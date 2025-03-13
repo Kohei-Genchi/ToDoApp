@@ -13,33 +13,31 @@ Route::middleware("auth:sanctum")->get("/user", function (Request $request) {
     return $request->user();
 });
 
+/**
+ * Stripe Webhook
+ */
 Route::post("/stripe/subscription/webhook", [
     StripSubscriptionController::class,
-    "Webhook",
+    "webhook",
 ]);
 
 /**
  * Todo API ルート
- * @Todo why 現在は auth:sanctum ではなく web ミドルウェアを使用
  */
 Route::prefix("todos")
     ->middleware(["web"])
     ->group(function () {
         // タスク一覧取得
         Route::get("/", [TodoController::class, "apiIndex"]);
-
         // タスク作成
         Route::post("/", [TodoController::class, "store"]);
-
         // 個別タスク操作
         Route::get("/{todo}", [TodoController::class, "show"]);
-
-        // PUT と POST の両方を受け付ける
+        // タスク更新
         Route::match(["put", "post"], "/{todo}", [
             TodoController::class,
             "update",
         ]);
-
         // タスクステータス操作
         Route::patch("/{todo}/toggle", [TodoController::class, "toggle"]);
         Route::delete("/{todo}", [TodoController::class, "destroy"]);
@@ -53,13 +51,10 @@ Route::prefix("categories")
     ->group(function () {
         // カテゴリー一覧取得
         Route::get("/", [CategoryApiController::class, "index"]);
-
         // カテゴリー作成
         Route::post("/", [CategoryApiController::class, "store"]);
-
         // カテゴリー更新
         Route::put("/{category}", [CategoryApiController::class, "update"]);
-
         // カテゴリー削除
         Route::delete("/{category}", [CategoryApiController::class, "destroy"]);
     });

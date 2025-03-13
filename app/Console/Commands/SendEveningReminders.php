@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 class SendEveningReminders extends Command
 {
-    protected $signature = 'reminders:evening';
-    protected $description = 'Send evening reminders to users about their tasks';
+    protected $signature = "reminders:evening";
+    protected $description = "Send evening reminders to users about their tasks";
 
     public function handle()
     {
@@ -19,18 +19,23 @@ class SendEveningReminders extends Command
             $count = 0;
 
             foreach ($users as $user) {
-                $completedCount = $user->todos()
-                    ->where('status', 'completed')
-                    ->whereDate('due_date', today())
+                $completedCount = $user
+                    ->todos()
+                    ->where("status", "completed")
+                    ->whereDate("due_date", today())
                     ->count();
 
-                $pendingCount = $user->todos()
-                    ->where('status', 'pending')
-                    ->whereDate('due_date', today())
+                $pendingCount = $user
+                    ->todos()
+                    ->where("status", "pending")
+                    ->whereDate("due_date", today())
                     ->count();
 
                 // Only send if user has an email and has relevant tasks for today
-                if ($user->email && ($pendingCount > 0 || $completedCount > 0)) {
+                if (
+                    $user->email &&
+                    ($pendingCount > 0 || $completedCount > 0)
+                ) {
                     $message = "こんばんは! ";
                     if ($pendingCount > 0) {
                         $message .= "明日のタスク作成は済んでいますか？ ";
@@ -40,20 +45,7 @@ class SendEveningReminders extends Command
                     }
 
                     $user->notify(new TaskReminder($message, $pendingCount));
-
-                    // Log details about the sent notification
-                    $this->info("Evening reminder sent to {$user->email} ({$user->name})");
-                    Log::info("Evening reminder sent to {$user->email} ({$user->name}) - Pending: {$pendingCount}, Completed: {$completedCount}");
-
                     $count++;
-                } else {
-                    // Log why notification wasn't sent
-                    if (!$user->email) {
-                        $this->warning("User {$user->name} (ID: {$user->id}) has no email address, skipping notification");
-                        Log::warning("Evening reminder not sent - User {$user->name} (ID: {$user->id}) has no email address");
-                    } elseif ($pendingCount == 0 && $completedCount == 0) {
-                        $this->info("User {$user->name} has no tasks for today, skipping notification");
-                    }
                 }
             }
 

@@ -19,7 +19,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): View
     {
-        return view('auth.login');
+        return view("auth.login");
     }
 
     /**
@@ -27,9 +27,6 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        // Log the login attempt for debugging
-        Log::info('Login attempt for email: ' . $request->email);
-
         try {
             // Attempt authentication
             $request->authenticate();
@@ -37,13 +34,9 @@ class AuthenticatedSessionController extends Controller
             // Regenerate the session
             $request->session()->regenerate();
 
-            // Log successful login
-            Log::info('User authenticated successfully: ' . Auth::id());
-
-            return redirect()->intended(route('dashboard', absolute: false));
+            return redirect()->intended(route("dashboard", absolute: false));
         } catch (\Exception $e) {
-            // Log authentication failure
-            Log::error('Authentication error: ' . $e->getMessage());
+            Log::error("Authentication error: " . $e->getMessage());
             throw $e;
         }
     }
@@ -53,11 +46,11 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('web')->logout();
+        Auth::guard("web")->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect("/");
     }
 }

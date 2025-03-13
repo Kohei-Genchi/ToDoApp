@@ -33,11 +33,7 @@ class SendMorningReminders extends Command
     public function handle()
     {
         try {
-            $this->info("実行日時: " . now()->format("Y-m-d H:i:s"));
-
             $users = User::all();
-            $this->info("総ユーザー数: " . $users->count());
-
             $count = 0;
 
             foreach ($users as $user) {
@@ -46,18 +42,6 @@ class SendMorningReminders extends Command
                     ->where("status", "pending")
                     ->whereDate("due_date", today())
                     ->get();
-
-                $this->info(
-                    "{$user->name}(ID:{$user->id}) - 今日のタスク: {$pendingTasks->count()}件"
-                );
-
-                if ($pendingTasks->count() > 0) {
-                    foreach ($pendingTasks as $task) {
-                        $this->info(
-                            "- タスク: {$task->title}, 期限: {$task->due_date}"
-                        );
-                    }
-                }
 
                 if ($user->email && $pendingTasks->count() > 0) {
                     try {
@@ -68,13 +52,8 @@ class SendMorningReminders extends Command
                             )
                         );
                         $count++;
-                        $this->info("通知送信: {$user->email}");
                     } catch (\Exception $e) {
                         $this->error("通知送信エラー: " . $e->getMessage());
-                    }
-                } else {
-                    if (!$user->email) {
-                        $this->warn("メールアドレスなし: {$user->name}");
                     }
                 }
             }

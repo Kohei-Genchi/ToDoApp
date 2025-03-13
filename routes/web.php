@@ -43,10 +43,6 @@ Route::get("stripe/subscription/checkout", [
     "checkout",
 ])->name("stripe.subscription.checkout");
 
-Route::post("/stripe/subscription/webhook", function (Request $request) {
-    return response()->json(["message" => "Webhook received"]);
-});
-
 # 支払い完了
 Route::get("stripe/subscription/comp", [
     StripSubscriptionController::class,
@@ -58,6 +54,7 @@ Route::get("stripe/subscription/customer_portal", [
     StripSubscriptionController::class,
     "customer_portal",
 ])->name("stripe.subscription.customer_portal");
+
 /**
  * ゲストログイン機能
  */
@@ -65,45 +62,8 @@ Route::get("/guest-login", [GuestLoginController::class, "login"])
     ->middleware("guest")
     ->name("guest.login");
 
-// @Todo delete debug code
 /**
- * カテゴリーデバッグ用エンドポイント
- */
-Route::get("/debug-categories", function () {
-    try {
-        if (!Auth::check()) {
-            return "Not logged in";
-        }
-
-        $user = Auth::user();
-
-        // 直接DBクエリ
-        $rawCategories = DB::select(
-            "SELECT * FROM categories WHERE user_id = ?",
-            [$user->id]
-        );
-
-        // Eloquentクエリ
-        $categories = $user->categories()->get();
-
-        return [
-            "user_id" => $user->id,
-            "raw_categories_count" => count($rawCategories),
-            "raw_categories" => $rawCategories,
-            "eloquent_categories_count" => $categories->count(),
-            "eloquent_categories" => $categories,
-        ];
-    } catch (\Exception $e) {
-        return [
-            "error" => $e->getMessage(),
-            "file" => $e->getFile(),
-            "line" => $e->getLine(),
-        ];
-    }
-});
-// @Todo web.php内で良い?
-/**
- * Web用カテゴリーAPI
+ * カテゴリーAPI
  */
 Route::get("/api/web-categories", [CategoryApiController::class, "index"]);
 
@@ -128,20 +88,16 @@ Route::middleware(["auth"])->group(function () {
     /**
      * Todoルート
      */
-    // タスク操作
     Route::post("/todos", [TodoController::class, "store"])->name(
         "todos.store"
     );
-
     Route::put("/todos/{todo}", [TodoController::class, "update"])->name(
         "todos.update"
     );
-
     Route::patch("/todos/{todo}/toggle", [
         TodoController::class,
         "toggle",
     ])->name("todos.toggle");
-
     Route::delete("/todos/{todo}", [TodoController::class, "destroy"])->name(
         "todos.destroy"
     );
@@ -152,38 +108,31 @@ Route::middleware(["auth"])->group(function () {
     Route::get("/categories", [CategoryController::class, "index"])->name(
         "categories.index"
     );
-
     Route::post("/categories", [CategoryController::class, "store"])->name(
         "categories.store"
     );
-
     Route::put("/categories/{category}", [
         CategoryController::class,
         "update",
     ])->name("categories.update");
-
     Route::delete("/categories/{category}", [
         CategoryController::class,
         "destroy",
     ])->name("categories.destroy");
 
-    // @Todo Profileへのリンクを作る。→UserNameにリンクをつける。ログアウト機能はProfileへ
     /**
      * プロフィールルート
      */
     Route::get("/profile", [ProfileController::class, "edit"])->name(
         "profile.edit"
     );
-
     Route::patch("/profile", [ProfileController::class, "update"])->name(
         "profile.update"
     );
-
     Route::delete("/profile", [ProfileController::class, "destroy"])->name(
         "profile.destroy"
     );
 
-    // @Todo apiなのにweb.php内で良い?
     /**
      * メモリスト部分ビュー取得API
      */

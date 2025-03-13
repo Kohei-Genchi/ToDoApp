@@ -17,34 +17,10 @@ class TodoCleanup extends Command
         $daysBack = $this->option("days");
         $targetDate = Carbon::now()->subDays($daysBack)->format("Y-m-d");
 
-        $this->info("Target date: {$targetDate}");
-
-        // First, let's check what tasks exist
-        $totalCount = Todo::whereDate("due_date", $targetDate)->count();
-        $this->info("Total tasks with due date {$targetDate}: {$totalCount}");
-
-        $todayLocationCount = Todo::where("location", "TODAY")
-            ->whereDate("due_date", $targetDate)
-            ->count();
-        $this->info(
-            "Tasks with location='TODAY' and due date {$targetDate}: {$todayLocationCount}"
-        );
-
-        // Show statuses
-        $statusCounts = Todo::whereDate("due_date", $targetDate)
-            ->selectRaw("status, count(*) as count")
-            ->groupBy("status")
-            ->get();
-
-        $this->info("Status counts for tasks due on {$targetDate}:");
-        foreach ($statusCounts as $status) {
-            $this->info("- {$status->status}: {$status->count}");
-        }
-
         try {
             // 完了したタスクを削除
             $completedCount = Todo::where("status", "completed")
-                ->where("location", "TODAY") // TODAY条件を追加
+                ->where("location", "TODAY")
                 ->whereDate("due_date", $targetDate)
                 ->delete();
 
@@ -52,7 +28,7 @@ class TodoCleanup extends Command
 
             // 未完了タスクをINBOXに戻す
             $pendingCount = Todo::where("status", "pending")
-                ->where("location", "TODAY") // TODAY条件を追加
+                ->where("location", "TODAY")
                 ->whereDate("due_date", $targetDate)
                 ->update([
                     "location" => "INBOX",
