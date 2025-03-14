@@ -50,7 +50,6 @@ class SendEveningReminders extends Command
             }
 
             $this->info("Evening reminders sent to {$count} users");
-            Log::info("Evening reminders sent to {$count} users");
 
             return Command::SUCCESS;
         } catch (\Exception $e) {

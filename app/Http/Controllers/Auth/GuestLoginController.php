@@ -16,25 +16,19 @@ class GuestLoginController extends Controller
      */
     public function login(Request $request)
     {
-
-        // Log that this method was called
-        Log::info('Guest login requested through "かんたんログイン" button');
-
-        // This is ONLY for "かんたんログイン" button clicks
-        $user = User::where('email', 'guest@example.com')->first();
+        $user = User::where("email", "guest@example.com")->first();
 
         if (!$user) {
             // Create guest user only when explicitly requested through the button
-            Log::info('Creating guest user because "かんたんログイン" button was clicked');
             $user = User::create([
-                'name' => 'Guest User',
-                'email' => 'guest@example.com',
-                'password' => bcrypt('guest-password')
+                "name" => "Guest User",
+                "email" => "guest@example.com",
+                "password" => bcrypt("guest-password"),
             ]);
         }
 
         Auth::login($user);
 
-        return redirect()->route('todos.index');
+        return redirect()->route("todos.index");
     }
 }

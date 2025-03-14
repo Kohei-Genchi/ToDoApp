@@ -37,11 +37,6 @@ class TodoCleanup extends Command
                 ]);
 
             $this->info("未完了タスク {$pendingCount} 件をINBOXに戻しました");
-
-            Log::info(
-                "Todoタスク整理: 完了タスク {$completedCount} 件を削除、未完了タスク {$pendingCount} 件をINBOXに戻しました"
-            );
-
             return Command::SUCCESS;
         } catch (\Exception $e) {
             Log::error(

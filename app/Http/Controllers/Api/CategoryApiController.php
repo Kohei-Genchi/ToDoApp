@@ -57,9 +57,6 @@ class CategoryApiController extends Controller
     {
         // For unauthenticated access, return unauthorized error
         if (!Auth::check()) {
-            Log::info(
-                "Unauthenticated access to category store API - returning unauthorized"
-            );
             return response()->json(
                 [
                     "success" => false,
@@ -96,13 +93,6 @@ class CategoryApiController extends Controller
                 "user_id" => $user->id,
             ]);
 
-            Log::info(
-                "Created new category ID: " .
-                    $category->id .
-                    " for user ID: " .
-                    $user->id
-            );
-
             return response()->json(
                 [
                     "success" => true,
@@ -135,9 +125,6 @@ class CategoryApiController extends Controller
     {
         // For unauthenticated access, return unauthorized error
         if (!Auth::check()) {
-            Log::info(
-                "Unauthenticated access to category update API - returning unauthorized"
-            );
             return response()->json(
                 [
                     "success" => false,
@@ -209,9 +196,6 @@ class CategoryApiController extends Controller
     {
         // For unauthenticated access, return unauthorized error
         if (!Auth::check()) {
-            Log::info(
-                "Unauthenticated access to category destroy API - returning unauthorized"
-            );
             return response()->json(
                 [
                     "success" => false,
