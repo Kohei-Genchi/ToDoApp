@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for www/public/build/assets/TodoCalendar-hPBlvg2u.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../../prettify.css" />
+    <link rel="stylesheet" href="../../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../../index.html">All files</a> / <a href="index.html">www/public/build/assets</a> TodoCalendar-hPBlvg2u.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import{_ as A,c as n,o as a,a as i,g as B,F as C,r as M,h as E,b as N,i as S,n as p,d as $,t as f,w as F,e as V}from"./app-D57cpfvF.js";const Y={props:{currentDate:{type:String,required:!0},todos:{type:Array,default:()=&gt;[]}},emits:["date-selected","edit-task","view-all-tasks","add-task"],setup(l,{emit:d}){const c=E(l.currentDate);function o(e){if(!e)return"";if(/^\d{4}-\d{2}-\d{2}$/.test(e))return e;try{const s=new Date(e);return`${s.getFullYear()}-${String(s.getMonth()+1).padStart(2,"0")}-${String(s.getDate()).padStart(2,"0")}`}catch(s){return console.error("Error formatting date:",s),""}}const x=N(()=&gt;{const e=[],s=new Date(l.currentDate),w=s.getFullYear(),k=s.getMonth(),v=new Date(w,k,1),h=new Date(v);h.setDate(v.getDate()-v.getDay());const T=new Date;T.setHours(0,0,0,0);for(let y=0;y&lt;6;y++)for(let m=0;m&lt;7;m++){const u=new Date(h);u.setDate(h.getDate()+y*7+m);const D=o(u),L=g(D);e.push({date:D,isCurrentMonth:u.getMonth()===k,isToday:u.getTime()===T.getTime(),isSelected:D===c.value,todos:L})}return e});S(()=&gt;l.currentDate,e=&gt;{c.value=e});function b(e){c.value=e,d("date-selected",e)}function t(e){d("date-selected",e)}function g(e){return l.todos.filter(s=&gt;o(s.due_date)===e)}function r(e){if(!e)return"";try{if(typeof e=="string"){if(e.includes("T"))return new Date(e).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});{const s=e.split(":");return`${s[0]}:${s[1]}`}}else if(e instanceof Date)return e.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});return e}catch(s){return console.error("Error formatting time:",s),""}}function _(e){d("edit-task",e)}return{calendarDays:x,selectDate:b,formatTime:r,editTask:_,viewAllTasks:t}}},j={class:"bg-white rounded-lg shadow-sm overflow-hidden"},z={class:"grid grid-cols-7 border-t border-l border-gray-200"},q=["onClick"],H={class:"flex justify-between items-start"},I={key:0,class:"text-xs bg-blue-100 text-blue-800 px-1 rounded-full"},O={class:"mt-1 space-y-0.5"},G=["onClick"],J={class:"truncate pl-0.5 text-xs"},K=["onClick"];function P(l,d,c,o,x,b){return a(),n("div",null,[i("div",j,[d[0]||(d[0]=B('&lt;div class="grid grid-cols-7 text-center text-xs text-gray-700 bg-gray-100"&gt;&lt;div class="py-1 text-red-600 font-medium"&gt;日&lt;/div&gt;&lt;div class="py-1 font-medium"&gt;月&lt;/div&gt;&lt;div class="py-1 font-medium"&gt;火&lt;/div&gt;&lt;div class="py-1 font-medium"&gt;水&lt;/div&gt;&lt;div class="py-1 font-medium"&gt;木&lt;/div&gt;&lt;div class="py-1 font-medium"&gt;金&lt;/div&gt;&lt;div class="py-1 text-blue-600 font-medium"&gt;土&lt;/div&gt;&lt;/div&gt;',1)),i("div",z,[(a(!0),n(C,null,M(o.calendarDays,(t,g)=&gt;(a(),n("div",{key:g,onClick:r=&gt;o.selectDate(t.date),class:p(["h-20 p-1 border-r border-b border-gray-200 relative",t.isCurrentMonth?"bg-white":"bg-gray-50",t.isToday?"bg-yellow-50":"",t.isSelected?"bg-blue-50":""])},[i("div",H,[i("div",{class:p(["text-xs",t.isCurrentMonth?"":"text-gray-400",t.isToday?"font-bold bg-yellow-100 rounded-full w-4 h-4 flex items-center justify-center":"",t.date.split("-")[2]==="01"?"font-bold":""])},f(parseInt(t.date.split("-")[2])),3),t.todos.length&gt;0?(a(),n("div",I,f(t.todos.length),1)):$("",!0)]),i("div",O,</span></span>[(a(!0),n(C,null,M(t.todos.slice(0,2),r=&gt;(a(),n("div",{key:r.id,class:p(["flex items-center rounded text-xs hover:bg-gray-100 truncate",r.status==="completed"?"text-gray-400 line-through":""]),style:V({borderLeft:"2px solid "+(r.category?r.category.color:"#ddd")}),onClick:F(_=&gt;o.editTask(r),["stop"])},[i("span",J,f(r.title),1)],14,G))),128)),t.todos.length&gt;2?(a(),n("div",{key:0,class:"text-xs text-blue-500 cursor-pointer hover:underline",onClick:F(r=&gt;o.viewAllTasks(t.date),["stop"])}," +"+f(t.todos.length-2),9,K)):$("",!0)])],10,q))),128))])])])}const R=A(Y,[["render",P]]);export{R as default};</span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2025-03-14T14:46:55.130Z
+            </div>
+        <script src="../../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../../sorter.js"></script>
+        <script src="../../../../block-navigation.js"></script>
+    </body>
+</html>
+    

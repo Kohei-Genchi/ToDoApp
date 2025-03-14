@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for www/public/build/assets/TodoList-ChdlPuzA.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../../prettify.css" />
+    <link rel="stylesheet" href="../../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../../index.html">All files</a> / <a href="index.html">www/public/build/assets</a> TodoList-ChdlPuzA.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import{_ as b,c as r,o as i,a as e,t as d,F as C,r as T,b as k,d as g,n as B,e as M,f as y,w as V}from"./app-D57cpfvF.js";const I={props:{todos:{type:Array,default:()=&gt;[]},categories:{type:Array,default:()=&gt;[]},isTrashView:{type:Boolean,default:!1},formatLocalDateTime:{type:Function,required:!0}},emits:["toggle-task","edit-task","trash-task","restore-task","delete-task"],setup(a,{emit:s}){const l=k(()=&gt;a.todos.filter(t=&gt;t.status==="completed").length),o=k(()=&gt;a.todos.filter(t=&gt;t.status!=="completed").length);function m(t){s("toggle-task",t)}function h(t){a.isTrashView||s("edit-task",t)}function n(t){return a.categories.find(c=&gt;c.id===t)}function u(t){return t.recurrence_type&amp;&amp;t.recurrence_type!=="none"}function x(t){switch(t){case"daily":return"毎日";case"weekly":return"毎週";case"monthly":return"毎月";default:return""}}function f(t){if(!t)return"";const c=t.split(":");return c.length&gt;=2?`${c[0]}:${c[1]}`:t}function v(t,c=1){if(!t)return"rgba(155, 155, 155, "+c+")";const w=parseInt(t.slice(1,3),16),_=parseInt(t.slice(3,5),16),p=parseInt(t.slice(5,7),16);return`rgba(${w}, ${_}, ${p}, ${c})`}return{completedCount:l,pendingCount:o,toggleTask:m,editTask:h,getCategoryById:n,isRecurring:u,getRecurrenceLabel:x,formatTime:f,hexToRgba:v,formatTimeWithFallback}}},j={class:"bg-white rounded-lg shadow mb-6 px-4 py-3 flex justify-between items-center"},L={class:"text-sm text-gray-700"},R={class:"text-green-600"},A={class:"text-blue-600"},F={key:0,class:"bg-white rounded-lg shadow-sm p-8 text-center"},H={key:0,class:"text-sm text-gray-500 mb-4"},z={key:1,class:"text-sm text-gray-500 mb-4"},N={key:1,class:"bg-white rounded-lg shadow-sm"},D={class:"divide-y divide-gray-100"},W={class:"p-3 sm:px-4 flex items-center"},q={key:0,class:"mr-3 flex-shrink-0"},E=["checked","onChange"],G=["onClick"],J={class:"flex items-center"},K={key:1,class:"ml-2 text-xs text-gray-500"},O={class:"inline-flex items-center"},P={key:0,class:"text-sm text-gray-500 mt-0.5"},Q={class:"inline-flex items-center"},S={class:"flex-shrink-0 ml-3"},U={key:0,class:"flex space-x-2"},X=["onClick"],Y=["onClick"],Z=["onClick"];function $(a,s,l,o,m,h){return i(),r("div",null,[e("div",j,[e("div",L,[e("span",null,"全 "+d(l.todos.length)+" タスク",1),s[0]||(s[0]=e("span",{class:"mx-2 text-gray-400"},"|",-1)),e("span",R,"完了: "+d(o.completedCount),1),s[1]||(s[1]=e("span",{class:"mx-2 text-gray-400"},"|",-1)),e("span",A,"未完了: "+d(o.pendingCount),1)])]),l.todos.length===0?(i(),r("div",F,[s[2]||(s[2]=e("svg",{xmlns:"http://www.w3.org/2000/svg",class:"h-12 w-12 mx-auto text-gray-400 mb-3",fill:"none",viewBox:"0 0 24 24",stroke:"currentColor"},[e("path",{"stroke-linecap":"round","stroke-linejoin":"round","stroke-width":"2",d:"M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"})],-1)),s[3]||(s[3]=e("h3",{class:"text-lg font-medium text-gray-700 mb-2"}," タスクはありません ",-1)),l.isTrashView?(i(),r("p",z,"ゴミ箱は空です")):(i(),r("p",H," 新しいタスクを追加しましょう "))])):(i(),r("div",N,[e("ul",D,[(i(!0),r(C,null,T(l.todos,n=&gt;(i(),r("li",{key:n.id,class:"hover:bg-gray-50 transition-colors"},[e("div",W,[l.isTrashView?g("",!0):(i(),r("div",q,[e("input",{type:"checkbox",checked:n.status==="completed",onChange:u=&gt;o.toggleTask(n),class:"h-5 w-5 text-blue-600 rounded focus:ring-blue-500"},null,40,E)])),e("div",{class:"flex-1 min-w-0",onClick:u=&gt;o.editTask(n),style:{cursor:"pointer"}},[e("div",J,[e("p",{class:B(["font-medium",n.status==="completed"?"line-through text-gray-500":"text-gray-900"])},d(n.title),3),n.category_id&amp;&amp;o.getCategoryById(n.category_id)?(i(),r("span",{key:0,class:"ml-2 px-2 py-0.5 rounded-full text-xs font-medium",style:M({backgroundColor:o.hexToRgba(o.getCategoryById(n.category_id).color,.15),color:o.getCategoryById(n.category_id).color})},d(o.getCategoryById(n.category_id).name),5)):g("",!0),o.isRecurring(n)?(i(),r("span",K,[e("span",O,[s[4]||(s[4]=e("svg",{xmlns:"http://www.w3.org/2000/svg",class:"h-3 w-3 mr-0.5",fill:"none",viewBox:"0 0 24 24",stroke:"currentColor"},[e("path",{"stroke-linecap":"round","stroke-linejoin":"round","stroke-width":"2",d:"M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"})],-1)),y(" "+d(o.getRecurrenceLabel(n.recurrence_type)),1)])])):g("",!0)]),n.due_time?(i(),r("div",P,[e("span",Q,[s[5]||(s[5]=e("svg",{xmlns:"http://www.w3.org/2000/svg",class:"h-3.5 w-3.5 mr-0.5",fill:"none",viewBox:"0 0 24 24",stroke:</span></span>"currentColor"},[e("path",{"stroke-linecap":"round","stroke-linejoin":"round","stroke-width":"2",d:"M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"})],-1)),y(" "+d(o.formatTimeWithFallback(n.due_time)),1)])])):g("",!0)],8,G),e("div",S,[l.isTrashView?(i(),r("div",U,[e("button",{onClick:u=&gt;a.$emit("restore-task",n),class:"text-blue-500 hover:text-blue-700 transition-colors"},s[6]||(s[6]=[e("svg",{class:"h-5 w-5",fill:"none",viewBox:"0 0 24 24",stroke:"currentColor"},[e("path",{"stroke-linecap":"round","stroke-linejoin":"round","stroke-width":"2",d:"M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"})],-1)]),8,X),e("button",{onClick:u=&gt;a.$emit("delete-task",n),class:"text-red-500 hover:text-red-700 transition-colors"},s[7]||(s[7]=[e("svg",{class:"h-5 w-5",fill:"none",viewBox:"0 0 24 24",stroke:"currentColor"},[e("path",{"stroke-linecap":"round","stroke-linejoin":"round","stroke-width":"2",d:"M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"})],-1)]),8,Y)])):(i(),r("button",{key:1,onClick:V(u=&gt;a.$emit("trash-task",n),["stop"]),class:"text-gray-400 hover:text-gray-600 transition-colors"},s[8]||(s[8]=[e("svg",{class:"h-5 w-5",fill:"none",viewBox:"0 0 24 24",stroke:"currentColor"},[e("path",{"stroke-linecap":"round","stroke-linejoin":"round","stroke-width":"2",d:"M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"})],-1)]),8,Z))])])]))),128))])]))])}const te=b(I,[["render",$]]);export{te as default};</span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2025-03-14T14:46:55.130Z
+            </div>
+        <script src="../../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../../sorter.js"></script>
+        <script src="../../../../block-navigation.js"></script>
+    </body>
+</html>
+    
