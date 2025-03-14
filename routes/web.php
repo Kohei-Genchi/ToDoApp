@@ -86,13 +86,10 @@ Route::get("/dashboard", function () {
  */
 Route::middleware(["auth"])->group(function () {
     /**
-     * Todoルート
+     * Todo Web ルート
      */
     Route::post("/todos", [TodoController::class, "store"])->name(
         "todos.store"
-    );
-    Route::put("/todos/{todo}", [TodoController::class, "update"])->name(
-        "todos.update"
     );
     Route::patch("/todos/{todo}/toggle", [
         TodoController::class,

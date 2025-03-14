@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\TodoController;
+use App\Http\Controllers\Api\TodoApiController;
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\StripSubscriptionController;
 use App\Http\Controllers\Api\MemoApiController;
@@ -29,19 +29,20 @@ Route::prefix("todos")
     ->middleware(["web"])
     ->group(function () {
         // タスク一覧取得
-        Route::get("/", [TodoController::class, "apiIndex"]);
+        Route::get("/", [TodoApiController::class, "index"]);
         // タスク作成
-        Route::post("/", [TodoController::class, "store"]);
+        Route::post("/", [TodoApiController::class, "store"]);
         // 個別タスク操作
-        Route::get("/{todo}", [TodoController::class, "show"]);
+        Route::get("/{todo}", [TodoApiController::class, "show"]);
         // タスク更新
         Route::match(["put", "post"], "/{todo}", [
-            TodoController::class,
+            TodoApiController::class,
             "update",
         ]);
         // タスクステータス操作
-        Route::patch("/{todo}/toggle", [TodoController::class, "toggle"]);
-        Route::delete("/{todo}", [TodoController::class, "destroy"]);
+        Route::patch("/{todo}/toggle", [TodoApiController::class, "toggle"]);
+        // タスク削除
+        Route::delete("/{todo}", [TodoApiController::class, "destroy"]);
     });
 
 /**
@@ -60,12 +61,14 @@ Route::prefix("categories")
         Route::delete("/{category}", [CategoryApiController::class, "destroy"]);
     });
 
+/**
+ * メモ API ルート
+ */
 Route::prefix("memos")
     ->middleware(["web"])
     ->group(function () {
         // Get all memos
         Route::get("/", [MemoApiController::class, "index"]);
-
         // Create a new memo
         Route::post("/", [MemoApiController::class, "store"]);
     });
