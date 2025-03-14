@@ -62,84 +62,21 @@
 </div>
 @endauth
 
-        @auth
-        {{-- Check if the current route is not profile or subscription related --}}
-        @if(!Request::is('profile*') && !Request::is('stripe/subscription*'))
-        <!-- クイック入力セクション -->
-        <div class="mb-4">
-        <div class="text-xs text-gray-400 uppercase tracking-wider mb-2">
-        クイック入力
+<!-- This section shows the changes needed in resources/views/layouts/navigation.blade.php -->
+
+@auth
+    {{-- Check if the current route is not profile or subscription related --}}
+    @if(!Request::is('profile*') && !Request::is('stripe/subscription*'))
+        <!-- Mount Vue.js component for quick input and memo list -->
+        <div id="sidebar-memos">
+            <!-- Vue.js SidebarMemosComponent will be mounted here -->
         </div>
-        <form action="{{ route('todos.store') }}" method="POST">
-        @csrf
-        <div class="flex items-center bg-gray-700 rounded overflow-hidden">
-        <input type="text" name="title" required placeholder="新しいメモを入力"
-        class="w-full bg-gray-700 px-3 py-2 text-sm focus:outline-none text-white">
-
-                        <button type="submit" class="px-2 py-2 text-gray-400 hover:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                        </button>
-                        </div>
-                        </form>
-                        </div>
-
-            <!-- MEMOリスト -->
-            <div>
-            <div class="flex items-center justify-between mb-2">
-            <div class="text-xs text-gray-400 uppercase tracking-wider">メモ一覧</div>
-            <div class="text-xs bg-gray-600 px-1.5 py-0.5 rounded-full">
-            {{ Auth::user()->todos()->whereNull('due_date')->where('status', 'pending')->count() }}
-            </div>
-            </div>
-
-                <div class="memo-list-container sidebar-memo-list space-y-1 max-h-96 overflow-y-auto pr-1 custom-scrollbar">
-                @php
-                $memos = Auth::user()->todos()
-                ->with('category')
-                ->whereNull('due_date')
-                ->where('status', 'pending')
-                ->orderBy('created_at', 'desc')
-                ->orderBy('created_at', 'desc')
-                ->get();
-                @endphp
-
-                    @if($memos->isEmpty())
-                    <div class="text-xs text-gray-500 text-center py-2">メモはありません</div>
-                    @else
-                    @foreach($memos as $memo)
-                    <div class="group bg-gray-700 hover:bg-gray-600 rounded py-1.5 px-2 cursor-pointer transition-colors"
-                    onclick="editTodo({{ $memo->id }}, {{ json_encode([
-                    'id' => $memo->id,
-                    'title' => $memo->title,
-                    'due_date' => $memo->due_date ? $memo->due_date->format('Y-m-d') : null,
-                    'due_time' => $memo->due_time ? $memo->due_time->format('H:i') : null,
-                    'category_id' => $memo->category_id,
-                    'recurrence_type' => $memo->recurrence_type,
-                    'recurrence_end_date' => $memo->recurrence_end_date ? $memo->recurrence_end_date->format('Y-m-d') : null,
-                    ]) }})"
-                    style="border-left: 3px solid {{ $memo->category ? $memo->category->color : '#6B7280' }}">
-                    <div class="flex items-center justify-between">
-                    <div class="text-sm truncate">{{ $memo->title }}</div>
-                    </div>
-                    @if($memo->category)
-                    <div class="text-xs text-gray-400 mt-0.5 flex items-center">
-                    <span class="w-2 h-2 rounded-full mr-1" style="background-color: {{ $memo->category->color }}"></span>
-                    {{ $memo->category->name }}
-                    </div>
-                    @endif
-                    </div>
-                    @endforeach
-                    @endif
-                    </div>
-                    </div>
-                    @endif
-                    @else
-                    <div class="mt-6 p-3 bg-gray-700 rounded text-xs text-gray-300">
-                    <p>タスク管理機能を使用するには、ログインまたは新規登録してください。</p>
-                    </div>
-                    @endauth
+    @endif
+@else
+    <div class="mt-6 p-3 bg-gray-700 rounded text-xs text-gray-300">
+        <p>タスク管理機能を使用するには、ログインまたは新規登録してください。</p>
+    </div>
+@endauth
                     </div>
                     <script>
                     // Toggle user dropdown visibility

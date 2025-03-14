@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TodoController;
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\StripSubscriptionController;
+use App\Http\Controllers\Api\MemoApiController;
 
 /**
  * ユーザー情報取得API
@@ -57,4 +58,14 @@ Route::prefix("categories")
         Route::put("/{category}", [CategoryApiController::class, "update"]);
         // カテゴリー削除
         Route::delete("/{category}", [CategoryApiController::class, "destroy"]);
+    });
+
+Route::prefix("memos")
+    ->middleware(["web"])
+    ->group(function () {
+        // Get all memos
+        Route::get("/", [MemoApiController::class, "index"]);
+
+        // Create a new memo
+        Route::post("/", [MemoApiController::class, "store"]);
     });
