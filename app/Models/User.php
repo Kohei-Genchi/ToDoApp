@@ -20,6 +20,8 @@ class User extends Authenticatable
         "abatar",
         "stripe_id",
         "subscription_id",
+        "morning_reminder_time",
+        "evening_reminder_time",
     ];
 
     protected $hidden = ["password", "remember_token"];
@@ -29,6 +31,8 @@ class User extends Authenticatable
         return [
             "email_verified_at" => "datetime",
             "password" => "hashed",
+            "morning_reminder_time" => "datetime",
+            "evening_reminder_time" => "datetime",
         ];
     }
 

@@ -62,10 +62,8 @@
 </div>
 @endauth
 
-<!-- This section shows the changes needed in resources/views/layouts/navigation.blade.php -->
-
 @auth
-    {{-- Check if the current route is not profile or subscription related --}}
+
     @if(!Request::is('profile*') && !Request::is('stripe/subscription*'))
         <!-- Mount Vue.js component for quick input and memo list -->
         <div id="sidebar-memos">

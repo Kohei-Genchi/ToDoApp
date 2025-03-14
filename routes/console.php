@@ -8,9 +8,8 @@ use App\Console\Commands\SendMorningReminders;
 use App\Console\Commands\SendEveningReminders;
 
 // スケジューラーの設定
-Schedule::command("todos:cleanup")->dailyAt("09:06");
+Schedule::command("todos:cleanup")->dailyAt("24:00");
 
-// メール送信のスケジュール設定
-Schedule::command("reminders:morning")->dailyAt("20:30");
-
-Schedule::command("reminders:evening")->dailyAt("20:30");
+// メール送信のスケジュール設定 - 毎分実行して、ユーザーの希望時間に送信
+Schedule::command("reminders:morning")->everyMinute();
+Schedule::command("reminders:evening")->everyMinute();

@@ -23,20 +23,34 @@ class SendMorningReminders extends Command
      * @var string
      */
 
-    /**
-     * Execute the console command.
-     */
     // In app/Console/Commands/SendMorningReminders.php
-
-    // app/Console/Commands/SendMorningReminders.php の修正例
-
     public function handle()
     {
         try {
             $users = User::all();
             $count = 0;
+            $currentHour = now()->format("H");
+            $currentMinute = now()->format("i");
 
             foreach ($users as $user) {
+                // Skip users who don't have their reminder time set to now
+                if ($user->morning_reminder_time) {
+                    $reminderHour = $user->morning_reminder_time->format("H");
+                    $reminderMinute = $user->morning_reminder_time->format("i");
+
+                    if (
+                        $reminderHour !== $currentHour ||
+                        $reminderMinute !== $currentMinute
+                    ) {
+                        continue; // Skip if not time for this user's reminder
+                    }
+                } else {
+                    // Default for users without a setting (8:00 AM)
+                    if ($currentHour !== "08" || $currentMinute !== "00") {
+                        continue;
+                    }
+                }
+
                 $pendingTasks = $user
                     ->todos()
                     ->where("status", "pending")

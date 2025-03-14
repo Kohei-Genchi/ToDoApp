@@ -60,5 +60,45 @@
                 >{{ __('保存しました。') }}</p>
             @endif
         </div>
+        <div class="mt-6 border-t border-gray-200 pt-4">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">
+                {{ __('リマインダー設定') }}
+            </h3>
+
+            <div class="mt-3">
+                <x-text-input
+                    id="morning_reminder_time"
+                    name="morning_reminder_time"
+                    type="time"
+                    class="mt-1 block w-full"
+                    :value="old('morning_reminder_time',
+                            is_string($user->morning_reminder_time)
+                                ? $user->morning_reminder_time
+                                : ($user->morning_reminder_time
+                                    ? $user->morning_reminder_time->format('H:i')
+                                    : '08:00'))"
+                />
+                <p class="mt-1 text-sm text-gray-600">本日のタスク実施忘れを防止するリマインダーです。</p>
+                <x-input-error class="mt-1" :messages="$errors->get('morning_reminder_time')" />
+            </div>
+
+            <div class="mt-3">
+                <x-input-label for="evening_reminder_time" :value="__('夕方のリマインダー時間')" />
+                <x-text-input
+                    id="evening_reminder_time"
+                    name="evening_reminder_time"
+                    type="time"
+                    class="mt-1 block w-full"
+                    :value="old('evening_reminder_time',
+                            is_string($user->evening_reminder_time)
+                                ? $user->evening_reminder_time
+                                : ($user->evening_reminder_time
+                                    ? $user->evening_reminder_time->format('H:i')
+                                    : '20:00'))"
+                />
+                <p class="mt-1 text-sm text-gray-600">翌日のタスク入力忘れを防止するリマインダーです。</p>
+                <x-input-error class="mt-1" :messages="$errors->get('evening_reminder_time')" />
+            </div>
+        </div>
     </form>
 </section>

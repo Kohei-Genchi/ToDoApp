@@ -12,13 +12,34 @@ class SendEveningReminders extends Command
     protected $signature = "reminders:evening";
     protected $description = "Send evening reminders to users about their tasks";
 
+    // In app/Console/Commands/SendEveningReminders.php
     public function handle()
     {
         try {
             $users = User::all();
             $count = 0;
+            $currentHour = now()->format("H");
+            $currentMinute = now()->format("i");
 
             foreach ($users as $user) {
+                // Skip users who don't have their reminder time set to now
+                if ($user->evening_reminder_time) {
+                    $reminderHour = $user->evening_reminder_time->format("H");
+                    $reminderMinute = $user->evening_reminder_time->format("i");
+
+                    if (
+                        $reminderHour !== $currentHour ||
+                        $reminderMinute !== $currentMinute
+                    ) {
+                        continue; // Skip if not time for this user's reminder
+                    }
+                } else {
+                    // Default for users without a setting (8:00 PM)
+                    if ($currentHour !== "20" || $currentMinute !== "00") {
+                        continue;
+                    }
+                }
+
                 $completedCount = $user
                     ->todos()
                     ->where("status", "completed")
