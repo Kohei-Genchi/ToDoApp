@@ -44,7 +44,7 @@
             <!-- 本体 - スクロール可能 -->
             <div class="p-4 overflow-y-auto">
                 <!-- Task Form -->
-                <form @submit.prevent="submitForm" class="space-y-2">
+                <form @submit.prevent="submitForm" class="space-y-4">
                     <!-- Title -->
                     <div>
                         <label
@@ -62,52 +62,128 @@
                         />
                     </div>
 
-                    <!-- Description - 高さを小さく -->
+                    <!-- Date -->
                     <div>
                         <label
-                            for="description"
+                            for="due_date"
                             class="block text-sm font-medium text-gray-700"
-                            >説明</label
+                            >期限日</label
                         >
-                        <textarea
-                            id="description"
-                            v-model="form.description"
-                            rows="2"
+                        <input
+                            type="date"
+                            id="due_date"
+                            v-model="form.due_date"
                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        ></textarea>
+                        />
                     </div>
 
-                    <!-- Date/Time -->
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label
-                                for="due_date"
-                                class="block text-sm font-medium text-gray-700"
-                                >期限日</label
-                            >
-                            <input
-                                type="date"
-                                id="due_date"
-                                v-model="form.due_date"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            />
+                    <!-- Time Range with Duration Buttons -->
+                    <div>
+                        <div class="flex items-center mb-2">
+                            <div class="w-6 h-6 mr-2">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    class="h-5 w-5 text-gray-500"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                            </div>
+                            <div class="flex items-center space-x-2 flex-1">
+                                <input
+                                    type="time"
+                                    v-model="form.start_time"
+                                    class="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    @focus="setCurrentTimeIfEmpty('start_time')"
+                                    @change="ensureEndTimeIsAfterStart"
+                                />
+                                <span class="text-gray-500">→</span>
+                                <input
+                                    type="time"
+                                    v-model="form.end_time"
+                                    class="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    @change="ensureEndTimeIsAfterStart"
+                                />
+                                <button
+                                    type="button"
+                                    @click="clearTimes"
+                                    class="text-gray-500 hover:text-gray-700"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-5 w-5"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                        <div>
-                            <label
-                                for="due_time"
-                                class="block text-sm font-medium text-gray-700"
-                                >時間</label
+
+                        <!-- Duration Buttons -->
+                        <div class="flex justify-between space-x-2 ml-8">
+                            <button
+                                type="button"
+                                @click="setDuration(15)"
+                                class="px-3 py-1 text-xs rounded-full border"
+                                :class="
+                                    activeDuration === 15
+                                        ? 'bg-pink-200 border-pink-300 text-pink-800'
+                                        : 'bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200'
+                                "
                             >
-                            <input
-                                type="time"
-                                id="due_time"
-                                v-model="form.due_time"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            />
+                                15分
+                            </button>
+                            <button
+                                type="button"
+                                @click="setDuration(30)"
+                                class="px-3 py-1 text-xs rounded-full border"
+                                :class="
+                                    activeDuration === 30
+                                        ? 'bg-pink-200 border-pink-300 text-pink-800'
+                                        : 'bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200'
+                                "
+                            >
+                                30分
+                            </button>
+                            <button
+                                type="button"
+                                @click="setDuration(60)"
+                                class="px-3 py-1 text-xs rounded-full border"
+                                :class="
+                                    activeDuration === 60
+                                        ? 'bg-pink-200 border-pink-300 text-pink-800'
+                                        : 'bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200'
+                                "
+                            >
+                                1時間
+                            </button>
+                            <button
+                                type="button"
+                                @click="setDuration(120)"
+                                class="px-3 py-1 text-xs rounded-full border"
+                                :class="
+                                    activeDuration === 120
+                                        ? 'bg-pink-200 border-pink-300 text-pink-800'
+                                        : 'bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200'
+                                "
+                            >
+                                2時間
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Category Selection - コンパクトに -->
+                    <!-- Category Selection -->
                     <div>
                         <div class="flex justify-between items-center">
                             <label
@@ -161,7 +237,7 @@
                             </div>
                         </div>
 
-                        <!-- カテゴリー作成フォーム - コンパクトに -->
+                        <!-- カテゴリー作成フォーム -->
                         <div
                             v-if="showCategoryInput"
                             class="mt-1 space-y-2 p-2 border border-gray-200 rounded-md bg-gray-50"
@@ -197,7 +273,7 @@
                         </div>
                     </div>
 
-                    <!-- Recurrence Type - コンパクトに -->
+                    <!-- Recurrence Type -->
                     <div>
                         <label
                             for="recurrence_type"
@@ -216,7 +292,7 @@
                         </select>
                     </div>
 
-                    <!-- Recurrence End Date - 条件付き表示をそのままに -->
+                    <!-- Recurrence End Date -->
                     <div
                         v-if="
                             form.recurrence_type &&
@@ -242,7 +318,7 @@
                 </form>
             </div>
 
-            <!-- Footer - 固定、コンパクトに -->
+            <!-- Footer -->
             <div class="bg-gray-50 px-4 py-2 border-t border-gray-200 mt-auto">
                 <div class="flex justify-between items-center">
                     <!-- 削除ボタン (編集時のみ) -->
@@ -347,12 +423,16 @@ export default {
             }
         }
 
+        // Track active duration button
+        const activeDuration = ref(null);
+
         // Form data - initialize with default values
         const form = reactive({
             title: "",
             description: "",
             due_date: "",
-            due_time: "",
+            start_time: "",
+            end_time: "",
             category_id: "",
             recurrence_type: "none",
             recurrence_end_date: "",
@@ -396,6 +476,84 @@ export default {
             );
         });
 
+        // Method to set current time when field is empty and focused
+        function setCurrentTimeIfEmpty(field) {
+            if (!form[field]) {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, "0");
+                const minutes = String(now.getMinutes()).padStart(2, "0");
+                form[field] = `${hours}:${minutes}`;
+
+                // If setting start_time, also set end_time 30 min later
+                if (field === "start_time" && !form.end_time) {
+                    setDuration(30);
+                }
+            }
+        }
+
+        // Clear both time fields and active duration
+        function clearTimes() {
+            form.start_time = "";
+            form.end_time = "";
+            activeDuration.value = null;
+        }
+
+        // Set duration and calculate end time
+        function setDuration(minutes) {
+            activeDuration.value = minutes;
+
+            // If start time is not set, set it to current time
+            if (!form.start_time) {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, "0");
+                const mins = String(now.getMinutes()).padStart(2, "0");
+                form.start_time = `${hours}:${mins}`;
+            }
+
+            // Calculate end time based on start time + duration
+            if (form.start_time) {
+                const [hours, mins] = form.start_time.split(":").map(Number);
+                const endTime = new Date();
+                endTime.setHours(hours, mins + minutes);
+                form.end_time = `${String(endTime.getHours()).padStart(2, "0")}:${String(endTime.getMinutes()).padStart(2, "0")}`;
+            }
+        }
+
+        // Ensure end time is after start time
+        function ensureEndTimeIsAfterStart() {
+            if (form.start_time && form.end_time) {
+                const [startHours, startMins] = form.start_time
+                    .split(":")
+                    .map(Number);
+                const [endHours, endMins] = form.end_time
+                    .split(":")
+                    .map(Number);
+
+                const startDate = new Date();
+                startDate.setHours(startHours, startMins, 0);
+
+                const endDate = new Date();
+                endDate.setHours(endHours, endMins, 0);
+
+                // If end time is before or equal to start time, set end time to start time + 30 minutes
+                if (endDate <= startDate) {
+                    endDate.setHours(startHours, startMins + 30);
+                    form.end_time = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+                    activeDuration.value = 30;
+                } else {
+                    // Calculate the difference in minutes to determine the active duration
+                    const diffMs = endDate - startDate;
+                    const diffMins = Math.round(diffMs / 60000);
+
+                    if (diffMins === 15) activeDuration.value = 15;
+                    else if (diffMins === 30) activeDuration.value = 30;
+                    else if (diffMins === 60) activeDuration.value = 60;
+                    else if (diffMins === 120) activeDuration.value = 120;
+                    else activeDuration.value = null;
+                }
+            }
+        }
+
         // Initialize form data based on todoData prop
         function initializeForm() {
             console.log("Initializing form with data:", props.todoData);
@@ -408,10 +566,12 @@ export default {
                     form.title = "";
                     form.description = "";
                     form.due_date = props.currentDate || "";
-                    form.due_time = "";
+                    form.start_time = "";
+                    form.end_time = "";
                     form.category_id = "";
                     form.recurrence_type = "none";
                     form.recurrence_end_date = "";
+                    activeDuration.value = null;
                 }
                 return;
             }
@@ -425,25 +585,32 @@ export default {
                 ? formatDateString(props.todoData.due_date)
                 : "";
 
-            // Handle time from ISO string
+            // Handle time from ISO string or existing due_time
             if (props.todoData.due_time) {
                 if (
                     typeof props.todoData.due_time === "string" &&
                     props.todoData.due_time.includes("T")
                 ) {
                     const timeDate = new Date(props.todoData.due_time);
-                    form.due_time = `${String(timeDate.getHours()).padStart(2, "0")}:${String(timeDate.getMinutes()).padStart(2, "0")}`;
+                    form.start_time = `${String(timeDate.getHours()).padStart(2, "0")}:${String(timeDate.getMinutes()).padStart(2, "0")}`;
                 } else {
                     // Try to extract just time part if it's in HH:MM:SS format
                     const timeParts = props.todoData.due_time.split(":");
                     if (timeParts.length >= 2) {
-                        form.due_time = `${timeParts[0]}:${timeParts[1]}`;
+                        form.start_time = `${timeParts[0]}:${timeParts[1]}`;
                     } else {
-                        form.due_time = props.todoData.due_time;
+                        form.start_time = props.todoData.due_time;
                     }
                 }
+
+                // Set end_time 30 minutes after start_time if available
+                if (form.start_time) {
+                    setDuration(30);
+                }
             } else {
-                form.due_time = "";
+                form.start_time = "";
+                form.end_time = "";
+                activeDuration.value = null;
             }
 
             // Make sure category_id is properly handled (as a string for select element)
@@ -500,29 +667,6 @@ export default {
             { immediate: true },
         );
 
-        // Watch for categories changes and log them
-        watch(
-            () => props.categories,
-            (newCategories) => {
-                console.log("Categories updated in TaskModal:", newCategories);
-
-                // Log detailed info about categories for debugging
-                if (newCategories) {
-                    console.log("Categories type:", typeof newCategories);
-                    console.log("Is array:", Array.isArray(newCategories));
-                    console.log("Length:", newCategories.length);
-
-                    if (
-                        Array.isArray(newCategories) &&
-                        newCategories.length > 0
-                    ) {
-                        console.log("First category:", newCategories[0]);
-                    }
-                }
-            },
-            { immediate: true, deep: true },
-        );
-
         // Initialize form when component mounts
         onMounted(() => {
             console.log(
@@ -533,32 +677,20 @@ export default {
             );
             console.log("Categories on mount:", props.categories);
 
-            // Log detailed info about categories for debugging
-            if (props.categories) {
-                console.log(
-                    "Categories type on mount:",
-                    typeof props.categories,
-                );
-                console.log(
-                    "Is array on mount:",
-                    Array.isArray(props.categories),
-                );
-                console.log("Length on mount:", props.categories.length);
-
-                if (
-                    Array.isArray(props.categories) &&
-                    props.categories.length > 0
-                ) {
-                    console.log(
-                        "First category on mount:",
-                        props.categories[0],
-                    );
-                }
-            }
-
             // Initialize form data
             nextTick(() => {
                 initializeForm();
+
+                // If it's a new task, set current time as default
+                if (props.mode === "add" && !form.start_time) {
+                    const now = new Date();
+                    const hours = String(now.getHours()).padStart(2, "0");
+                    const minutes = String(now.getMinutes()).padStart(2, "0");
+                    form.start_time = `${hours}:${minutes}`;
+
+                    // Set default duration to 30 minutes
+                    setDuration(30);
+                }
             });
         });
 
@@ -575,6 +707,13 @@ export default {
 
             // Prepare data for submission
             const formData = { ...form };
+
+            // Set due_time from start_time for compatibility
+            if (formData.start_time) {
+                formData.due_time = formData.start_time;
+            } else {
+                formData.due_time = null;
+            }
 
             // Convert category_id to number if it's a string and not empty
             if (formData.category_id !== "" && formData.category_id !== null) {
@@ -712,9 +851,14 @@ export default {
             newCategory,
             categoriesArray,
             getSelectedCategory,
+            activeDuration,
+            setDuration,
             submitForm,
             createCategory,
             deleteTask,
+            setCurrentTimeIfEmpty,
+            clearTimes,
+            ensureEndTimeIsAfterStart,
             props, // Expose props for debugging
         };
     },
