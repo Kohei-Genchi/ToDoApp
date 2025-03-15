@@ -161,11 +161,13 @@ export default {
         const formattedTime = computed(() => {
             if (!props.todo.due_time) return "";
             const date = new Date(props.todo.due_time);
-            return date.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            }).replace(/^24/, '00');
+            return date
+                .toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                })
+                .replace(/^24/, "00");
         });
 
         /**

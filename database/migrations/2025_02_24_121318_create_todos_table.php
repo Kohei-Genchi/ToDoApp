@@ -4,28 +4,34 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
-        Schema::create('todos', function (Blueprint $table) {
+        Schema::create("todos", function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('title');
-            $table->text('description')->nullable();
-            $table->enum('location', ['INBOX', 'TODAY', 'TEMPLATE', 'SCHEDULED'])->default('INBOX');
-            $table->date('due_date')->nullable();
-            $table->time('due_time')->nullable();
-            $table->enum('status', ['pending', 'completed', 'trashed'])->default('pending');
-            $table->string('recurrence_type')->nullable(); // Added here
-            $table->date('recurrence_end_date')->nullable(); // Added here
-            $table->foreignId('category_id')->nullable()->constrained()->nullOnDelete(); // Added here
+            $table->foreignId("user_id")->constrained()->onDelete("cascade");
+            $table->string("title");
+            $table
+                ->enum("location", ["INBOX", "TODAY", "TEMPLATE", "SCHEDULED"])
+                ->default("INBOX");
+            $table->date("due_date")->nullable();
+            $table->time("due_time")->nullable();
+            $table
+                ->enum("status", ["pending", "completed", "trashed"])
+                ->default("pending");
+            $table->string("recurrence_type")->nullable(); // Added here
+            $table->date("recurrence_end_date")->nullable(); // Added here
+            $table
+                ->foreignId("category_id")
+                ->nullable()
+                ->constrained()
+                ->nullOnDelete(); // Added here
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('todos');
+        Schema::dropIfExists("todos");
     }
 };
