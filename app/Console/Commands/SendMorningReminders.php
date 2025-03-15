@@ -58,8 +58,8 @@ class SendMorningReminders extends Command
                         $this->info("ユーザー " . $user->id . " のリマインダー時間: " . $reminderTime->format('H:i'));
                         $this->info("リマインダー時間 (分): " . $reminderMinutesSinceMidnight . ", 現在時刻 (分): " . $currentMinutesSinceMidnight);
 
-                        // Allow a window of 15 minutes after the scheduled time
-                        $windowEnd = $reminderMinutesSinceMidnight + 15;
+                        // Allow a window of only 1 minute to match the exact time
+                        $windowEnd = $reminderMinutesSinceMidnight + 1;
 
                         if ($currentMinutesSinceMidnight < $reminderMinutesSinceMidnight || $currentMinutesSinceMidnight > $windowEnd) {
                             $skipDueToTime = true;
@@ -71,7 +71,7 @@ class SendMorningReminders extends Command
 
                         // Default time is 8:00 AM (480 minutes since midnight)
                         $defaultReminderTime = 8 * 60; // 8 hours * 60 minutes
-                        $windowEnd = $defaultReminderTime + 15;
+                        $windowEnd = $defaultReminderTime + 1;
 
                         if ($currentMinutesSinceMidnight < $defaultReminderTime || $currentMinutesSinceMidnight > $windowEnd) {
                             $skipDueToTime = true;
@@ -93,8 +93,8 @@ class SendMorningReminders extends Command
 
                 $this->info("ユーザー " . $user->id . " の保留中タスク数: " . $pendingTasks->count());
 
-                // Check if a notification was sent to this user recently (within the last 30 minutes)
-                $cacheKey = 'reminder_sent_to_user_' . $user->id;
+                // Check if a morning notification was sent to this user recently (within the last 30 minutes)
+                $cacheKey = 'morning_reminder_sent_to_user_' . $user->id;
                 $lastSentTime = Cache::get($cacheKey);
 
                 if ($lastSentTime) {
