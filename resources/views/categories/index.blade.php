@@ -1,4 +1,4 @@
-<!-- <x-app-layout>
+<x-app-layout>
     <div class="max-w-6xl mx-auto p-4">
 
         @include('todos.partials.nav-tabs')
@@ -119,4 +119,4 @@
             });
         </script>
     </div>
-</x-app-layout> -->
+</x-app-layout>

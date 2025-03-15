@@ -10,11 +10,11 @@
             @click="$emit('close')"
         ></div>
 
-        <!-- Modal Content - スクロール可能にする -->
+        <!-- Modal Content -->
         <div
             class="bg-white rounded-lg shadow-lg w-full max-w-xl relative z-10 flex flex-col max-h-[90vh]"
         >
-            <!-- ヘッダー - 固定 -->
+            <!-- Header -->
             <div
                 class="px-4 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center"
             >
@@ -41,9 +41,8 @@
                 </button>
             </div>
 
-            <!-- 本体 - スクロール可能 -->
+            <!-- Body -->
             <div class="p-4 overflow-y-auto">
-                <!-- Task Form -->
                 <form @submit.prevent="submitForm" class="space-y-4">
                     <!-- Title -->
                     <div>
@@ -77,7 +76,7 @@
                         />
                     </div>
 
-                    <!-- Time Range with Duration Buttons -->
+                    <!-- Time Range -->
                     <div>
                         <div class="flex items-center mb-2">
                             <div class="w-6 h-6 mr-2">
@@ -203,69 +202,104 @@
                                 }}
                             </button>
                         </div>
+                    </div>
 
-                        <!-- カテゴリー選択 -->
-                        <div v-if="!showCategoryInput" class="mt-1">
-                            <select
-                                id="category_id"
-                                v-model="form.category_id"
-                                class="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            >
-                                <option value="">カテゴリーなし</option>
-                                <option
-                                    v-for="category in categoriesArray"
-                                    :key="category.id"
-                                    :value="category.id"
-                                >
-                                    {{ category.name }}
-                                </option>
-                            </select>
-
-                            <!-- 選択されたカテゴリー表示 -->
-                            <div
-                                v-if="form.category_id && getSelectedCategory"
-                                class="mt-1 p-1 bg-gray-50 rounded-md text-xs flex items-center"
-                            >
-                                <div
-                                    class="w-3 h-3 rounded-full mr-1"
-                                    :style="{
-                                        backgroundColor:
-                                            getSelectedCategory.color,
-                                    }"
-                                ></div>
-                                <span>{{ getSelectedCategory.name }}</span>
-                            </div>
-                        </div>
-
-                        <!-- カテゴリー作成フォーム -->
-                        <div
-                            v-if="showCategoryInput"
-                            class="mt-1 space-y-2 p-2 border border-gray-200 rounded-md bg-gray-50"
+                    <!-- Category Select -->
+                    <div v-if="!showCategoryInput" class="mt-1">
+                        <select
+                            id="category_id"
+                            v-model="form.category_id"
+                            class="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         >
-                            <div class="flex gap-2">
-                                <div class="flex-grow">
+                            <option value="">カテゴリーなし</option>
+                            <option
+                                v-for="category in categoriesArray"
+                                :key="category.id"
+                                :value="category.id"
+                            >
+                                {{ category.name }}
+                            </option>
+                        </select>
+
+                        <!-- Selected Category Display -->
+                        <div
+                            v-if="form.category_id && getSelectedCategory"
+                            class="mt-1 p-1 bg-gray-50 rounded-md text-xs flex items-center"
+                        >
+                            <div
+                                class="w-3 h-3 rounded-full mr-1"
+                                :style="{
+                                    backgroundColor: getSelectedCategory.color,
+                                }"
+                            ></div>
+                            <span>{{ getSelectedCategory.name }}</span>
+                        </div>
+                    </div>
+
+                    <!-- New Category Form -->
+                    <div
+                        v-if="showCategoryInput"
+                        class="mt-3 overflow-hidden transition-all duration-300 transform"
+                    >
+                        <div
+                            class="p-3 rounded-xl bg-white shadow-sm border border-gray-100"
+                        >
+                            <!-- Input area with floating design -->
+                            <div class="flex items-center gap-2 p-2">
+                                <!-- Color selector with pill design -->
+                                <div class="relative">
+                                    <div
+                                        class="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer shadow-sm transition-transform duration-200 hover:scale-105 active:scale-95"
+                                        :style="{
+                                            backgroundColor: newCategory.color,
+                                        }"
+                                    >
+                                        <input
+                                            type="color"
+                                            v-model="newCategory.color"
+                                            class="w-10 h-10 rounded-full border-0 overflow-hidden cursor-pointer p-0"
+                                        />
+                                    </div>
+                                </div>
+
+                                <!-- Text input with minimalist design -->
+                                <div class="relative flex-grow">
                                     <input
                                         type="text"
-                                        id="new_category_name"
                                         v-model="newCategory.name"
                                         placeholder="カテゴリー名"
-                                        class="w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 text-sm"
+                                        class="flex-grow px-3 py-2 bg-gray-50 rounded-lg focus:outline-none"
                                     />
-                                </div>
-                                <div class="w-24">
-                                    <input
-                                        type="color"
-                                        id="new_category_color"
-                                        v-model="newCategory.color"
-                                        class="w-full h-7 border border-gray-300 rounded-md p-0"
-                                    />
+                                    <div
+                                        class="absolute bottom-0 left-0 w-full h-1 transition-all duration-300 transform scale-x-0 origin-left"
+                                        :class="{
+                                            'scale-x-100':
+                                                newCategory.name.length > 0,
+                                        }"
+                                        :style="{
+                                            backgroundColor: newCategory.color,
+                                        }"
+                                    ></div>
                                 </div>
                             </div>
-                            <div class="flex justify-end gap-2">
+
+                            <!-- Action buttons with subtle hover effects -->
+                            <div class="flex justify-end items-center gap-2">
                                 <button
                                     type="button"
+                                    @click="showCategoryInput = false"
+                                    class="px-4 py-2 text-sm text-gray-500 rounded-lg hover:bg-gray-100 transition-all duration-200"
+                                >
+                                    キャンセル
+                                </button>
+                                <button
                                     @click="createCategory"
-                                    class="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                    :disabled="!newCategory.name"
+                                    class="px-3 py-2 rounded-lg text-white"
+                                    :style="{
+                                        backgroundColor:
+                                            newCategory.color || '#4F46E5',
+                                    }"
                                 >
                                     追加
                                 </button>
@@ -321,7 +355,7 @@
             <!-- Footer -->
             <div class="bg-gray-50 px-4 py-2 border-t border-gray-200 mt-auto">
                 <div class="flex justify-between items-center">
-                    <!-- 削除ボタン (編集時のみ) -->
+                    <!-- Delete Button (edit mode only) -->
                     <div v-if="mode === 'edit'">
                         <button
                             type="button"
@@ -333,7 +367,7 @@
                     </div>
                     <div v-else class="flex-1"></div>
 
-                    <!-- キャンセル/保存ボタン -->
+                    <!-- Cancel/Save Buttons -->
                     <div class="flex gap-2">
                         <button
                             type="button"
@@ -399,34 +433,13 @@ export default {
     emits: ["close", "submit", "delete", "category-created"],
 
     setup(props, { emit }) {
-        console.log("TaskModal setup - Mode:", props.mode);
-        console.log("Categories received:", props.categories);
-        console.log("todoData received:", props.todoData);
-        console.log("todoId received:", props.todoId);
-
-        // Helper function to format dates
-        function formatDateString(dateStr) {
-            if (!dateStr) return "";
-
-            try {
-                // Check if already in YYYY-MM-DD format
-                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-                    return dateStr;
-                }
-
-                // Convert ISO date string to local date format
-                const date = new Date(dateStr);
-                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-            } catch (e) {
-                console.error("Error formatting date:", e, dateStr);
-                return "";
-            }
-        }
-
+        // ===============================
+        // State
+        // ===============================
         // Track active duration button
         const activeDuration = ref(null);
 
-        // Form data - initialize with default values
+        // Form data
         const form = reactive({
             title: "",
             description: "",
@@ -445,23 +458,21 @@ export default {
             color: "#3b82f6",
         });
 
-        // Ensure categories are properly handled
+        // ===============================
+        // Computed Properties
+        // ===============================
+
+        // Format categories for select dropdown
         const categoriesArray = computed(() => {
             if (!props.categories) return [];
 
-            // If it's already an array, return it
             if (Array.isArray(props.categories)) {
-                return props.categories.map((cat) => {
-                    // Make sure ID is a string for comparison with form.category_id
-                    return {
-                        ...cat,
-                        id: String(cat.id),
-                    };
-                });
+                return props.categories.map((cat) => ({
+                    ...cat,
+                    id: String(cat.id),
+                }));
             }
 
-            // If it's not an array, return empty array
-            console.error("Categories prop is not an array:", props.categories);
             return [];
         });
 
@@ -476,7 +487,29 @@ export default {
             );
         });
 
-        // Method to set current time when field is empty and focused
+        // ===============================
+        // Methods
+        // ===============================
+
+        // Format date string to YYYY-MM-DD
+        function formatDateString(dateStr) {
+            if (!dateStr) return "";
+
+            try {
+                // Check if already in YYYY-MM-DD format
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    return dateStr;
+                }
+
+                // Convert ISO date string to local date format
+                const date = new Date(dateStr);
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+            } catch (e) {
+                return "";
+            }
+        }
+
+        // Set current time when field is empty and focused
         function setCurrentTimeIfEmpty(field) {
             if (!form[field]) {
                 const now = new Date();
@@ -556,11 +589,7 @@ export default {
 
         // Initialize form data based on todoData prop
         function initializeForm() {
-            console.log("Initializing form with data:", props.todoData);
-
             if (!props.todoData) {
-                console.warn("TodoData is null or undefined");
-
                 // Set defaults for new task
                 if (props.mode === "add") {
                     form.title = "";
@@ -619,7 +648,6 @@ export default {
                 props.todoData.category_id !== undefined
             ) {
                 form.category_id = String(props.todoData.category_id);
-                console.log("Setting category_id to:", form.category_id);
             } else {
                 form.category_id = "";
             }
@@ -628,78 +656,10 @@ export default {
             form.recurrence_end_date = props.todoData.recurrence_end_date
                 ? formatDateString(props.todoData.recurrence_end_date)
                 : "";
-
-            console.log("Form initialized with:", { ...form });
         }
 
-        // Watch for prop changes and initialize form
-        watch(
-            () => props.todoData,
-            (newData) => {
-                console.log("TodoData changed:", newData);
-                nextTick(() => {
-                    initializeForm();
-                });
-            },
-            { immediate: true, deep: true },
-        );
-
-        // Watch for mode changes
-        watch(
-            () => props.mode,
-            (newMode) => {
-                console.log("Mode changed to:", newMode);
-                nextTick(() => {
-                    initializeForm();
-                });
-            },
-            { immediate: true },
-        );
-
-        // Set default date based on current view
-        watch(
-            () => props.currentDate,
-            (newDate) => {
-                if (props.mode === "add" && !form.due_date && newDate) {
-                    form.due_date = formatDateString(newDate);
-                }
-            },
-            { immediate: true },
-        );
-
-        // Initialize form when component mounts
-        onMounted(() => {
-            console.log(
-                "TaskModal mounted - TodoID:",
-                props.todoId,
-                "Mode:",
-                props.mode,
-            );
-            console.log("Categories on mount:", props.categories);
-
-            // Initialize form data
-            nextTick(() => {
-                initializeForm();
-
-                // If it's a new task, set current time as default
-                if (props.mode === "add" && !form.start_time) {
-                    const now = new Date();
-                    const hours = String(now.getHours()).padStart(2, "0");
-                    const minutes = String(now.getMinutes()).padStart(2, "0");
-                    form.start_time = `${hours}:${minutes}`;
-
-                    // Set default duration to 30 minutes
-                    setDuration(30);
-                }
-            });
-        });
-
-        // Form submission
+        // Submit form
         function submitForm() {
-            console.log("Submit button clicked");
-            console.log("Submitting form with data:", { ...form });
-            console.log("Task ID from props:", props.todoId);
-
             if (!form.title.trim()) {
                 alert("タイトルを入力してください");
                 return;
@@ -719,18 +679,11 @@ export default {
             if (formData.category_id !== "" && formData.category_id !== null) {
                 formData.category_id = Number(formData.category_id);
             } else {
-                // Ensure it's null and not an empty string
                 formData.category_id = null;
             }
 
-            console.log("Processed form data for submission:", formData);
-
             // Include task ID in the submission for edit mode
             if (props.mode === "edit" && props.todoId) {
-                console.log(
-                    "Emitting submit event with task ID:",
-                    props.todoId,
-                );
                 formData.id = props.todoId;
             }
 
@@ -748,9 +701,7 @@ export default {
                 category: categoryObject,
             };
 
-            console.log("Emitting task with category:", updatedTodo);
-
-            // Emit only the necessary events
+            // Emit submit event
             emit("submit", updatedTodo);
             emit("close");
         }
@@ -761,8 +712,6 @@ export default {
                 alert("カテゴリー名を入力してください");
                 return;
             }
-
-            console.log("Creating category:", newCategory);
 
             try {
                 // Get CSRF token
@@ -783,7 +732,7 @@ export default {
                         name: newCategory.name.trim(),
                         color: newCategory.color,
                     }),
-                    credentials: "include", // Important for authentication
+                    credentials: "include",
                 });
 
                 // Check for errors
@@ -796,7 +745,6 @@ export default {
 
                 // Parse response
                 const data = await response.json();
-                console.log("Category created successfully:", data);
 
                 // Set the new category as selected
                 form.category_id = String(data.id);
@@ -814,20 +762,13 @@ export default {
                 // Show success message
                 alert("カテゴリーが作成されました");
             } catch (error) {
-                console.error("Error creating category:", error);
                 alert("カテゴリーの作成に失敗しました: " + error.message);
             }
         }
 
         // Delete task
         function deleteTask() {
-            console.log(
-                "Delete task button clicked for task ID:",
-                props.todoId,
-            );
-
             if (!props.todoId) {
-                console.error("No task ID found");
                 return;
             }
 
@@ -835,15 +776,55 @@ export default {
             const shouldDeleteAllRecurring =
                 form.recurrence_type && form.recurrence_type !== "none";
 
-            console.log(
-                "Emitting delete event with id:",
-                props.todoId,
-                "deleteAllRecurring:",
-                shouldDeleteAllRecurring,
-            );
-
             emit("delete", props.todoId, shouldDeleteAllRecurring);
         }
+
+        // ===============================
+        // Watchers & Lifecycle Hooks
+        // ===============================
+
+        // Watch for prop changes and initialize form
+        watch(
+            () => props.todoData,
+            () => {
+                initializeForm();
+            },
+            { immediate: true, deep: true },
+        );
+
+        // Watch for mode changes
+        watch(
+            () => props.mode,
+            () => {
+                initializeForm();
+            },
+            { immediate: true },
+        );
+
+        // Set default date based on current view
+        watch(
+            () => props.currentDate,
+            (newDate) => {
+                if (props.mode === "add" && !form.due_date && newDate) {
+                    form.due_date = formatDateString(newDate);
+                }
+            },
+            { immediate: true },
+        );
+
+        // Initialize when component mounts
+        onMounted(() => {
+            // If it's a new task, set current time as default
+            if (props.mode === "add" && !form.start_time) {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, "0");
+                const minutes = String(now.getMinutes()).padStart(2, "0");
+                form.start_time = `${hours}:${minutes}`;
+
+                // Set default duration to 30 minutes
+                setDuration(30);
+            }
+        });
 
         return {
             form,
@@ -859,7 +840,6 @@ export default {
             setCurrentTimeIfEmpty,
             clearTimes,
             ensureEndTimeIsAfterStart,
-            props, // Expose props for debugging
         };
     },
 };

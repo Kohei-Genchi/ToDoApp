@@ -33,15 +33,15 @@ class SendMorningReminders extends Command
             $users = User::all();
             $count = 0;
             $now = now();
-            $currentHour = (int)$now->format("H");
-            $currentMinute = (int)$now->format("i");
-            $currentMinutesSinceMidnight = ($currentHour * 60) + $currentMinute;
+            $currentHour = (int) $now->format("H");
+            $currentMinute = (int) $now->format("i");
+            $currentMinutesSinceMidnight = $currentHour * 60 + $currentMinute;
 
-            $this->info("現在の時刻: " . $currentHour . ":" . $currentMinute);
-            $this->info("ユーザー数: " . $users->count());
+            $this->info("Current time: {$currentHour}:{$currentMinute}");
+            $this->info("Total users: {$users->count()}");
 
             // Check if --force flag is provided to bypass time checks
-            $forceRun = $this->option('force') ?? false;
+            $forceRun = $this->option("force") ?? false;
 
             foreach ($users as $user) {
                 $skipDueToTime = false;
@@ -49,36 +49,32 @@ class SendMorningReminders extends Command
                 // Time-based filtering (skip if --force is not provided)
                 if (!$forceRun) {
                     if ($user->morning_reminder_time) {
-                        // Convert to Carbon instance properly if it's not already
                         $reminderTime = $user->morning_reminder_time;
-                        $reminderHour = (int)$reminderTime->format("H");
-                        $reminderMinute = (int)$reminderTime->format("i");
-                        $reminderMinutesSinceMidnight = $reminderHour * 60 + $reminderMinute;
-
-                        $this->info("ユーザー " . $user->id . " のリマインダー時間: " . $reminderTime->format('H:i'));
-                        $this->info("リマインダー時間 (分): " . $reminderMinutesSinceMidnight . ", 現在時刻 (分): " . $currentMinutesSinceMidnight);
+                        $reminderHour = (int) $reminderTime->format("H");
+                        $reminderMinute = (int) $reminderTime->format("i");
+                        $reminderMinutesSinceMidnight =
+                            $reminderHour * 60 + $reminderMinute;
 
                         // Only send at the exact minute
-                        if ($currentMinutesSinceMidnight != $reminderMinutesSinceMidnight) {
+                        if (
+                            $currentMinutesSinceMidnight !=
+                            $reminderMinutesSinceMidnight
+                        ) {
                             $skipDueToTime = true;
-                            $this->info("時間が一致しません: 現在 " . $currentMinutesSinceMidnight . "分, 設定時間 " . $reminderMinutesSinceMidnight . "分");
                         }
                     } else {
                         // Default for users without a setting (8:00 AM)
-                        $this->info("ユーザー " . $user->id . " はリマインダー時間未設定 (デフォルト: 08:00)");
-
-                        // Default time is 8:00 AM (480 minutes since midnight)
                         $defaultReminderTime = 8 * 60; // 8 hours * 60 minutes
 
-                        if ($currentMinutesSinceMidnight != $defaultReminderTime) {
+                        if (
+                            $currentMinutesSinceMidnight != $defaultReminderTime
+                        ) {
                             $skipDueToTime = true;
-                            $this->info("デフォルト時間と一致しません: 現在 " . $currentMinutesSinceMidnight . "分, デフォルト時間 " . $defaultReminderTime . "分");
                         }
                     }
                 }
 
                 if ($skipDueToTime) {
-                    $this->info("ユーザー " . $user->id . " は時間が一致しないためスキップ");
                     continue;
                 }
 
@@ -88,18 +84,13 @@ class SendMorningReminders extends Command
                     ->whereDate("due_date", today())
                     ->get();
 
-                $this->info("ユーザー " . $user->id . " の保留中タスク数: " . $pendingTasks->count());
-
-                // Check if a morning notification was sent to this user recently (within the last 30 minutes)
-                $cacheKey = 'morning_reminder_sent_to_user_' . $user->id;
+                // Check if a morning notification was sent recently (within the last 30 minutes)
+                $cacheKey = "morning_reminder_sent_to_user_" . $user->id;
                 $lastSentTime = Cache::get($cacheKey);
 
                 if ($lastSentTime) {
                     $lastSentMinutes = now()->diffInMinutes($lastSentTime);
-                    $this->info("ユーザー " . $user->id . " は " . $lastSentMinutes . " 分前に通知を受け取りました");
-
                     if ($lastSentMinutes < 30) {
-                        $this->info("ユーザー " . $user->id . " は30分以内に通知を受け取ったためスキップします");
                         continue;
                     }
                 }
@@ -117,24 +108,19 @@ class SendMorningReminders extends Command
                         Cache::put($cacheKey, now(), 60); // Store for 60 minutes
 
                         $count++;
-                        $this->info("ユーザー " . $user->id . " に通知を送信しました");
+                        $this->info("Sent notification to user {$user->id}");
                     } catch (\Exception $e) {
-                        $this->error("通知送信エラー (ユーザー " . $user->id . "): " . $e->getMessage());
-                    }
-                } else {
-                    if (!$user->email) {
-                        $this->info("ユーザー " . $user->id . " はメールアドレスがないためスキップ");
-                    }
-                    if ($pendingTasks->count() <= 0) {
-                        $this->info("ユーザー " . $user->id . " は保留中タスクがないためスキップ");
+                        $this->error(
+                            "Error sending notification to user {$user->id}: {$e->getMessage()}"
+                        );
                     }
                 }
             }
 
-            $this->info("通知送信完了: {$count}ユーザー");
+            $this->info("Completed sending notifications to {$count} users");
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error("エラー発生: " . $e->getMessage());
+            $this->error("Error occurred: " . $e->getMessage());
             return Command::FAILURE;
         }
     }
