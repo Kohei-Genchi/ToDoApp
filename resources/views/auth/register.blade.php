@@ -1,6 +1,6 @@
 <x-guest-layout>
     <div class="mb-6 text-center">
-        <h1 class="text-2xl font-bold text-gray-800">{{ config('app.name', 'TicketYatra') }}</h1>
+        <h1 class="text-2xl font-bold text-gray-800">{{ config('app.name', 'TodoList') }}</h1>
         <p class="text-gray-600 mt-1">Create your account</p>
     </div>
 

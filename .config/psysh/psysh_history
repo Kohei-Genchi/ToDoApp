@@ -18,7 +18,21 @@ $user->todos()->create([
     'due_date' => now()->toDateString(),
     'status' => 'pending'
 ]);
-Mail::raw('テストメール', function($message) { 
-    $message->to('test@example.com')->subject('テスト送信'); 
+Mail::raw('テストメール', function($message) {
+    $message->to('test@example.com')->subject('テスト送信');
 });
 EXIT
+$user = App\Models\User::first() ?: App\Models\User::factory()->create(['email' => 'test@example.com']);
+$user->todos()->create([
+  'title' => 'Today Test Task',
+  'due_date' => today(),
+  'status' => 'pending',
+  'location' => 'TODAY'
+]);
+Mail::raw('Test mail from TodoList', function($message) {
+    $message->to('test@example.com')->subject('Test email');
+});
+
+// Test notification
+$user = App\Models\User::first();
+$user->notify(new App\Notifications\TaskReminder('This is a test reminder', 1));

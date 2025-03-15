@@ -46,13 +46,6 @@ export const MockEmptyState = {
     template: '<div class="mock-empty-state">No tasks</div>',
 };
 
-// Mock for TaskStats component
-export const MockTaskStats = {
-    name: "TaskStats",
-    props: ["totalCount", "completedCount", "pendingCount"],
-    template: '<div class="mock-task-stats">Total: {{ totalCount }}</div>',
-};
-
 // Mock for NotificationComponent
 export const MockNotificationComponent = {
     name: "NotificationComponent",
