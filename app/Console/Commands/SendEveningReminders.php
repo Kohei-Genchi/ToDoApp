@@ -45,12 +45,10 @@ class SendEveningReminders extends Command
                         $this->info("ユーザー " . $user->id . " のリマインダー時間: " . $reminderTime->format('H:i'));
                         $this->info("リマインダー時間 (分): " . $reminderMinutesSinceMidnight . ", 現在時刻 (分): " . $currentMinutesSinceMidnight);
 
-                        // Allow a window of only 1 minute to match the exact time
-                        $windowEnd = $reminderMinutesSinceMidnight + 1;
-
-                        if ($currentMinutesSinceMidnight < $reminderMinutesSinceMidnight || $currentMinutesSinceMidnight > $windowEnd) {
+                        // Only send at the exact minute
+                        if ($currentMinutesSinceMidnight != $reminderMinutesSinceMidnight) {
                             $skipDueToTime = true;
-                            $this->info("時間範囲外: " . $reminderMinutesSinceMidnight . "分から" . $windowEnd . "分の間ではありません");
+                            $this->info("時間が一致しません: 現在 " . $currentMinutesSinceMidnight . "分, 設定時間 " . $reminderMinutesSinceMidnight . "分");
                         }
                     } else {
                         // Default for users without a setting (18:00 PM for evening reminders)
@@ -58,11 +56,10 @@ class SendEveningReminders extends Command
 
                         // Default time is 18:00 (1080 minutes since midnight)
                         $defaultReminderTime = 18 * 60; // 18 hours * 60 minutes
-                        $windowEnd = $defaultReminderTime + 1;
 
-                        if ($currentMinutesSinceMidnight < $defaultReminderTime || $currentMinutesSinceMidnight > $windowEnd) {
+                        if ($currentMinutesSinceMidnight != $defaultReminderTime) {
                             $skipDueToTime = true;
-                            $this->info("デフォルト時間範囲外: " . $defaultReminderTime . "分から" . $windowEnd . "分の間ではありません");
+                            $this->info("デフォルト時間と一致しません: 現在 " . $currentMinutesSinceMidnight . "分, デフォルト時間 " . $defaultReminderTime . "分");
                         }
                     }
                 }
