@@ -1,12 +1,5 @@
 <template>
     <div>
-        <!-- タスク統計 -->
-        <task-stats
-            :total-count="todos.length"
-            :completed-count="completedCount"
-            :pending-count="pendingCount"
-        />
-
         <!-- タスクがない場合のメッセージ -->
         <empty-state v-if="todos.length === 0" />
 
@@ -29,16 +22,14 @@
 
 <script>
 import { computed } from "vue";
-import TaskStats from "./TaskStats.vue";
 import EmptyState from "./EmptyState.vue";
 import TaskItem from "./TaskItem.vue";
 
 export default {
     name: "TodoList",
     components: {
-        TaskStats,
         EmptyState,
-        TaskItem,
+        TaskItem
     },
 
     props: {

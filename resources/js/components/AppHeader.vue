@@ -12,7 +12,7 @@
                         :class="[
                             'px-3 py-1 rounded-md text-sm font-medium',
                             currentView === 'today'
-                                ? 'bg-blue-600 text-white'
+                                ? 'bg-blue-500 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
                         ]"
                     >
@@ -31,7 +31,7 @@
                     </button>
                     <button
                         @click="$emit('add-task')"
-                        class="px-3 py-1 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        class="px-3 py-1 rounded-md text-sm font-medium text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                         + 新しいタスク
                     </button>
