@@ -9,12 +9,11 @@
         />
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <!-- 日付ナビゲーション -->
-            <date-navigation
+            <!-- 週間日付ナビゲーション - 新しいコンポーネント -->
+            <weekly-date-navigation
                 v-if="currentView !== 'calendar'"
-                :formatted-date="formattedDate"
-                @previous-day="previousDay"
-                @next-day="nextDay"
+                :current-date="currentDate"
+                @date-selected="selectDate"
             />
 
             <!-- カレンダー月ナビゲーション -->
@@ -92,8 +91,8 @@ const NotificationComponent = defineAsyncComponent(
 
 // コンポーネントのインポート
 import AppHeader from "./AppHeader.vue";
-import DateNavigation from "./DateNavigation.vue";
 import MonthNavigation from "./MonthNavigation.vue";
+import WeeklyDateNavigation from "./WeeklyDateNavigation.vue";
 
 export default {
     name: "TodoApp",
@@ -105,8 +104,8 @@ export default {
         DeleteConfirmModal,
         NotificationComponent,
         AppHeader,
-        DateNavigation,
         MonthNavigation,
+        WeeklyDateNavigation, // 新しいナビゲーションコンポーネント
     },
 
     setup() {
@@ -376,22 +375,12 @@ export default {
         // ===============================
 
         /**
-         * 前日に移動
+         * 特定の日付を選択
+         * @param {string} date 日付文字列
          */
-        function previousDay() {
-            const date = new Date(currentDate.value);
-            date.setDate(date.getDate() - 1);
-            currentDate.value = date.toISOString().split("T")[0];
-            loadTasks();
-        }
-
-        /**
-         * 翌日に移動
-         */
-        function nextDay() {
-            const date = new Date(currentDate.value);
-            date.setDate(date.getDate() + 1);
-            currentDate.value = date.toISOString().split("T")[0];
+        function selectDate(date) {
+            currentDate.value = date;
+            currentView.value = "date";
             loadTasks();
         }
 
@@ -412,16 +401,6 @@ export default {
             const date = new Date(currentDate.value);
             date.setMonth(date.getMonth() + 1);
             currentDate.value = date.toISOString().split("T")[0];
-            loadTasks();
-        }
-
-        /**
-         * 特定の日付を選択
-         * @param {string} date 日付文字列
-         */
-        function selectDate(date) {
-            currentDate.value = date;
-            currentView.value = "date";
             loadTasks();
         }
 
@@ -806,11 +785,9 @@ export default {
             showCalendarView,
 
             // 日付操作
-            previousDay,
-            nextDay,
+            selectDate,
             previousMonth,
             nextMonth,
-            selectDate,
 
             // タスクモーダル
             openAddTaskModal,
