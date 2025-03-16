@@ -293,6 +293,7 @@
                                     キャンセル
                                 </button>
                                 <button
+                                    type="button"
                                     @click="createCategory"
                                     :disabled="!newCategory.name"
                                     class="px-3 py-2 rounded-lg text-white"
