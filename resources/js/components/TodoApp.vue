@@ -284,7 +284,7 @@ export default {
                     currentView.value,
                     currentDate.value,
                 );
-
+                //オブジェクトやnull などが返ってきた場合に備えて Array.isArrayで確認。
                 if (!Array.isArray(response.data)) {
                     todos.value = [];
                     return;
@@ -593,28 +593,21 @@ export default {
             }
         }
 
-        /**
-         * メモリストを更新
-         */
         async function refreshMemoList() {
             try {
-                // 更新されたメモリストHTMLを取得
-                const response = await fetch("/api/memos-partial", {
+                const response = await axios.get("/api/memos-partial", {
                     headers: {
-                        "X-Requested-With": "XMLHttpRequest",
                         Accept: "text/html",
                         "Cache-Control": "no-cache, no-store, must-revalidate",
                     },
-                    cache: "no-store", // キャッシュなし
+                    // キャッシュを無効化
+                    params: { _t: new Date().getTime() },
                 });
 
-                if (!response.ok) {
-                    throw new Error(`API returned status ${response.status}`);
-                }
+                // レスポンスデータは自動的に処理される
+                const html = response.data;
 
-                const html = await response.text();
-
-                // メモリストコンテナを検索（ページの異なる部分に複数ある可能性）
+                // メモリストコンテナを検索
                 const memoContainers = document.querySelectorAll(
                     ".memo-list-container",
                 );
@@ -625,14 +618,14 @@ export default {
                         container.innerHTML = html;
                     });
 
-                    // 必要に応じてイベントリスナーを再アタッチ
+                    // イベントリスナーを再アタッチ
                     attachMemoListEvents();
-
                     return true;
                 } else {
                     return false;
                 }
             } catch (error) {
+                console.error("メモリスト更新エラー:", error);
                 return false;
             }
         }

@@ -26,25 +26,26 @@ class TodoApiController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            // If not authenticated, return an empty array
             if (!Auth::check()) {
                 return response()->json([]);
             }
 
-            // Get query parameters
+            // クエリパラメータを取得
+            // $request->view に値がある場合、その値を $view に代入。null または undefined の場合、デフォルト値 "today"を。
             $view = $request->view ?? "today";
-
             $date = $request->date ? now()->parse($request->date) : now();
 
-            // Build base query
+            // クエリの構築
             $query = $this->buildBaseTaskQuery();
-
-            // Apply view-specific filters
             $this->applyViewFilters($query, $view, $date, $request);
 
             // Fetch tasks
             $todos = $query->orderBy("due_time", "asc")->get();
-
+            // Log::info("Task index request", $request->all());
+            // Log::debug("Query result", [
+            //     "count" => $todos->count(),
+            //     "first_item" => $todos->first(),
+            // ]);
             return response()->json($todos);
         } catch (\Exception $e) {
             return response()->json(
@@ -63,7 +64,6 @@ class TodoApiController extends Controller
     public function store(TodoRequest $request): JsonResponse
     {
         try {
-            // Check if user is authenticated
             if (!Auth::check()) {
                 return response()->json(
                     ["error" => "Authentication required"],
@@ -71,13 +71,11 @@ class TodoApiController extends Controller
                 );
             }
 
-            // Prepare task data
             $taskData = $this->prepareTaskData($request->validated());
 
-            // Create the task
             $todo = Todo::create($taskData);
 
-            // Handle recurring tasks
+            // 繰り返しタスクの処理
             if ($this->shouldCreateRecurringTasks($taskData)) {
                 $this->createRecurringTasks($taskData);
             }

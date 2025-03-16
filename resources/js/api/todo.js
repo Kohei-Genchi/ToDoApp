@@ -56,6 +56,7 @@ export default {
      * @returns {Promise} APIレスポンス
      */
     getTasks(view, date) {
+        // console.log("getTaskWith", view, date);
         return axios.get("/api/todos", {
             params: { view, date },
             headers: getCommonHeaders(),

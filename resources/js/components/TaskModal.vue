@@ -677,7 +677,6 @@ export default {
                 formData.due_time = null;
             }
 
-            // Convert category_id to number if it's a string and not empty
             if (formData.category_id !== "" && formData.category_id !== null) {
                 formData.category_id = Number(formData.category_id);
             } else {
@@ -704,12 +703,11 @@ export default {
             };
 
             console.log("フォーム送信データ:", formData);
-            // Emit submit event
+
             emit("submit", updatedTodo);
             emit("close");
         }
 
-        // Create new category
         async function createCategory() {
             if (!newCategory.name.trim()) {
                 alert("カテゴリー名を入力してください");
@@ -717,55 +715,36 @@ export default {
             }
 
             try {
-                // Get CSRF token
-                const csrf = document
-                    .querySelector('meta[name="csrf-token"]')
-                    .getAttribute("content");
-
-                // Make direct fetch request
-                const response = await fetch("/api/categories", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": csrf,
-                        Accept: "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
-                    },
-                    body: JSON.stringify({
-                        name: newCategory.name.trim(),
-                        color: newCategory.color,
-                    }),
-                    credentials: "include",
+                const response = await axios.post("/api/categories", {
+                    name: newCategory.name.trim(),
+                    color: newCategory.color,
                 });
 
-                // Check for errors
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(
-                        errorData.message || "Error creating category",
-                    );
-                }
+                // レスポンスデータに直接アクセス可能
+                const data = response.data;
 
-                // Parse response
-                const data = await response.json();
-
-                // Set the new category as selected
+                // 新しいカテゴリを選択
                 form.category_id = String(data.id);
 
-                // Hide the category form
+                // カテゴリフォームを非表示
                 showCategoryInput.value = false;
 
-                // Emit event to refresh categories
+                // カテゴリリストを更新
                 emit("category-created");
 
-                // Reset form
+                // フォームをリセット
                 newCategory.name = "";
                 newCategory.color = "#3b82f6";
 
-                // Show success message
+                // 成功メッセージ
                 alert("カテゴリーが作成されました");
             } catch (error) {
-                alert("カテゴリーの作成に失敗しました: " + error.message);
+                // エラーハンドリングも簡潔に
+                console.error("カテゴリー作成エラー:", error);
+                alert(
+                    "カテゴリーの作成に失敗しました: " +
+                        (error.response?.data?.message || error.message),
+                );
             }
         }
 
