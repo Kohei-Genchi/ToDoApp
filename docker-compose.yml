@@ -69,15 +69,16 @@ services:
             - app-network
 
     db:
-        image: mysql:8.0
+        platform: linux/arm64/v8
+        image: mariadb:10.6
         container_name: my-mysql
         hostname: mysql
         restart: unless-stopped
         environment:
-            MYSQL_DATABASE: ${DB_DATABASE}
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-            MYSQL_USER: ${DB_USERNAME}
-            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MARIADB_DATABASE: ${DB_DATABASE}
+            MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+            MARIADB_USER: ${DB_USERNAME}
+            MARIADB_PASSWORD: ${DB_PASSWORD}
         volumes:
             - dbdata:/var/lib/mysql
         networks:

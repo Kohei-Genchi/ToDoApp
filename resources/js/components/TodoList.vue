@@ -6,6 +6,7 @@
         <!-- タスク一覧 -->
         <div v-else class="bg-white rounded-lg shadow-sm">
             <ul class="divide-y divide-gray-100">
+                <!-- // task-itemでeditイベント発生→editTask メソッドが実行。 -->
                 <task-item
                     v-for="todo in todos"
                     :key="todo.id"
@@ -29,7 +30,7 @@ export default {
     name: "TodoList",
     components: {
         EmptyState,
-        TaskItem
+        TaskItem,
     },
 
     props: {
@@ -90,6 +91,9 @@ export default {
          */
         const editTask = (todo) => {
             emit("edit-task", todo);
+            console.log("TodoListがeditイベントを受け取りました:", todo);
+            //TodoAppのopenEditTaskModal
+            //edit イベントの(todo)を受け取る
         };
 
         return {

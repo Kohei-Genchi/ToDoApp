@@ -11,6 +11,7 @@ use App\Traits\HandlesApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TodoApiController extends Controller
 {
@@ -32,6 +33,7 @@ class TodoApiController extends Controller
 
             // Get query parameters
             $view = $request->view ?? "today";
+
             $date = $request->date ? now()->parse($request->date) : now();
 
             // Build base query
@@ -137,6 +139,7 @@ class TodoApiController extends Controller
      */
     public function update(TodoUpdateRequest $request, Todo $todo): JsonResponse
     {
+        Log::info("タスク更新リクエスト:", $request->all());
         try {
             // Check if user is authenticated
             if (!Auth::check()) {

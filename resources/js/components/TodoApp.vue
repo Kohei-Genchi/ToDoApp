@@ -321,6 +321,7 @@ export default {
             } catch (error) {
                 handleError(error, "タスクの読み込みに失敗しました");
             }
+            console.log("更新後のタスクリスト:", todos.value);
         }
 
         async function loadCategories() {
@@ -473,6 +474,7 @@ export default {
                     selectedTaskData.value = JSON.parse(JSON.stringify(task));
 
                     showTaskModal.value = true;
+                    console.log("編集モーダルを開きます:", task);
                 }
             } catch (error) {
                 handleError(error, "タスク編集の準備中にエラーが発生しました");
@@ -572,6 +574,7 @@ export default {
                         (!selectedTaskData.value.due_date ||
                             selectedTaskData.value.due_date === null);
 
+                    console.log("APIに送信するデータ:", preparedData);
                     // 既存のタスクを更新
                     response = await TodoApi.updateTask(taskId, preparedData);
 
@@ -580,7 +583,7 @@ export default {
                         await refreshMemoList();
                     }
                 }
-
+                console.log("APIレスポンス:", response.data);
                 closeTaskModal();
 
                 // モーダルを閉じた後、現在のビューに基づいて関連するタスクデータを再読み込み

@@ -656,6 +656,7 @@ export default {
             form.recurrence_end_date = props.todoData.recurrence_end_date
                 ? formatDateString(props.todoData.recurrence_end_date)
                 : "";
+            // console.log("モーダルにデータをロード:", props.todoData);
         }
 
         // Submit form
@@ -665,7 +666,7 @@ export default {
                 return;
             }
 
-            // Prepare data for submission
+            // データ準備
             const formData = { ...form };
 
             // Set due_time from start_time for compatibility
@@ -701,6 +702,7 @@ export default {
                 category: categoryObject,
             };
 
+            console.log("フォーム送信データ:", formData);
             // Emit submit event
             emit("submit", updatedTodo);
             emit("close");

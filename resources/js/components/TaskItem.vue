@@ -188,6 +188,9 @@ export default {
          */
         const handleEdit = () => {
             emit("edit", props.todo);
+            console.log("編集ボタンがクリックされました:", props.todo);
+            // (emit)、親コンポーネントにイベントを送信
+            // handleEdit→edit イベント発生、現在の todo (タスクデータ) を親コンポーネント(TodoList)に渡す
         };
 
         return {
