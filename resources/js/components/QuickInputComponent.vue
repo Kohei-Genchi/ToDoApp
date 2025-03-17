@@ -1,4 +1,3 @@
-<!-- resources/js/components/QuickInputComponent.vue -->
 <template>
     <div class="mb-4">
         <div class="text-xs text-gray-400 uppercase tracking-wider mb-2">

@@ -16,3 +16,8 @@ exit
 php artisan migrate:fresh
 php artisan db:seed
 exit
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+php artisan route:clear
+exit

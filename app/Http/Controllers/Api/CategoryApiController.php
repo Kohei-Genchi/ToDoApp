@@ -1,19 +1,13 @@
 <?php
 
-// app/Http/Controllers/Api/CategoryApiController.php
-// Fix for category API
-
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
+use App\Http\Requests\CategoryApiRequest;
 
 class CategoryApiController extends Controller
 {
@@ -53,7 +47,7 @@ class CategoryApiController extends Controller
     /**
      * Store a newly created category via AJAX.
      */
-    public function store(Request $request): JsonResponse
+    public function store(CategoryApiRequest $request): JsonResponse
     {
         // For unauthenticated access, return unauthorized error
         if (!Auth::check()) {
@@ -66,27 +60,10 @@ class CategoryApiController extends Controller
             );
         }
 
-        // Validate the request
-        $validator = Validator::make($request->all(), [
-            "name" => "required|string|max:255",
-            "color" => "required|string|max:7",
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(
-                [
-                    "success" => false,
-                    "message" => "Validation failed",
-                    "errors" => $validator->errors(),
-                ],
-                422
-            );
-        }
-
         try {
             $user = Auth::user();
 
-            // Create the category
+            // Create the category - request is already validated by CategoryApiRequest
             $category = Category::create([
                 "name" => $request->name,
                 "color" => $request->color,
@@ -121,8 +98,10 @@ class CategoryApiController extends Controller
     /**
      * Update an existing category.
      */
-    public function update(Request $request, Category $category): JsonResponse
-    {
+    public function update(
+        CategoryApiRequest $request,
+        Category $category
+    ): JsonResponse {
         // For unauthenticated access, return unauthorized error
         if (!Auth::check()) {
             return response()->json(
@@ -145,25 +124,8 @@ class CategoryApiController extends Controller
             );
         }
 
-        // Validate the request
-        $validator = Validator::make($request->all(), [
-            "name" => "required|string|max:255",
-            "color" => "required|string|max:7",
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(
-                [
-                    "success" => false,
-                    "message" => "Validation failed",
-                    "errors" => $validator->errors(),
-                ],
-                422
-            );
-        }
-
         try {
-            // Update the category
+            // Update the category - request is already validated by CategoryApiRequest
             $category->update([
                 "name" => $request->name,
                 "color" => $request->color,

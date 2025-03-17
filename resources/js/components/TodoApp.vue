@@ -284,6 +284,7 @@ export default {
                     currentView.value,
                     currentDate.value,
                 );
+                // console.log(response.data[0]);
                 //オブジェクトやnull などが返ってきた場合に備えて Array.isArrayで確認。
                 if (!Array.isArray(response.data)) {
                     todos.value = [];
@@ -294,7 +295,6 @@ export default {
                 todos.value = response.data.map((todo) => {
                     // 参照の問題を避けるためディープコピーを作成
                     const processedTodo = { ...todo };
-
                     // IDが数値であることを確認
                     if (processedTodo.id !== undefined) {
                         processedTodo.id = Number(processedTodo.id);

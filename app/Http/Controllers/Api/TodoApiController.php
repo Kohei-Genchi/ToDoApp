@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Clockwork\Support\Laravel\Facade as Clockwork;
 
 class TodoApiController extends Controller
 {
@@ -41,11 +42,7 @@ class TodoApiController extends Controller
 
             // Fetch tasks
             $todos = $query->orderBy("due_time", "asc")->get();
-            // Log::info("Task index request", $request->all());
-            // Log::debug("Query result", [
-            //     "count" => $todos->count(),
-            //     "first_item" => $todos->first(),
-            // ]);
+
             return response()->json($todos);
         } catch (\Exception $e) {
             return response()->json(
