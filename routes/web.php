@@ -5,6 +5,7 @@ use App\Http\Controllers\TodoController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Api\CategoryApiController;
+use App\Http\Controllers\Api\TaskShareController;
 use App\Models\Todo;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
@@ -13,67 +14,67 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\StripSubscriptionController;
 
 /**
- * 認証ルートの読み込み
+ * Load authentication routes
  */
 require __DIR__ . "/auth.php";
 
 /**
- * ホームページリダイレクト
+ * Homepage redirect
  */
 Route::get("/", function () {
     return redirect()->route("todos.index");
 })->name("home");
 
-//Google ログイン
+//Google login
 Route::get("/auth/google", [GoogleController::class, "redirectToGoogle"]);
 Route::get("/auth/google/callback", [
     GoogleController::class,
     "handleGoogleCallback",
 ]);
 
-# サブスク申請ページ(チェックアウトに進む前のページ)
+# Subscription page (before checkout)
 Route::get("stripe/subscription", [
     StripSubscriptionController::class,
     "index",
 ])->name("stripe.subscription");
 
-# チェックアウトページ
+# Checkout page
 Route::get("stripe/subscription/checkout", [
     StripSubscriptionController::class,
     "checkout",
 ])->name("stripe.subscription.checkout");
 
-# 支払い完了
+# Payment complete
 Route::get("stripe/subscription/comp", [
     StripSubscriptionController::class,
     "comp",
 ])->name("stripe.subscription.comp");
 
-# カスタマーポータル
+# Customer portal
 Route::get("stripe/subscription/customer_portal", [
     StripSubscriptionController::class,
     "customer_portal",
 ])->name("stripe.subscription.customer_portal");
 
 /**
- * ゲストログイン機能
+ * Guest login
  */
 Route::get("/guest-login", [GuestLoginController::class, "login"])
     ->middleware("guest")
     ->name("guest.login");
 
 /**
- * カテゴリーAPI
+ * Category API
  */
 Route::get("/api/web-categories", [CategoryApiController::class, "index"]);
 
 /**
- * Todoアプリメインページ
+ * Todo app main page
  */
 Route::get("/todos", [TodoController::class, "index"])->name("todos.index");
 
 /**
- * ダッシュボードリダイレクト
+ * Dashboard redirect
  */
 Route::get("/dashboard", function () {
     return redirect()->route("todos.index", ["view" => "today"]);
@@ -82,11 +83,11 @@ Route::get("/dashboard", function () {
     ->name("dashboard");
 
 /**
- * 認証が必要なルートグループ
+ * Routes requiring authentication
  */
 Route::middleware(["auth"])->group(function () {
     /**
-     * Todo Web ルート
+     * Todo Web routes
      */
     Route::post("/todos", [TodoController::class, "store"])->name(
         "todos.store"
@@ -100,7 +101,7 @@ Route::middleware(["auth"])->group(function () {
     );
 
     /**
-     * カテゴリールート
+     * Category routes
      */
     Route::get("/categories", [CategoryController::class, "index"])->name(
         "categories.index"
@@ -118,7 +119,7 @@ Route::middleware(["auth"])->group(function () {
     ])->name("categories.destroy");
 
     /**
-     * プロフィールルート
+     * Profile routes
      */
     Route::get("/profile", [ProfileController::class, "edit"])->name(
         "profile.edit"
@@ -131,7 +132,52 @@ Route::middleware(["auth"])->group(function () {
     );
 
     /**
-     * メモリスト部分ビュー取得API
+     * Task sharing web routes
+     */
+    Route::prefix("todos/shared")->group(function () {
+        Route::get("/", [TaskShareController::class, "sharedWithMe"])->name(
+            "todos.shared"
+        );
+    });
+
+    /**
+     * Routes for task sharing (web interface)
+     */
+    Route::prefix("tasks")
+        ->middleware(["auth"])
+        ->group(function () {
+            // View tasks shared with me
+            Route::get("/shared", [SharedTaskController::class, "index"])->name(
+                "tasks.shared"
+            );
+
+            // View sharing settings for a task (owner only)
+            Route::get("/{todo}/sharing", [
+                SharedTaskController::class,
+                "showSharing",
+            ])->name("tasks.sharing");
+
+            // Share a task with a user (owner only)
+            Route::post("/{todo}/sharing", [
+                SharedTaskController::class,
+                "storeSharing",
+            ])->name("tasks.storeSharing");
+
+            // Update sharing permission (owner only)
+            Route::put("/{todo}/sharing/{user}", [
+                SharedTaskController::class,
+                "updateSharing",
+            ])->name("tasks.updateSharing");
+
+            // Remove sharing (owner only)
+            Route::delete("/{todo}/sharing/{user}", [
+                SharedTaskController::class,
+                "destroySharing",
+            ])->name("tasks.destroySharing");
+        });
+
+    /**
+     * Memo list partial view API
      */
     Route::get("/api/memos-partial", function () {
         $memos = Auth::user()
@@ -146,7 +192,7 @@ Route::middleware(["auth"])->group(function () {
     });
 
     /**
-     * カテゴリーAPI
+     * Category API
      */
     Route::post("/api/categories", [
         CategoryApiController::class,

@@ -4,11 +4,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\TodoApiController;
 use App\Http\Controllers\Api\CategoryApiController;
-use App\Http\Controllers\StripSubscriptionController;
+use App\Http\Controllers\Api\TaskShareController;
 use App\Http\Controllers\Api\MemoApiController;
+use App\Http\Controllers\StripSubscriptionController;
 
 /**
- * ユーザー情報取得API
+ * User information API
  */
 Route::middleware("auth:sanctum")->get("/user", function (Request $request) {
     return $request->user();
@@ -23,46 +24,68 @@ Route::post("/stripe/subscription/webhook", [
 ]);
 
 /**
- * Todo API ルート
+ * Todo API routes
  */
 Route::prefix("todos")
     ->middleware(["web"])
     ->group(function () {
-        // タスク一覧取得
+        // Get tasks
         Route::get("/", [TodoApiController::class, "index"]);
-        // タスク作成
+        // Create task
         Route::post("/", [TodoApiController::class, "store"]);
-        // 個別タスク操作
+        // Individual task operations
         Route::get("/{todo}", [TodoApiController::class, "show"]);
-        // タスク更新
+        // Update task
         Route::match(["put", "post"], "/{todo}", [
             TodoApiController::class,
             "update",
         ]);
-        // タスクステータス操作
+        // Toggle task status
         Route::patch("/{todo}/toggle", [TodoApiController::class, "toggle"]);
-        // タスク削除
+        // Delete task
         Route::delete("/{todo}", [TodoApiController::class, "destroy"]);
     });
 
 /**
- * カテゴリー API ルート
+ * Task sharing API routes - Fixed to match the client's expected URLs
+ */
+Route::middleware(["web"])->group(function () {
+    // Get users with whom a task is shared
+    Route::get("/tasks/{todo}/shares", [TaskShareController::class, "index"]);
+    // Share a task with a user
+    Route::post("/tasks/{todo}/shares", [TaskShareController::class, "store"]);
+    // Update sharing permission for a user
+    Route::put("/tasks/{todo}/shares/{user}", [
+        TaskShareController::class,
+        "update",
+    ]);
+    // Stop sharing a task with a user
+    Route::delete("/tasks/{todo}/shares/{user}", [
+        TaskShareController::class,
+        "destroy",
+    ]);
+    // Get tasks shared with me
+    Route::get("/shared-with-me", [TaskShareController::class, "sharedWithMe"]);
+});
+
+/**
+ * Category API routes
  */
 Route::prefix("categories")
     ->middleware(["web"])
     ->group(function () {
-        // カテゴリー一覧取得
+        // Get categories
         Route::get("/", [CategoryApiController::class, "index"]);
-        // カテゴリー作成
+        // Create category
         Route::post("/", [CategoryApiController::class, "store"]);
-        // カテゴリー更新
+        // Update category
         Route::put("/{category}", [CategoryApiController::class, "update"]);
-        // カテゴリー削除
+        // Delete category
         Route::delete("/{category}", [CategoryApiController::class, "destroy"]);
     });
 
 /**
- * メモ API ルート
+ * Memo API routes
  */
 Route::prefix("memos")
     ->middleware(["web"])

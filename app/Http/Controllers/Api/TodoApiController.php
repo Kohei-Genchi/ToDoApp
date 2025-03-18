@@ -11,6 +11,7 @@ use App\Traits\HandlesApiResponses;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Clockwork\Support\Laravel\Facade as Clockwork;
 
@@ -106,10 +107,10 @@ class TodoApiController extends Controller
                 return response()->json([], 401);
             }
 
-            // Check if the task belongs to the authenticated user
-            if ($todo->user_id !== Auth::id()) {
+            // Check if the user is authorized to view this task
+            if (Gate::denies('view', $todo)) {
                 return response()->json(
-                    ["error" => "Unauthorized access"],
+                    ["error" => "Unauthorized access. You don't have permission to view this task."],
                     403
                 );
             }
@@ -144,10 +145,10 @@ class TodoApiController extends Controller
                 );
             }
 
-            // Check if the task belongs to the authenticated user
-            if ($todo->user_id !== Auth::id()) {
+            // Check if the user is authorized to update this task
+            if (Gate::denies('update', $todo)) {
                 return response()->json(
-                    ["error" => "Unauthorized access"],
+                    ["error" => "Unauthorized access. You don't have permission to edit this task."],
                     403
                 );
             }
@@ -193,10 +194,10 @@ class TodoApiController extends Controller
                 );
             }
 
-            // Check if the task belongs to the authenticated user
-            if ($todo->user_id !== Auth::id()) {
+            // Check if the user is authorized to toggle this task
+            if (Gate::denies('update', $todo)) {
                 return response()->json(
-                    ["error" => "Unauthorized access"],
+                    ["error" => "Unauthorized access. You don't have permission to update this task."],
                     403
                 );
             }
@@ -238,10 +239,10 @@ class TodoApiController extends Controller
                 );
             }
 
-            // Check if the task belongs to the authenticated user
-            if ($todo->user_id !== Auth::id()) {
+            // Check if the user is authorized to delete this task
+            if (Gate::denies('delete', $todo)) {
                 return response()->json(
-                    ["error" => "Unauthorized access"],
+                    ["error" => "Unauthorized access. You don't have permission to delete this task."],
                     403
                 );
             }

@@ -31,16 +31,11 @@ class TaskReminder extends Notification
      */
     public function via(object $notifiable): array
     {
-        // Check if the environment is configured to use Slack
-        // If SLACK_BOT_USER_OAUTH_TOKEN is set, use Slack, otherwise use mail
         return config("services.slack.notifications.bot_user_oauth_token")
             ? ["slack"]
             : ["mail"];
     }
 
-    /**
-     * Get the mail representation of the notification.
-     */
     public function toMail(object $notifiable): MailMessage
     {
         $mailMessage = new MailMessage();

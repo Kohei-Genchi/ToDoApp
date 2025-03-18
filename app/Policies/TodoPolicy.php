@@ -17,7 +17,13 @@ class TodoPolicy
 
     public function view(User $user, Todo $todo): bool
     {
-        return $user->id === $todo->user_id;
+        // Allow if user owns the task
+        if ($user->id === $todo->user_id) {
+            return true;
+        }
+
+        // Allow if task is shared with user (any permission level)
+        return $todo->isSharedWith($user);
     }
 
 
@@ -29,7 +35,23 @@ class TodoPolicy
 
     public function update(User $user, Todo $todo): bool
     {
-        return $user->id === $todo->user_id;
+        // Allow if user owns the task
+        if ($user->id === $todo->user_id) {
+            return true;
+        }
+
+        // Allow if task is shared with user and they have edit permission
+        if ($todo->isSharedWith($user)) {
+            $sharePermission = $todo->sharedWith()
+                ->where('user_id', $user->id)
+                ->first()
+                ->pivot
+                ->permission ?? null;
+
+            return $sharePermission === 'edit';
+        }
+
+        return false;
     }
 
 

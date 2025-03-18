@@ -1,36 +1,46 @@
 <template>
     <div>
-        <!-- タスクがない場合のメッセージ -->
+        <!-- Empty state when no tasks -->
         <empty-state v-if="todos.length === 0" />
 
-        <!-- タスク一覧 -->
+        <!-- Task list -->
         <div v-else class="bg-white rounded-lg shadow-sm">
             <ul class="divide-y divide-gray-100">
-                <!-- // task-itemでeditイベント発生→editTask メソッドが実行。 -->
                 <task-item
                     v-for="todo in todos"
                     :key="todo.id"
                     :todo="todo"
                     :category="getCategoryById(todo.category_id)"
+                    :current-user-id="currentUserId"
                     @toggle="toggleTask"
                     @edit="editTask"
                     @delete="$emit('delete-task', todo)"
+                    @share="shareTask(todo)"
                 />
             </ul>
         </div>
+
+        <!-- Task Share Modal -->
+        <task-share-modal
+            v-if="showShareModal"
+            :task="selectedShareTask"
+            @close="showShareModal = false"
+        />
     </div>
 </template>
 
 <script>
-import { computed } from "vue";
+import { computed, ref, onMounted } from "vue";
 import EmptyState from "./EmptyState.vue";
 import TaskItem from "./TaskItem.vue";
+import TaskShareModal from "./TaskShareModal.vue";
 
 export default {
     name: "TodoList",
     components: {
         EmptyState,
         TaskItem,
+        TaskShareModal,
     },
 
     props: {
@@ -47,8 +57,15 @@ export default {
     emits: ["toggle-task", "edit-task", "delete-task"],
 
     setup(props, { emit }) {
+        // Get current user ID from Laravel global variable
+        const currentUserId = ref(null);
+
+        // State for share modal
+        const showShareModal = ref(false);
+        const selectedShareTask = ref(null);
+
         /**
-         * 完了済みタスク数
+         * Number of completed tasks
          */
         const completedCount = computed(
             () =>
@@ -57,7 +74,7 @@ export default {
         );
 
         /**
-         * 未完了タスク数
+         * Number of pending tasks
          */
         const pendingCount = computed(
             () =>
@@ -66,9 +83,9 @@ export default {
         );
 
         /**
-         * カテゴリIDからカテゴリオブジェクトを取得
-         * @param {number} categoryId カテゴリID
-         * @returns {Object|null} カテゴリオブジェクト
+         * Get category by ID
+         * @param {number} categoryId Category ID
+         * @returns {Object|null} Category object
          */
         const getCategoryById = (categoryId) => {
             if (!categoryId) return null;
@@ -78,23 +95,38 @@ export default {
         };
 
         /**
-         * タスク完了状態切り替えハンドラ
-         * @param {Object} todo タスクオブジェクト
+         * Task status toggle handler
+         * @param {Object} todo Task object
          */
         const toggleTask = (todo) => {
             emit("toggle-task", todo);
         };
 
         /**
-         * タスク編集ハンドラ
-         * @param {Object} todo タスクオブジェクト
+         * Task edit handler
+         * @param {Object} todo Task object
          */
         const editTask = (todo) => {
             emit("edit-task", todo);
-            console.log("TodoListがeditイベントを受け取りました:", todo);
-            //TodoAppのopenEditTaskModal
-            //edit イベントの(todo)を受け取る
+            console.log("TodoList received edit event:", todo);
         };
+
+        /**
+         * Task share handler
+         * @param {Object} todo Task object
+         */
+        const shareTask = (todo) => {
+            selectedShareTask.value = todo;
+            showShareModal.value = true;
+        };
+
+        // Initialize
+        onMounted(() => {
+            // Get current user ID from Laravel global variable
+            if (window.Laravel && window.Laravel.user) {
+                currentUserId.value = window.Laravel.user.id;
+            }
+        });
 
         return {
             completedCount,
@@ -102,6 +134,10 @@ export default {
             getCategoryById,
             toggleTask,
             editTask,
+            shareTask,
+            currentUserId,
+            showShareModal,
+            selectedShareTask,
         };
     },
 };
