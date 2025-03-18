@@ -22,6 +22,7 @@ class User extends Authenticatable
         "subscription_id",
         "morning_reminder_time",
         "evening_reminder_time",
+        "slack_webhook_url", // Add this for custom Slack webhook
     ];
 
     protected $hidden = ["password", "remember_token"];
@@ -52,8 +53,20 @@ class User extends Authenticatable
         return $this->hasMany(Category::class);
     }
 
+    /**
+     * Route notifications for the mail channel.
+     */
     public function routeNotificationForMail()
     {
         return $this->email;
+    }
+
+    /**
+     * Route notifications for the Slack channel.
+     */
+    public function routeNotificationForSlack()
+    {
+        return $this->slack_webhook_url ??
+            config("services.slack.notifications.bot_user_oauth_token");
     }
 }

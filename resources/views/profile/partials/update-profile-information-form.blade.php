@@ -60,12 +60,14 @@
                 >{{ __('保存しました。') }}</p>
             @endif
         </div>
+
         <div class="mt-6 border-t border-gray-200 pt-4">
             <h3 class="text-lg font-medium text-gray-900 mb-2">
                 {{ __('リマインダー設定') }}
             </h3>
 
             <div class="mt-3">
+                <x-input-label for="morning_reminder_time" :value="__('朝のリマインダー時間')" />
                 <x-text-input
                     id="morning_reminder_time"
                     name="morning_reminder_time"
@@ -98,6 +100,30 @@
                 />
                 <p class="mt-1 text-sm text-gray-600">翌日のタスク入力忘れを防止するリマインダーです。</p>
                 <x-input-error class="mt-1" :messages="$errors->get('evening_reminder_time')" />
+            </div>
+
+            <div class="mt-4">
+                <h3 class="text-base font-medium text-gray-900 mb-2">
+                    {{ __('Slack通知設定') }}
+                </h3>
+                <div class="mt-3">
+                    <x-input-label for="slack_webhook_url" :value="__('Slack Webhook URL (任意)')" />
+                    <x-text-input
+                        id="slack_webhook_url"
+                        name="slack_webhook_url"
+                        type="text"
+                        class="mt-1 block w-full"
+                        :value="old('slack_webhook_url', $user->slack_webhook_url)"
+                        placeholder="https://hooks.slack.com/services/..."
+                    />
+                    <p class="mt-1 text-sm text-gray-600">
+                        リマインダーをSlackに送信する場合は、Incoming Webhook URLを入力してください。
+                        <a href="https://api.slack.com/messaging/webhooks" target="_blank" class="text-blue-600 hover:underline">
+                            Slack Incoming Webhooksについて
+                        </a>
+                    </p>
+                    <x-input-error class="mt-1" :messages="$errors->get('slack_webhook_url')" />
+                </div>
             </div>
         </div>
     </form>

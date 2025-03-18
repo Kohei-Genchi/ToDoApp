@@ -15,6 +15,7 @@
         "laravel/cashier": "^15.6",
         "laravel/framework": "^11.31",
         "laravel/sanctum": "^4.0",
+        "laravel/slack-notification-channel": "^3.5",
         "laravel/socialite": "^5.18",
         "laravel/tinker": "^2.9",
         "laravel/ui": "^4.6",

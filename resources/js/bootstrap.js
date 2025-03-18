@@ -1,22 +1,23 @@
 // In resources/js/bootstrap.js
 
-import axios from 'axios';
+import axios from "axios";
 
 window.axios = axios;
 
-// Add withCredentials to include cookies in all requests
 axios.defaults.withCredentials = true;
 
-window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+window.axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
 
 axios.interceptors.request.use(
-    config => {
+    (config) => {
         // Get the CSRF token from the meta tag
-        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const token = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
         if (token) {
-            config.headers['X-CSRF-TOKEN'] = token;
+            config.headers["X-CSRF-TOKEN"] = token;
         }
         return config;
     },
-    error => Promise.reject(error)
+    (error) => Promise.reject(error),
 );
