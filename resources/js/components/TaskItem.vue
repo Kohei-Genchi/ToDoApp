@@ -1,7 +1,7 @@
 <template>
     <li class="hover:bg-gray-50 transition-colors">
         <div class="p-3 sm:px-4 flex items-center">
-            <!-- チェックボックス -->
+            <!-- Checkbox -->
             <div class="mr-3 flex-shrink-0">
                 <input
                     type="checkbox"
@@ -11,7 +11,7 @@
                 />
             </div>
 
-            <!-- タスク内容 -->
+            <!-- Task content -->
             <div
                 class="flex-1 min-w-0"
                 @click="handleEdit"
@@ -29,7 +29,36 @@
                         {{ todo.title }}
                     </p>
 
-                    <!-- カテゴリーラベル -->
+                    <!-- Shared indicator -->
+                    <span
+                        v-if="isShared"
+                        class="ml-2 p-0.5 rounded text-xs border flex items-center"
+                        :class="{
+                            'text-green-600 border-green-200 bg-green-50':
+                                todo.user_id === myUserId,
+                            'text-blue-600 border-blue-200 bg-blue-50':
+                                todo.user_id !== myUserId,
+                        }"
+                        :title="sharedTooltip"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3 w-3 mr-0.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                            />
+                        </svg>
+                        <span>{{ sharedLabel }}</span>
+                    </span>
+
+                    <!-- Category label -->
                     <span
                         v-if="category"
                         class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium"
@@ -41,7 +70,7 @@
                         {{ category.name }}
                     </span>
 
-                    <!-- 繰り返しアイコン -->
+                    <!-- Recurrence icon -->
                     <span v-if="isRecurring" class="ml-2 text-xs text-gray-500">
                         <span class="inline-flex items-center">
                             <svg
@@ -63,9 +92,12 @@
                     </span>
                 </div>
 
-                <!-- 時間表示 -->
-                <div v-if="formattedTime" class="text-sm text-gray-500 mt-0.5">
-                    <span class="inline-flex items-center">
+                <!-- Time display -->
+                <div
+                    v-if="formattedTime || isShared"
+                    class="text-sm text-gray-500 mt-0.5 flex space-x-2"
+                >
+                    <span v-if="formattedTime" class="inline-flex items-center">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             class="h-3.5 w-3.5 mr-0.5"
@@ -82,15 +114,100 @@
                         </svg>
                         {{ formattedTime }}
                     </span>
+
+                    <!-- Shared with names (limited to first 2) -->
+                    <span
+                        v-if="
+                            isShared &&
+                            sharedWith &&
+                            sharedWith.length > 0 &&
+                            todo.user_id === myUserId
+                        "
+                        class="inline-flex items-center"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3.5 w-3.5 mr-0.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                            />
+                        </svg>
+                        <span v-if="sharedWith.length <= 2">
+                            {{ sharedWith.map((user) => user.name).join(", ") }}
+                        </span>
+                        <span v-else>
+                            {{
+                                sharedWith
+                                    .slice(0, 2)
+                                    .map((user) => user.name)
+                                    .join(", ")
+                            }}
+                            +{{ sharedWith.length - 2 }}
+                        </span>
+                    </span>
+
+                    <!-- Owner info when viewing a shared task -->
+                    <span
+                        v-if="
+                            isShared && todo.user_id !== myUserId && todo.user
+                        "
+                        class="inline-flex items-center"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3.5 w-3.5 mr-0.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                        </svg>
+                        {{ todo.user.name }}
+                    </span>
                 </div>
             </div>
 
-            <!-- アクションボタン -->
-            <div class="flex-shrink-0 ml-3">
-                <!-- 削除ボタン -->
+            <!-- Action buttons -->
+            <div class="flex-shrink-0 ml-3 flex space-x-1">
+                <!-- Share button (if owned by current user) -->
                 <button
-                    @click="$emit('delete')"
+                    v-if="todo.user_id === myUserId"
+                    @click.stop="$emit('share', todo)"
+                    class="text-gray-400 hover:text-blue-600 transition-colors"
+                    title="共有"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                        />
+                    </svg>
+                </button>
+
+                <!-- Delete button -->
+                <button
+                    @click.stop="$emit('delete')"
                     class="text-gray-400 hover:text-red-600 transition-colors"
+                    title="削除"
                 >
                     <svg
                         class="h-5 w-5"
@@ -112,7 +229,7 @@
 </template>
 
 <script>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 export default {
     name: "TaskItem",
@@ -125,13 +242,21 @@ export default {
             type: Object,
             default: null,
         },
+        myUserId: {
+            type: Number,
+            default: null,
+        },
+        sharedWith: {
+            type: Array,
+            default: () => [],
+        },
     },
 
-    emits: ["toggle", "edit", "delete"],
+    emits: ["toggle", "edit", "delete", "share"],
 
     setup(props, { emit }) {
         /**
-         * 繰り返しタスクかどうかを判定
+         * Is this a recurring task?
          */
         const isRecurring = computed(
             () =>
@@ -140,7 +265,7 @@ export default {
         );
 
         /**
-         * 繰り返しタイプのラベルを取得
+         * Get label for recurrence type
          */
         const recurrenceLabel = computed(() => {
             switch (props.todo.recurrence_type) {
@@ -156,7 +281,7 @@ export default {
         });
 
         /**
-         * 時間文字列をフォーマット
+         * Format time string
          */
         const formattedTime = computed(() => {
             if (!props.todo.due_time) return "";
@@ -171,7 +296,7 @@ export default {
         });
 
         /**
-         * HEX色コードをRGBA形式に変換
+         * Convert HEX color code to RGBA format
          */
         const categoryColor = computed(() => {
             if (!props.category?.color) return "rgba(155, 155, 155, 0.15)";
@@ -184,14 +309,50 @@ export default {
         });
 
         /**
-         * タスク編集ハンドラ
+         * Task edit handler
          */
         const handleEdit = () => {
             emit("edit", props.todo);
-            console.log("編集ボタンがクリックされました:", props.todo);
-            // (emit)、親コンポーネントにイベントを送信
-            // handleEdit→edit イベント発生、現在の todo (タスクデータ) を親コンポーネント(TodoList)に渡す
+            console.log("Edit button clicked:", props.todo);
+            // (emit) Send event to parent component (TodoList)
+            // handleEdit -> edit event with current todo (task data) passed to parent
         };
+
+        /**
+         * Is this task shared?
+         */
+        const isShared = computed(() => {
+            // Task is shared if:
+            // 1. It has sharedWith property with users
+            // 2. Or it has a user_id different from the current user (meaning it's shared with current user)
+            return (
+                (props.sharedWith && props.sharedWith.length > 0) ||
+                (props.todo.user_id !== props.myUserId &&
+                    props.todo.user_id !== undefined)
+            );
+        });
+
+        /**
+         * Get label for shared indicator
+         */
+        const sharedLabel = computed(() => {
+            if (props.todo.user_id === props.myUserId) {
+                return "共有中";
+            } else {
+                return "共有された";
+            }
+        });
+
+        /**
+         * Get tooltip text for shared indicator
+         */
+        const sharedTooltip = computed(() => {
+            if (props.todo.user_id === props.myUserId) {
+                return `このタスクは${props.sharedWith?.length || 0}人のユーザーと共有されています`;
+            } else {
+                return "このタスクは他のユーザーから共有されています";
+            }
+        });
 
         return {
             isRecurring,
@@ -199,6 +360,9 @@ export default {
             formattedTime,
             categoryColor,
             handleEdit,
+            isShared,
+            sharedLabel,
+            sharedTooltip,
         };
     },
 };

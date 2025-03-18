@@ -29,6 +29,34 @@
                     >
                         カレンダー
                     </button>
+                    <!-- New button for shared tasks -->
+                    <button
+                        @click="$emit('show-shared')"
+                        :class="[
+                            'px-3 py-1 rounded-md text-sm font-medium',
+                            currentView === 'shared'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
+                        ]"
+                    >
+                        <span class="flex items-center">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-4 w-4 mr-1"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                                />
+                            </svg>
+                            共有タスク
+                        </span>
+                    </button>
                     <button
                         @click="$emit('add-task')"
                         class="px-3 py-1 rounded-md text-sm font-medium text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -47,7 +75,7 @@ export default {
 
     props: {
         /**
-         * 現在のビュー
+         * Current view
          */
         currentView: {
             type: String,
@@ -55,6 +83,6 @@ export default {
         },
     },
 
-    emits: ["set-view", "show-calendar", "add-task"],
+    emits: ["set-view", "show-calendar", "show-shared", "add-task"],
 };
 </script>

@@ -1,22 +1,23 @@
 <template>
     <div class="bg-gray-100 min-h-screen main-content">
-        <!-- ヘッダー（「+ 新しいタスク」ボタンを含む） -->
+        <!-- Header ("+ New Task" button included) -->
         <app-header
             :current-view="currentView"
             @set-view="setView"
             @show-calendar="showCalendarView"
+            @show-shared="showSharedTasksView"
             @add-task="openAddTaskModal"
         />
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <!-- 週間日付ナビゲーション - 新しいコンポーネント -->
+            <!-- Weekly Date Navigation - new component -->
             <weekly-date-navigation
-                v-if="currentView !== 'calendar'"
+                v-if="currentView !== 'calendar' && currentView !== 'shared'"
                 :current-date="currentDate"
                 @date-selected="selectDate"
             />
 
-            <!-- カレンダー月ナビゲーション -->
+            <!-- Calendar Month Navigation -->
             <month-navigation
                 v-if="currentView === 'calendar'"
                 :formatted-month="formattedMonth"
@@ -24,7 +25,7 @@
                 @next-month="nextMonth"
             />
 
-            <!-- カレンダー表示 -->
+            <!-- Calendar View -->
             <todo-calendar
                 v-if="currentView === 'calendar'"
                 :current-date="currentDate"
@@ -33,9 +34,16 @@
                 @edit-task="openEditTaskModal"
             />
 
-            <!-- タスク一覧（通常ビュー） -->
+            <!-- Shared Tasks View -->
+            <shared-tasks-view
+                v-if="currentView === 'shared'"
+                @back="setView('today')"
+                @edit-task="openEditTaskModal"
+            />
+
+            <!-- Task List (normal view) -->
             <todo-list
-                v-if="currentView !== 'calendar'"
+                v-if="currentView !== 'calendar' && currentView !== 'shared'"
                 :todos="filteredTodos"
                 :categories="categories"
                 @toggle-task="toggleTaskStatus"
@@ -44,7 +52,7 @@
             />
         </main>
 
-        <!-- タスク追加/編集モーダル -->
+        <!-- Task Add/Edit Modal -->
         <task-modal
             v-if="showTaskModal"
             :mode="taskModalMode"
@@ -59,7 +67,7 @@
             @category-created="loadCategories"
         />
 
-        <!-- 削除確認モーダル -->
+        <!-- Delete Confirmation Modal -->
         <delete-confirm-modal
             v-if="showDeleteConfirmModal"
             :todo-title="selectedTaskData?.title || ''"
@@ -68,7 +76,7 @@
             @cancel="showDeleteConfirmModal = false"
         />
 
-        <!-- 通知コンポーネント -->
+        <!-- Notification Component -->
         <notification-component ref="notification" />
     </div>
 </template>
@@ -78,7 +86,7 @@ import { ref, computed, onMounted, defineAsyncComponent } from "vue";
 import TodoApi from "../api/todo";
 import CategoryApi from "../api/category";
 
-// コンポーネントのインポート
+// Component imports
 const TodoList = defineAsyncComponent(() => import("./TodoList.vue"));
 const TodoCalendar = defineAsyncComponent(() => import("./TodoCalendar.vue"));
 const TaskModal = defineAsyncComponent(() => import("./TaskModal.vue"));
@@ -88,8 +96,11 @@ const DeleteConfirmModal = defineAsyncComponent(
 const NotificationComponent = defineAsyncComponent(
     () => import("./UI/NotificationComponent.vue"),
 );
+const SharedTasksView = defineAsyncComponent(
+    () => import("./SharedTasksView.vue"),
+);
 
-// コンポーネントのインポート
+// Component imports
 import AppHeader from "./AppHeader.vue";
 import MonthNavigation from "./MonthNavigation.vue";
 import WeeklyDateNavigation from "./WeeklyDateNavigation.vue";
@@ -105,19 +116,20 @@ export default {
         NotificationComponent,
         AppHeader,
         MonthNavigation,
-        WeeklyDateNavigation, // 新しいナビゲーションコンポーネント
+        WeeklyDateNavigation,
+        SharedTasksView, // Add this new component
     },
 
     setup() {
         // ===============================
-        // ステート
+        // State
         // ===============================
         const todos = ref([]);
         const categories = ref([]);
         const currentView = ref("today");
         const currentDate = ref(new Date().toISOString().split("T")[0]);
 
-        // モーダルステート
+        // Modal state
         const showTaskModal = ref(false);
         const taskModalMode = ref("add");
         const selectedTaskId = ref(null);
@@ -125,26 +137,26 @@ export default {
         const showDeleteConfirmModal = ref(false);
         const deleteAllRecurring = ref(false);
 
-        // 通知参照
+        // Notification reference
         const notification = ref(null);
 
         // ===============================
-        // ユーティリティ関数
+        // Utility Functions
         // ===============================
 
         /**
-         * 日付を比較用にフォーマット
-         * @param {string|Date} dateString - 日付文字列またはDateオブジェクト
-         * @returns {string} YYYY-MM-DD形式の日付文字列
+         * Format date for comparison
+         * @param {string|Date} dateString - Date string or Date object
+         * @returns {string} Date string in YYYY-MM-DD format
          */
         function formatDateForComparison(dateString) {
             if (!dateString) return "";
 
             try {
-                // 異なる日付形式を処理
+                // Handle different date formats
                 let date;
                 if (typeof dateString === "string") {
-                    // すでにYYYY-MM-DD形式の場合はそのまま返す
+                    // If already in YYYY-MM-DD format, return as is
                     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
                         return dateString;
                     }
@@ -155,12 +167,12 @@ export default {
                     return "";
                 }
 
-                // 有効な日付かどうか確認
+                // Check if date is valid
                 if (isNaN(date.getTime())) {
                     return "";
                 }
 
-                // ローカルタイムゾーンでYYYY-MM-DD形式にフォーマット
+                // Format date as YYYY-MM-DD in local timezone
                 return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
             } catch (e) {
                 return "";
@@ -168,9 +180,9 @@ export default {
         }
 
         /**
-         * API用に日付をフォーマット
-         * @param {string} dateStr 日付文字列
-         * @returns {string|null} YYYY-MM-DD形式の日付文字列またはnull
+         * Format date for API
+         * @param {string} dateStr Date string
+         * @returns {string|null} Date string in YYYY-MM-DD format or null
          */
         function formatDateForAPI(dateStr) {
             if (!dateStr) return null;
@@ -188,18 +200,18 @@ export default {
         }
 
         /**
-         * タスクが繰り返しタスクかどうかを判定
-         * @param {Object} task タスクオブジェクト
-         * @returns {boolean} 繰り返しタスクかどうか
+         * Check if task is recurring
+         * @param {Object} task Task object
+         * @returns {boolean} Whether task is recurring
          */
         function isRecurringTask(task) {
             return task?.recurrence_type && task.recurrence_type !== "none";
         }
 
         /**
-         * エラーを処理し、通知を表示
-         * @param {Error} error エラーオブジェクト
-         * @param {string} defaultMessage デフォルトのエラーメッセージ
+         * Handle error and show notification
+         * @param {Error} error Error object
+         * @param {string} defaultMessage Default error message
          */
         function handleError(error, defaultMessage) {
             const errorMessage = error?.response?.data?.error || defaultMessage;
@@ -207,11 +219,11 @@ export default {
         }
 
         // ===============================
-        // 計算プロパティ
+        // Computed Properties
         // ===============================
 
         /**
-         * 表示用に日付をフォーマット
+         * Format date for display
          */
         const formattedDate = computed(() => {
             const date = new Date(currentDate.value);
@@ -233,7 +245,7 @@ export default {
                 return "昨日";
             }
 
-            // 日本語形式
+            // Japanese format
             const options = {
                 year: "numeric",
                 month: "long",
@@ -244,7 +256,7 @@ export default {
         });
 
         /**
-         * 表示用に月をフォーマット
+         * Format month for display
          */
         const formattedMonth = computed(() => {
             const date = new Date(currentDate.value);
@@ -253,7 +265,7 @@ export default {
         });
 
         /**
-         * 現在の日付に基づいてタスクをフィルタリング
+         * Filter todos based on current date
          */
         const filteredTodos = computed(() => {
             const formattedCurrentDate = formatDateForComparison(
@@ -272,11 +284,11 @@ export default {
         });
 
         // ===============================
-        // データ読み込み関数
+        // Data Loading Functions
         // ===============================
 
         /**
-         * タスク一覧を読み込む
+         * Load tasks
          */
         async function loadTasks() {
             try {
@@ -285,22 +297,22 @@ export default {
                     currentDate.value,
                 );
                 // console.log(response.data[0]);
-                //オブジェクトやnull などが返ってきた場合に備えて Array.isArrayで確認。
+                //Check if response data is an array - handle objects and null
                 if (!Array.isArray(response.data)) {
                     todos.value = [];
                     return;
                 }
 
-                // レスポンスを処理して一貫性を確保
+                // Process response to ensure consistency
                 todos.value = response.data.map((todo) => {
-                    // 参照の問題を避けるためディープコピーを作成
+                    // Create deep copy to avoid reference issues
                     const processedTodo = { ...todo };
-                    // IDが数値であることを確認
+                    // Ensure ID is a number
                     if (processedTodo.id !== undefined) {
                         processedTodo.id = Number(processedTodo.id);
                     }
 
-                    // category_idが数値であることを確認
+                    // Ensure category_id is a number
                     if (
                         processedTodo.category_id !== null &&
                         processedTodo.category_id !== undefined
@@ -310,7 +322,7 @@ export default {
                         );
                     }
 
-                    // 比較しやすいようにフォーマットされた日付を追加
+                    // Add formatted date for comparison
                     if (processedTodo.due_date) {
                         processedTodo.formatted_due_date =
                             formatDateForComparison(processedTodo.due_date);
@@ -321,7 +333,7 @@ export default {
             } catch (error) {
                 handleError(error, "タスクの読み込みに失敗しました");
             }
-            console.log("更新後のタスクリスト:", todos.value);
+            console.log("Updated task list:", todos.value);
         }
 
         async function loadCategories() {
@@ -333,7 +345,7 @@ export default {
                     return;
                 }
 
-                // カテゴリが適切にフォーマットされていることを確認
+                // Ensure categories are properly formatted
                 categories.value = Array.isArray(response.data)
                     ? response.data.map((cat) => ({
                           id: Number(cat.id),
@@ -348,12 +360,12 @@ export default {
         }
 
         // ===============================
-        // ビュー操作関数
+        // View Functions
         // ===============================
 
         /**
-         * ビューを設定
-         * @param {string} view ビュータイプ
+         * Set view
+         * @param {string} view View type
          */
         function setView(view) {
             currentView.value = view;
@@ -364,20 +376,27 @@ export default {
         }
 
         /**
-         * カレンダービューを表示
+         * Show calendar view
          */
         function showCalendarView() {
             currentView.value = "calendar";
             loadTasks();
         }
 
+        /**
+         * Show shared tasks view
+         */
+        function showSharedTasksView() {
+            currentView.value = "shared";
+        }
+
         // ===============================
-        // 日付操作関数
+        // Date Functions
         // ===============================
 
         /**
-         * 特定の日付を選択
-         * @param {string} date 日付文字列
+         * Select a specific date
+         * @param {string} date Date string
          */
         function selectDate(date) {
             currentDate.value = date;
@@ -386,7 +405,7 @@ export default {
         }
 
         /**
-         * 前月に移動
+         * Go to previous month
          */
         function previousMonth() {
             const date = new Date(currentDate.value);
@@ -396,7 +415,7 @@ export default {
         }
 
         /**
-         * 翌月に移動
+         * Go to next month
          */
         function nextMonth() {
             const date = new Date(currentDate.value);
@@ -406,11 +425,11 @@ export default {
         }
 
         // ===============================
-        // タスクモーダル関連関数
+        // Task Modal Functions
         // ===============================
 
         /**
-         * タスク追加モーダルを開く
+         * Open add task modal
          */
         function openAddTaskModal() {
             taskModalMode.value = "add";
@@ -429,12 +448,12 @@ export default {
         }
 
         /**
-         * タスク編集モーダルを開く
-         * @param {Object|number|string} task タスクオブジェクトまたはID
+         * Open edit task modal
+         * @param {Object|number|string} task Task object or ID
          */
         async function openEditTaskModal(task) {
             try {
-                // 直接ID入力の場合（数値または文字列として）
+                // Handle direct ID input (as number or string)
                 if (
                     (typeof task === "number" || typeof task === "string") &&
                     !isNaN(Number(task))
@@ -443,7 +462,7 @@ export default {
                     return;
                 }
 
-                // タスクが空配列または未定義の場合
+                // Handle empty task or empty array
                 if (!task || (Array.isArray(task) && task.length === 0)) {
                     notification.value?.show(
                         "編集するタスクが見つかりません",
@@ -452,14 +471,14 @@ export default {
                     return;
                 }
 
-                // タスクがIDプロパティを持つオブジェクトの場合
+                // Handle task as object with ID property
                 if (typeof task === "object" && task !== null) {
-                    // モーダルを開く前にカテゴリを強制的に再読み込み
+                    // Force reload categories before opening modal
                     await loadCategories();
 
                     taskModalMode.value = "edit";
 
-                    // タスクIDが適切に設定されていることを確認
+                    // Ensure task ID is properly set
                     if (task.id === undefined || task.id === null) {
                         notification.value?.show(
                             "タスクIDが見つかりません",
@@ -470,11 +489,11 @@ export default {
 
                     selectedTaskId.value = Number(task.id);
 
-                    // 参照の問題を避けるためタスクのディープコピーを作成
+                    // Create deep copy of task to avoid reference issues
                     selectedTaskData.value = JSON.parse(JSON.stringify(task));
 
                     showTaskModal.value = true;
-                    console.log("編集モーダルを開きます:", task);
+                    console.log("Opening edit modal:", task);
                 }
             } catch (error) {
                 handleError(error, "タスク編集の準備中にエラーが発生しました");
@@ -482,16 +501,16 @@ export default {
         }
 
         /**
-         * IDでタスクデータを取得し、編集モーダルを開く
-         * @param {number} taskId タスクID
+         * Fetch task data by ID and open edit modal
+         * @param {number} taskId Task ID
          */
         async function fetchAndEditTask(taskId) {
             try {
-                // まず、すでに読み込まれているタスクを確認
+                // First, check if task is already loaded
                 const task = todos.value.find((t) => t.id === taskId);
 
                 if (task) {
-                    // カテゴリが読み込まれていることを確認
+                    // Ensure categories are loaded
                     await loadCategories();
 
                     taskModalMode.value = "edit";
@@ -501,10 +520,10 @@ export default {
                     return;
                 }
 
-                // APIからタスクデータを取得
+                // Fetch task data from API
                 const response = await TodoApi.getTaskById(taskId);
 
-                // カテゴリが読み込まれていることを確認
+                // Ensure categories are loaded
                 await loadCategories();
 
                 taskModalMode.value = "edit";
@@ -517,26 +536,26 @@ export default {
         }
 
         /**
-         * タスクモーダルを閉じる
+         * Close task modal
          */
         function closeTaskModal() {
             showTaskModal.value = false;
         }
 
         // ===============================
-        // タスク操作関数
+        // Task Functions
         // ===============================
 
         /**
-         * タスクを送信（作成または更新）
-         * @param {Object} taskData タスクデータ
+         * Submit task (create or update)
+         * @param {Object} taskData Task data
          */
         async function submitTask(taskData) {
             try {
-                // 元のデータを変更しないようにクローン
+                // Clone data to avoid modifying original
                 const preparedData = { ...taskData };
 
-                // 日付を正しくAPIにフォーマット
+                // Format dates for API
                 if (preparedData.due_date) {
                     preparedData.due_date = formatDateForAPI(
                         preparedData.due_date,
@@ -552,10 +571,10 @@ export default {
                 let response;
 
                 if (taskModalMode.value === "add") {
-                    // 新しいタスクの追加
+                    // Add new task
                     response = await TodoApi.createTask(preparedData);
                 } else {
-                    // タスクIDが利用可能であることを確認
+                    // Ensure task ID is available
                     const taskId =
                         selectedTaskId.value ||
                         (preparedData.id ? Number(preparedData.id) : null);
@@ -568,25 +587,25 @@ export default {
                         return;
                     }
 
-                    // 以前に日付のないタスクに日付を追加しているかどうかを確認
+                    // Check if adding due date to a previous memo
                     const isAddingDueDateToMemo =
                         preparedData.due_date &&
                         (!selectedTaskData.value.due_date ||
                             selectedTaskData.value.due_date === null);
 
-                    console.log("APIに送信するデータ:", preparedData);
-                    // 既存のタスクを更新
+                    console.log("Data to send to API:", preparedData);
+                    // Update existing task
                     response = await TodoApi.updateTask(taskId, preparedData);
 
-                    // メモリストからタスクに日付を追加している場合、メモリストをすぐに更新
+                    // If adding due date to a memo, refresh memo list
                     if (isAddingDueDateToMemo) {
                         await refreshMemoList();
                     }
                 }
-                console.log("APIレスポンス:", response.data);
+                console.log("API response:", response.data);
                 closeTaskModal();
 
-                // モーダルを閉じた後、現在のビューに基づいて関連するタスクデータを再読み込み
+                // After closing modal, reload tasks based on current view
                 await loadTasks();
             } catch (error) {
                 handleError(error, "タスクの保存に失敗しました");
@@ -600,56 +619,56 @@ export default {
                         Accept: "text/html",
                         "Cache-Control": "no-cache, no-store, must-revalidate",
                     },
-                    // キャッシュを無効化
+                    // Disable cache
                     params: { _t: new Date().getTime() },
                 });
 
-                // レスポンスデータは自動的に処理される
+                // Response data is automatically processed
                 const html = response.data;
 
-                // メモリストコンテナを検索
+                // Find memo list containers
                 const memoContainers = document.querySelectorAll(
                     ".memo-list-container",
                 );
 
                 if (memoContainers.length > 0) {
-                    // すべてのメモコンテナを新しいHTMLで更新
+                    // Update all memo containers with new HTML
                     memoContainers.forEach((container) => {
                         container.innerHTML = html;
                     });
 
-                    // イベントリスナーを再アタッチ
+                    // Reattach event listeners
                     attachMemoListEvents();
                     return true;
                 } else {
                     return false;
                 }
             } catch (error) {
-                console.error("メモリスト更新エラー:", error);
+                console.error("Error updating memo list:", error);
                 return false;
             }
         }
 
         /**
-         * メモリストのイベントを再アタッチ
+         * Reattach memo list events
          */
         function attachMemoListEvents() {
-            // メモリスト内のすべてのゴミ箱ボタンを検索し、クリックハンドラをアタッチ
+            // Find all trash buttons in memo list and attach click handlers
             const trashButtons = document.querySelectorAll(
                 '.memo-list-container button[onclick*="trashMemo"]',
             );
-            // 必要に応じて他のイベントリスナーを再アタッチ
+            // Reattach other event listeners as needed
         }
 
         /**
-         * タスクの完了状態を切り替え
-         * @param {Object} task タスクオブジェクト
+         * Toggle task status
+         * @param {Object} task Task object
          */
         async function toggleTaskStatus(task) {
             try {
                 await TodoApi.toggleTask(task.id);
 
-                // 楽観的更新
+                // Optimistic update
                 const taskIndex = todos.value.findIndex(
                     (t) => t.id === task.id,
                 );
@@ -667,32 +686,32 @@ export default {
         }
 
         /**
-         * タスク削除ハンドラ
-         * @param {number} id タスクID
-         * @param {boolean} deleteAllRecurringFlag すべての繰り返しタスクを削除するかどうか
+         * Handle task delete
+         * @param {number} id Task ID
+         * @param {boolean} deleteAllRecurringFlag Delete all recurring tasks flag
          */
         function handleTaskDelete(id, deleteAllRecurringFlag) {
-            // まずタスクモーダルを閉じる
+            // First close task modal
             closeTaskModal();
 
-            // 削除確認モーダルを表示
+            // Show delete confirmation modal
             selectedTaskId.value = id;
             deleteAllRecurring.value = deleteAllRecurringFlag;
 
-            // 確認に表示するタスクを検索
+            // Find task for confirmation
             const task = todos.value.find((t) => t.id === id);
 
             if (task) {
                 selectedTaskData.value = task;
             }
 
-            // 確認モーダルを表示 - ユーザーが確認するまで削除しない
+            // Show confirmation modal - don't delete until user confirms
             showDeleteConfirmModal.value = true;
         }
 
         /**
-         * タスク削除確認
-         * @param {Object} task タスクオブジェクト
+         * Confirm task delete
+         * @param {Object} task Task object
          */
         function confirmDeleteTask(task) {
             selectedTaskId.value = task.id;
@@ -701,11 +720,11 @@ export default {
         }
 
         /**
-         * 削除を確認
-         * @param {boolean} confirmed 確認されたかどうか
+         * Confirm delete
+         * @param {boolean} confirmed Confirmed flag
          */
         async function confirmDelete(confirmed = true) {
-            // ユーザーが確認した場合のみ続行
+            // Only continue if user confirmed
             if (!confirmed) {
                 showDeleteConfirmModal.value = false;
                 return;
@@ -719,22 +738,22 @@ export default {
                 notification.value?.show("タスクを削除しました");
                 showDeleteConfirmModal.value = false;
 
-                // タスクリストを更新
+                // Update task list
                 await loadTasks();
 
-                // フィルタリングされたタスクの強制更新
-                todos.value = [...todos.value]; // リアクティビティをトリガー
+                // Force update filtered tasks
+                todos.value = [...todos.value]; // Trigger reactivity
             } catch (error) {
                 handleError(error, "タスクの削除に失敗しました");
             }
         }
 
-        // 初期化
+        // Initialization
         onMounted(() => {
             loadTasks();
             loadCategories();
 
-            // レガシーコードからのedit-todoイベントをリッスン
+            // Listen for edit-todo events from legacy code
             document
                 .getElementById("todo-app")
                 ?.addEventListener("edit-todo", async (event) => {
@@ -761,7 +780,7 @@ export default {
         });
 
         return {
-            // ステート
+            // State
             todos,
             categories,
             currentView,
@@ -776,29 +795,30 @@ export default {
             showDeleteConfirmModal,
             notification,
 
-            // ビュー操作
+            // View functions
             setView,
             showCalendarView,
+            showSharedTasksView,
 
-            // 日付操作
+            // Date functions
             selectDate,
             previousMonth,
             nextMonth,
 
-            // タスクモーダル
+            // Task modal functions
             openAddTaskModal,
             openEditTaskModal,
             fetchAndEditTask,
             closeTaskModal,
 
-            // タスク操作
+            // Task functions
             submitTask,
             toggleTaskStatus,
             handleTaskDelete,
             confirmDeleteTask,
             confirmDelete,
 
-            // その他
+            // Other functions
             loadCategories,
             isRecurringTask,
         };

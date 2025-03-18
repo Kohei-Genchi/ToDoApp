@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Cashier\Billable;
@@ -17,12 +18,12 @@ class User extends Authenticatable
         "email",
         "password",
         "google_id",
-        "abatar",
+        "avatar",
         "stripe_id",
         "subscription_id",
         "morning_reminder_time",
         "evening_reminder_time",
-        "slack_webhook_url", // Add this for custom Slack webhook
+        "slack_webhook_url",
     ];
 
     protected $hidden = ["password", "remember_token"];
@@ -51,6 +52,16 @@ class User extends Authenticatable
     public function categories(): HasMany
     {
         return $this->hasMany(Category::class);
+    }
+
+    /**
+     * Get tasks shared with this user.
+     */
+    public function sharedTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(Todo::class, "task_shares")
+            ->withPivot("permission")
+            ->withTimestamps();
     }
 
     /**
