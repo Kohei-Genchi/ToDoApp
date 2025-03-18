@@ -1,4 +1,4 @@
-<nav class="bg-gray-800 text-white h-full w-64 fixed left-0 top-0 overflow-y-auto">
+<nav class="bg-gray-800 text-white h-full w-52 fixed left-0 top-0 overflow-y-auto">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <div class="p-4">
 @auth

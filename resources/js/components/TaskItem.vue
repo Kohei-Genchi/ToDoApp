@@ -339,7 +339,7 @@ export default {
             if (props.todo.user_id === props.myUserId) {
                 return "共有中";
             } else {
-                return "共有された";
+                // return "共有された";
             }
         });
 
