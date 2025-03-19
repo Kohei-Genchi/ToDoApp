@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Helper functions
         function callEditFunction(data) {
-            if (vm?.openEditTaskModal) {
+            if (vm?.openEditTaskopenShareModal) {
                 vm.openEditTaskModal(data);
             } else {
                 const detail = data.id
