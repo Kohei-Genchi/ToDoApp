@@ -216,9 +216,9 @@ export default {
                         shareEmail.value,
                     );
 
-                    // 既存のユーザー一覧にあるか確認
+                    // 既存のユーザー一覧にあるか確認 (大文字小文字を区別せずに比較)
                     const existingUser = sharedUsers.value.find(
-                        (u) => u.email === shareEmail.value,
+                        (u) => u.email.toLowerCase() === shareEmail.value.toLowerCase(),
                     );
                     if (existingUser) {
                         errorMessage.value =
@@ -254,6 +254,18 @@ export default {
                 }
 
                 // 通常のタスク共有モード
+
+                // 既存のユーザー一覧にあるか確認 (大文字小文字を区別せずに比較)
+                const existingUser = sharedUsers.value.find(
+                    (u) => u.email.toLowerCase() === shareEmail.value.toLowerCase(),
+                );
+                if (existingUser) {
+                    errorMessage.value =
+                        "指定されたユーザーは既に共有設定されています。";
+                    isSubmitting.value = false;
+                    return;
+                }
+
                 const response = await TaskShareApi.shareTask(
                     props.task.id,
                     shareEmail.value,
@@ -270,6 +282,12 @@ export default {
                 // Clear the form
                 shareEmail.value = "";
                 sharePermission.value = "view";
+
+                // 成功メッセージを表示
+                errorMessage.value = "ユーザーを共有リストに追加しました。";
+                setTimeout(() => {
+                    errorMessage.value = "";
+                }, 3000);
             } catch (error) {
                 console.error("Error sharing task:", error);
                 errorMessage.value =
@@ -346,7 +364,12 @@ export default {
         };
 
         const close = () => {
-            emit("close");
+            // If in global share mode, pass the shared users back to the parent component
+            if (isGlobalShareMode.value) {
+                emit("close", { sharedUsers: sharedUsers.value });
+            } else {
+                emit("close");
+            }
         };
 
         // Lifecycle

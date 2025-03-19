@@ -78,7 +78,7 @@
         <task-share-modal
             v-if="showGlobalShareModal"
             :task="selectedGlobalTask"
-            @close="showGlobalShareModal = false"
+            @close="handleGlobalShareModalClose"
         />
 
         <!-- Calendar Table Layout - Increased width and removed overflow constraints -->
@@ -258,6 +258,10 @@ export default {
         // Methods
         const loadSharedTasks = async () => {
             isLoading.value = true;
+
+            // Store the current shared users to preserve them in case of API failure
+            const currentSharedUsers = [...sharedUsers.value];
+
             try {
                 // Load shared tasks
                 const sharedResponse = await TaskShareApi.getSharedWithMe();
@@ -301,6 +305,14 @@ export default {
                     return true;
                 });
 
+                // Ensure each task has a shared_with array
+                sharedTasks.value = sharedTasks.value.map(task => {
+                    if (!task.shared_with) {
+                        task.shared_with = [];
+                    }
+                    return task;
+                });
+
                 console.log("Combined tasks:", sharedTasks.value);
 
                 // Extract unique users from all tasks for the calendar view
@@ -317,8 +329,16 @@ export default {
                     });
                 }
 
+                // First add all existing shared users to preserve them
+                currentSharedUsers.forEach(user => {
+                    if (!uniqueUsers.has(user.id)) {
+                        uniqueUsers.set(user.id, user);
+                    }
+                });
+
                 // Add users who shared tasks with the current user
                 sharedTasks.value.forEach((task) => {
+                    // Add the task owner
                     if (task.user && !uniqueUsers.has(task.user.id)) {
                         uniqueUsers.set(task.user.id, {
                             id: task.user.id,
@@ -326,12 +346,32 @@ export default {
                             email: task.user.email,
                         });
                     }
+
+                    // Add users the task is shared with
+                    if (task.shared_with && Array.isArray(task.shared_with)) {
+                        task.shared_with.forEach(share => {
+                            if (!uniqueUsers.has(share.user_id)) {
+                                uniqueUsers.set(share.user_id, {
+                                    id: share.user_id,
+                                    name: share.user_name || share.name,
+                                    email: share.user_email || share.email,
+                                });
+                            }
+                        });
+                    }
                 });
 
                 sharedUsers.value = Array.from(uniqueUsers.values());
+                console.log("Extracted shared users:", sharedUsers.value);
                 console.log("Shared users:", sharedUsers.value);
             } catch (error) {
                 console.error("Error loading shared tasks:", error);
+
+                // If there was an error, keep the existing shared users
+                if (currentSharedUsers.length > 0) {
+                    console.log("Preserving existing shared users due to API error");
+                    sharedUsers.value = currentSharedUsers;
+                }
             } finally {
                 isLoading.value = false;
             }
@@ -419,10 +459,10 @@ export default {
                 const isCurrentUserTask =
                     Number(task.user_id) === Number(currentUserId.value);
 
-                const shouldDisplayInColumn =
-                    isTaskOwner ||
-                    (Number(userId) === Number(currentUserId.value) &&
-                        isSharedWithUser);
+                // Display task in column if:
+                // 1. User owns the task, OR
+                // 2. Task is shared with this user
+                const shouldDisplayInColumn = isTaskOwner || isSharedWithUser;
 
                 if (!shouldDisplayInColumn) continue;
 
@@ -712,14 +752,80 @@ export default {
 
         // Initialize the component
         onMounted(() => {
-            loadSharedTasks();
-            loadCategories();
-
             // Get current user ID
             if (window.Laravel && window.Laravel.user) {
                 currentUserId.value = window.Laravel.user.id;
+
+                // Try to load shared users from localStorage only if they belong to the current user
+                try {
+                    const savedUsersKey = `sharedUsers_${currentUserId.value}`;
+                    const savedUsers = localStorage.getItem(savedUsersKey);
+
+                    if (savedUsers) {
+                        const parsedUsers = JSON.parse(savedUsers);
+                        if (Array.isArray(parsedUsers) && parsedUsers.length > 0) {
+                            console.log("Loaded shared users from localStorage:", parsedUsers);
+                            sharedUsers.value = parsedUsers;
+                        }
+                    } else {
+                        // If no saved users for this user ID, start with an empty array
+                        console.log("No saved shared users found for this user, starting fresh");
+                        sharedUsers.value = [];
+                        localStorage.removeItem('sharedUsers'); // Remove old format data
+                    }
+                } catch (e) {
+                    console.error("Error loading shared users from localStorage:", e);
+                    sharedUsers.value = []; // Ensure we start with an empty array
+                }
+            } else {
+                // No user logged in, ensure empty shared users
+                sharedUsers.value = [];
             }
+
+            loadSharedTasks();
+            loadCategories();
         });
+
+        // Handle the global share modal close event
+        const handleGlobalShareModalClose = (data) => {
+            showGlobalShareModal.value = false;
+
+            // If we received shared users data from the modal
+            if (data && data.sharedUsers && Array.isArray(data.sharedUsers)) {
+                console.log("Received shared users from modal:", data.sharedUsers);
+
+                // Create a Map to store unique users
+                const uniqueUsers = new Map();
+
+                // First add all existing shared users
+                sharedUsers.value.forEach(user => {
+                    uniqueUsers.set(user.id, user);
+                });
+
+                // Then add the new shared users from the modal
+                data.sharedUsers.forEach(user => {
+                    uniqueUsers.set(user.id, user);
+                });
+
+                // Update the shared users list with the combined unique users
+                sharedUsers.value = Array.from(uniqueUsers.values());
+
+                console.log("Updated shared users list:", sharedUsers.value);
+
+                // Store the shared users in localStorage as a backup, using user-specific key
+                if (currentUserId.value) {
+                    try {
+                        const savedUsersKey = `sharedUsers_${currentUserId.value}`;
+                        localStorage.setItem(savedUsersKey, JSON.stringify(sharedUsers.value));
+                    } catch (e) {
+                        console.error("Could not save shared users to localStorage:", e);
+                    }
+                }
+            }
+
+            // Reload shared tasks to refresh the view, but don't let it clear our shared users
+            loadSharedTasks();
+        };
 
         return {
             currentDate,
@@ -751,6 +857,7 @@ export default {
             showGlobalShareModal,
             selectedGlobalTask,
             openGlobalShareModal,
+            handleGlobalShareModalClose,
         };
     },
 };
