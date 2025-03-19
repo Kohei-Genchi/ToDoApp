@@ -53,6 +53,16 @@
             </div>
         </div>
 
+        <!-- Back to task list button -->
+        <div class="flex justify-end px-4 py-2">
+            <button
+                @click="goBackToTaskList"
+                class="text-sm text-blue-600 hover:text-blue-800"
+            >
+                ← タスク一覧に戻る
+            </button>
+        </div>
+
         <!-- User columns header -->
         <div class="grid" :class="userColumnsClass">
             <div class="px-2 py-3 bg-gray-50 border-b border-r border-gray-200">
@@ -80,12 +90,12 @@
         <div
             class="grid"
             :class="userColumnsClass"
-            style="height: calc(100vh - 200px); overflow-y: auto"
+            style="height: calc(100vh - 250px); overflow-y: auto"
         >
             <!-- Time slots from 8:00 to 20:00 -->
             <template v-for="hour in hours" :key="hour">
                 <div
-                    class="px-2 py-2 border-b border-r border-gray-200 bg-gray-50 sticky left-0 z-10"
+                    class="px-2 py-2 border-b border-r border-gray-200 bg-gray-50 sticky left-0 z-10 text-left"
                 >
                     <div class="text-xs text-gray-500">
                         {{ formatHour(hour) }}
@@ -108,7 +118,7 @@
                                 user.id,
                             )"
                             :key="task.id"
-                            class="absolute m-1 p-1 text-xs rounded overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md"
+                            class="absolute m-1 p-1 text-xs rounded overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md text-left"
                             :class="getTaskClasses(task)"
                             :style="getTaskPositionStyle(task, hour)"
                             @click.stop="editTask(task)"
@@ -177,6 +187,7 @@
 import { ref, computed, onMounted } from "vue";
 import TaskModal from "./TaskModal.vue";
 import TodoApi from "../api/todo";
+import TaskShareApi from "../api/taskShare";
 
 export default {
     name: "SharedTasksCalendarView",
@@ -185,32 +196,16 @@ export default {
         TaskModal,
     },
 
-    props: {
-        initialSharedUsers: {
-            type: Array,
-            default: () => [],
-        },
-        initialSharedTasks: {
-            type: Array,
-            default: () => [],
-        },
-        categories: {
-            type: Array,
-            default: () => [],
-        },
-        currentUserId: {
-            type: Number,
-            default: null,
-        },
-    },
-
-    emits: ["task-updated", "task-created", "task-deleted"],
+    emits: ["task-updated", "task-created", "task-deleted", "back"],
 
     setup(props, { emit }) {
         // State
         const currentDate = ref(new Date().toISOString().split("T")[0]);
-        const sharedUsers = ref([...props.initialSharedUsers]);
-        const sharedTasks = ref([...props.initialSharedTasks]);
+        const sharedUsers = ref([]);
+        const sharedTasks = ref([]);
+        const categories = ref([]);
+        const currentUserId = ref(null);
+        const isLoading = ref(true);
 
         // Task modal state
         const showTaskModal = ref(false);
@@ -222,6 +217,55 @@ export default {
 
         // Generate hours from 8:00 to 20:00
         const hours = Array.from({ length: 13 }, (_, i) => i + 8); // 8 to 20
+
+        // Methods
+        const loadSharedTasks = async () => {
+            isLoading.value = true;
+            try {
+                const response = await TaskShareApi.getSharedWithMe();
+                sharedTasks.value = response.data;
+
+                // Extract unique users from shared tasks for the calendar view
+                const uniqueUsers = new Map();
+
+                // Add the current user first
+                if (window.Laravel && window.Laravel.user) {
+                    const currentUser = window.Laravel.user;
+                    currentUserId.value = currentUser.id;
+                    uniqueUsers.set(currentUser.id, {
+                        id: currentUser.id,
+                        name: currentUser.name,
+                        email: currentUser.email,
+                    });
+                }
+
+                // Add users who shared tasks with the current user
+                sharedTasks.value.forEach((task) => {
+                    if (task.user && !uniqueUsers.has(task.user.id)) {
+                        uniqueUsers.set(task.user.id, {
+                            id: task.user.id,
+                            name: task.user.name,
+                            email: task.user.email,
+                        });
+                    }
+                });
+
+                sharedUsers.value = Array.from(uniqueUsers.values());
+            } catch (error) {
+                console.error("Error loading shared tasks:", error);
+            } finally {
+                isLoading.value = false;
+            }
+        };
+
+        const loadCategories = async () => {
+            try {
+                const response = await axios.get("/api/web-categories");
+                categories.value = response.data || [];
+            } catch (error) {
+                console.error("Error loading categories:", error);
+            }
+        };
 
         // Computed properties
         const formattedCurrentDate = computed(() => {
@@ -368,7 +412,8 @@ export default {
         };
 
         const getTaskPositionStyle = (task, hour) => {
-            // Calculate vertical position based on minutes
+            // Task is positioned based on its minutes
+            // But always aligns to the left
             let minuteOffset = 0;
 
             if (task.due_time) {
@@ -397,7 +442,8 @@ export default {
 
             return {
                 top: `${minuteOffset}%`,
-                left: "2.5%",
+                left: "0", // Always align to the left
+                width: "95%",
             };
         };
 
@@ -415,6 +461,10 @@ export default {
 
         const goToToday = () => {
             currentDate.value = new Date().toISOString().split("T")[0];
+        };
+
+        const goBackToTaskList = () => {
+            emit("back");
         };
 
         const addTaskAtTime = (hour, userId) => {
@@ -523,9 +573,12 @@ export default {
 
         // Initialize the component
         onMounted(() => {
-            // If shared users are not provided, fetch them
-            if (sharedUsers.value.length === 0) {
-                // You could fetch shared users here if needed
+            loadSharedTasks();
+            loadCategories();
+
+            // Get current user ID
+            if (window.Laravel && window.Laravel.user) {
+                currentUserId.value = window.Laravel.user.id;
             }
         });
 
@@ -551,11 +604,13 @@ export default {
             previousDay,
             nextDay,
             goToToday,
+            goBackToTaskList,
             addTaskAtTime,
             editTask,
             closeTaskModal,
             submitTask,
             handleTaskDelete,
+            loadSharedTasks,
         };
     },
 };

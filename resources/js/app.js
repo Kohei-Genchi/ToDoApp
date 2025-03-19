@@ -4,8 +4,7 @@ import Alpine from "alpinejs";
 import { createApp } from "vue";
 import TodoApp from "./components/TodoApp.vue";
 import SidebarMemosComponent from "./components/SidebarMemosComponent.vue";
-import SharedTasksView from "./components/SharedTasksView.vue";
-import SharedTasksCalendarView from "./components/SharedTasksCalendarView.vue";
+import SharedTasksCalendarView from "./components/SharedTasksCalendarView.vue"; // Import directly
 
 window.Alpine = Alpine;
 Alpine.start();
@@ -85,9 +84,9 @@ document.addEventListener("DOMContentLoaded", function () {
         createApp(SidebarMemosComponent).mount("#sidebar-memos");
     }
 
-    // SharedTasksView component initialization
+    // Changed: Direct initialization of SharedTasksCalendarView instead of SharedTasksView
     if (document.getElementById("shared-tasks-view")) {
-        createApp(SharedTasksView).mount("#shared-tasks-view");
+        createApp(SharedTasksCalendarView).mount("#shared-tasks-view");
     }
 
     // Add event listeners to traditional edit buttons

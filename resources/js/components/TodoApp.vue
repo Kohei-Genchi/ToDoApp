@@ -34,11 +34,13 @@
                 @edit-task="openEditTaskModal"
             />
 
-            <!-- Shared Tasks View -->
-            <shared-tasks-view
+            <!-- Shared Tasks Calendar View -->
+            <shared-tasks-calendar-view
                 v-if="currentView === 'shared'"
                 @back="setView('today')"
-                @edit-task="openEditTaskModal"
+                @task-updated="loadTasks"
+                @task-created="loadTasks"
+                @task-deleted="loadTasks"
             />
 
             <!-- Task List (normal view) -->
@@ -96,8 +98,8 @@ const DeleteConfirmModal = defineAsyncComponent(
 const NotificationComponent = defineAsyncComponent(
     () => import("./UI/NotificationComponent.vue"),
 );
-const SharedTasksView = defineAsyncComponent(
-    () => import("./SharedTasksView.vue"),
+const SharedTasksCalendarView = defineAsyncComponent(
+    () => import("./SharedTasksCalendarView.vue"),
 );
 
 // Component imports
@@ -117,7 +119,7 @@ export default {
         AppHeader,
         MonthNavigation,
         WeeklyDateNavigation,
-        SharedTasksView, // Add this new component
+        SharedTasksCalendarView,
     },
 
     setup() {
@@ -384,7 +386,7 @@ export default {
         }
 
         /**
-         * Show shared tasks view
+         * Show shared tasks view - directly show calendar view of shared tasks
          */
         function showSharedTasksView() {
             currentView.value = "shared";
