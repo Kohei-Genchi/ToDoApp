@@ -150,6 +150,7 @@ export default {
         const sharePermission = ref("view");
         const isSubmitting = ref(false);
         const errorMessage = ref("");
+        const debug = ref(false); // デバッグモード
 
         // Computed
         const isValidEmail = computed(() => {
@@ -159,41 +160,22 @@ export default {
 
         // グローバル共有モードかどうかを判定
         const isGlobalShareMode = computed(() => {
-            return props.task.id === "global-share";
+            return props.task && props.task.id === "global-share";
         });
 
         // Methods
         const loadSharedUsers = async () => {
+            console.log(
+                "loadSharedUsers called, isGlobalShareMode:",
+                isGlobalShareMode.value,
+            );
+
             // グローバル共有モードの場合はAPIリクエストをスキップ
             if (isGlobalShareMode.value) {
-                // ユーザーの共有設定をリストしておく
-                try {
-                    // 代わりに全ユーザーの共有設定を取得
-                    // 注: APIがない場合は空の配列を返す
-                    const response = await TaskShareApi.getSharedWithMe();
+                console.log("グローバル共有モード: ユーザー一覧を初期化");
 
-                    // 共有ユーザーを重複なく抽出
-                    const uniqueUsers = new Map();
-                    if (response.data && Array.isArray(response.data)) {
-                        response.data.forEach((task) => {
-                            if (task.user) {
-                                uniqueUsers.set(task.user.id, {
-                                    id: task.user.id,
-                                    name: task.user.name,
-                                    email: task.user.email,
-                                    pivot: { permission: "view" }, // デフォルトは表示のみ
-                                });
-                            }
-                        });
-                    }
-
-                    sharedUsers.value = Array.from(uniqueUsers.values());
-                } catch (error) {
-                    console.log(
-                        "グローバル共有ユーザー取得に失敗しました。新規に共有を設定してください。",
-                    );
-                    sharedUsers.value = [];
-                }
+                // テスト用にサンプルデータを設定
+                sharedUsers.value = [];
                 return;
             }
 
@@ -216,6 +198,8 @@ export default {
         };
 
         const shareTask = async () => {
+            console.log("shareTask called, email:", shareEmail.value);
+
             if (!isValidEmail.value) {
                 errorMessage.value = "有効なメールアドレスを入力してください。";
                 return;
@@ -227,9 +211,10 @@ export default {
             try {
                 // グローバル共有モードの場合の処理
                 if (isGlobalShareMode.value) {
-                    // ここではバックエンドにグローバル共有APIがないため、
-                    // ユーザーが最初のタスクを共有したことにする（デモ用）
-                    // 実際の実装では、バックエンドに適切なAPIを用意することをお勧めします
+                    console.log(
+                        "グローバル共有モード: 新しいユーザー追加:",
+                        shareEmail.value,
+                    );
 
                     // 既存のユーザー一覧にあるか確認
                     const existingUser = sharedUsers.value.find(
@@ -250,12 +235,21 @@ export default {
                         pivot: { permission: sharePermission.value },
                     };
 
+                    // ユーザーを追加
                     sharedUsers.value.push(newUser);
+                    console.log("ユーザーを追加しました:", newUser);
 
                     // フォームをクリア
                     shareEmail.value = "";
                     sharePermission.value = "view";
                     isSubmitting.value = false;
+
+                    // 成功メッセージを表示
+                    errorMessage.value = "ユーザーを共有リストに追加しました。";
+                    setTimeout(() => {
+                        errorMessage.value = "";
+                    }, 3000);
+
                     return;
                 }
 
@@ -294,8 +288,12 @@ export default {
 
             // グローバル共有モードの場合はAPIリクエストをスキップ
             if (isGlobalShareMode.value) {
+                console.log(
+                    "グローバル共有モード: 権限を更新:",
+                    user.email,
+                    user.pivot.permission,
+                );
                 // 権限の更新はフロントエンドのみで行う（デモ用）
-                // 実際の実装では、バックエンドAPIを適切に呼び出す
                 return;
             }
 
@@ -314,12 +312,20 @@ export default {
         };
 
         const unshareTask = async (user) => {
-            if (!confirm(`${user.name} との共有を解除してもよろしいですか？`)) {
+            if (
+                !confirm(
+                    `${user.name || user.email} との共有を解除してもよろしいですか？`,
+                )
+            ) {
                 return;
             }
 
             // グローバル共有モードの場合
             if (isGlobalShareMode.value) {
+                console.log(
+                    "グローバル共有モード: ユーザーを削除:",
+                    user.email,
+                );
                 // フロントエンドでユーザーを削除（デモ用）
                 sharedUsers.value = sharedUsers.value.filter(
                     (u) => u.id !== user.id,
@@ -345,6 +351,7 @@ export default {
 
         // Lifecycle
         onMounted(() => {
+            console.log("TaskShareModal mounted, task:", props.task);
             loadSharedUsers();
         });
 
@@ -355,7 +362,8 @@ export default {
             isSubmitting,
             errorMessage,
             isValidEmail,
-            isGlobalShareMode, // 追加
+            isGlobalShareMode,
+            debug,
             shareTask,
             updatePermission,
             unshareTask,
