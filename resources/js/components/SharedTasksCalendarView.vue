@@ -1,10 +1,10 @@
 <template>
     <div
-        class="shared-tasks-calendar bg-white rounded-lg shadow-sm overflow-hidden"
+        class="shared-tasks-calendar bg-white rounded-lg shadow-sm overflow-hidden w-full"
     >
         <!-- Header with date navigation -->
         <div
-            class="p-4 flex justify-between items-center border-b border-gray-200"
+            class="p-2 flex justify-between items-center border-b border-gray-200"
         >
             <div class="flex items-center space-x-2">
                 <h2 class="text-lg font-medium text-gray-900">共有タスク</h2>
@@ -54,32 +54,33 @@
         </div>
 
         <!-- Back to task list button -->
-        <div class="flex justify-end px-4 py-2">
+        <div class="flex justify-end px-2 py-1">
             <button
                 @click="goBackToTaskList"
-                class="text-sm text-blue-600 hover:text-blue-800"
+                class="text-xs text-blue-600 hover:text-blue-800"
             >
                 ← タスク一覧に戻る
             </button>
         </div>
 
-        <!-- Calendar Table Layout -->
-        <div class="w-full overflow-auto">
-            <table class="w-full border-collapse">
+        <!-- Calendar Table Layout - Increased width and removed overflow constraints -->
+        <div class="w-full">
+            <table class="w-full border-collapse table-fixed">
                 <!-- Header Row -->
                 <thead>
                     <tr>
                         <th
-                            class="w-16 px-2 py-3 bg-gray-50 border border-gray-200 text-sm font-medium text-gray-500"
+                            class="w-16 px-1 py-1 bg-gray-50 border border-gray-200 text-xs font-medium text-gray-500"
                         >
                             時間
                         </th>
                         <th
                             v-for="user in sharedUsers"
                             :key="`header-${user.id}`"
-                            class="px-2 py-3 bg-gray-50 border border-gray-200 text-center min-w-40"
+                            class="px-1 py-1 bg-gray-50 border border-gray-200 text-center"
+                            style="min-width: 120px; width: auto"
                         >
-                            <div class="text-sm font-medium truncate">
+                            <div class="text-xs font-medium truncate">
                                 {{ user.name }}
                             </div>
                             <div class="text-xs text-gray-500 truncate">
@@ -94,7 +95,7 @@
                     <tr v-for="hour in fullHours" :key="`row-${hour}`">
                         <!-- Time Cell -->
                         <td
-                            class="w-16 px-2 py-2 border border-gray-200 bg-gray-50 text-left"
+                            class="w-12 px-1 py-1 border border-gray-200 bg-gray-50 text-left"
                         >
                             <div class="text-xs text-gray-500">
                                 {{ formatHour(hour) }}
@@ -105,29 +106,37 @@
                         <td
                             v-for="user in sharedUsers"
                             :key="`cell-${hour}-${user.id}`"
-                            class="border border-gray-200 relative group min-h-[60px] p-0"
+                            class="border border-gray-200 relative group min-h-[50px] p-0"
+                            style="height: 50px"
                             @click="addTaskAtTime(hour, user.id)"
                         >
-                            <!-- Tasks for this hour and user -->
-                            <div
-                                v-for="task in getTasksForHourAndUser(
-                                    hour,
-                                    user.id,
-                                )"
-                                :key="`task-${task.id}`"
-                                class="absolute m-1 p-1 text-xs rounded overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md text-left"
-                                :class="getTaskClasses(task)"
-                                :style="getTaskPositionStyle(task, hour)"
-                                @click.stop="editTask(task)"
-                            >
-                                <div class="font-medium truncate">
-                                    {{ task.title }}
-                                </div>
+                            <!-- Tasks for this hour and user - horizontal layout -->
+                            <div class="flex flex-col h-full w-full overflow-y-auto p-0.5">
                                 <div
-                                    v-if="task.due_time"
-                                    class="text-xs opacity-75"
+                                    v-for="(task, index) in getTasksForHourAndUser(hour, user.id)"
+                                    :key="`task-${task.id}`"
+                                    class="mb-0.5 p-1 text-xs rounded overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md text-left flex-shrink-0"
+                                    :class="getTaskClasses(task)"
+                                    @click.stop="editTask(task)"
                                 >
-                                    {{ formatTaskTime(task.due_time) }}
+                                    <div class="flex items-center">
+                                        <div class="font-medium truncate mr-1">
+                                            {{ task.title }}
+                                        </div>
+                                        <div
+                                            v-if="task.due_time"
+                                            class="text-xs opacity-75 whitespace-nowrap"
+                                        >
+                                            {{ formatTaskTime(task.due_time) }}
+                                        </div>
+                                    </div>
+                                    <!-- Show owner info for shared tasks -->
+                                    <div
+                                        v-if="task.ownerInfo"
+                                        class="text-xs italic text-gray-600"
+                                    >
+                                        From: {{ task.ownerInfo }}
+                                    </div>
                                 </div>
                             </div>
 
@@ -213,11 +222,42 @@ export default {
         const loadSharedTasks = async () => {
             isLoading.value = true;
             try {
-                const response = await TaskShareApi.getSharedWithMe();
-                sharedTasks.value = response.data;
-                console.log("Loaded shared tasks:", sharedTasks.value);
+                // Load shared tasks
+                const sharedResponse = await TaskShareApi.getSharedWithMe();
+                let allTasks = [...sharedResponse.data];
+                console.log("Loaded shared tasks:", sharedResponse.data);
 
-                // Extract unique users from shared tasks for the calendar view
+                // Also load the current user's own tasks
+                if (window.Laravel && window.Laravel.user) {
+                    try {
+                        const ownTasksResponse = await TodoApi.getTasks({
+                            date: currentDate.value
+                        });
+
+                        if (ownTasksResponse.data && Array.isArray(ownTasksResponse.data)) {
+                            console.log("Loaded own tasks:", ownTasksResponse.data);
+
+                            // Add the current user's tasks to the shared tasks list
+                            allTasks = [...allTasks, ...ownTasksResponse.data];
+                        }
+                    } catch (ownTasksError) {
+                        console.error("Error loading own tasks:", ownTasksError);
+                    }
+                }
+
+                // Remove duplicates (in case a task is both shared and owned)
+                const taskIds = new Set();
+                sharedTasks.value = allTasks.filter(task => {
+                    if (taskIds.has(task.id)) {
+                        return false;
+                    }
+                    taskIds.add(task.id);
+                    return true;
+                });
+
+                console.log("Combined tasks:", sharedTasks.value);
+
+                // Extract unique users from all tasks for the calendar view
                 const uniqueUsers = new Map();
 
                 // Add the current user first
@@ -302,155 +342,192 @@ export default {
 
                 return timeString;
             } catch (e) {
+                console.error("Error formatting time:", e);
                 return timeString;
             }
         };
 
+        // Improved function to get tasks for a specific hour and user
         const getTasksForHourAndUser = (hour, userId) => {
-            // For debugging
-            if (sharedTasks.value.length > 0 && hour === 9 && userId) {
+            if (!userId || sharedTasks.value.length === 0) {
+                return [];
+            }
+
+            // Log for debugging
+            if (hour === 9) {
                 console.log(
                     `Looking for tasks at ${hour}:00 for user ${userId}`,
                 );
             }
 
-            const matchingTasks = sharedTasks.value.filter((task) => {
-                // Check if task belongs to this user
-                const isTaskOwner = task.user_id === userId;
+            const matchingTasks = [];
 
-                // Check if task is on the current date
+            // Loop through all tasks (more robust than filter)
+            for (const task of sharedTasks.value) {
+                // Check if the task should be displayed in this user's column
+                const isTaskOwner = Number(task.user_id) === Number(userId);
+                const isSharedWithUser = task.shared_with && task.shared_with.some(
+                    share => Number(share.user_id) === Number(userId)
+                );
+                const isCurrentUserTask = Number(task.user_id) === Number(currentUserId.value);
+
+                // Display logic:
+                // 1. If this is the task owner's column, show the task (each user's tasks in their own column)
+                // 2. If this is the current user's column, show tasks shared with them
+                const shouldDisplayInColumn = isTaskOwner ||
+                    (Number(userId) === Number(currentUserId.value) && isSharedWithUser);
+
+                if (!shouldDisplayInColumn) continue;
+
+                // Check if task is on the current date - use local date comparison to fix timezone issues
                 const taskDate = formatDateForComparison(task.due_date);
+
+                // Debug date comparison
+                if (hour === 9) {
+                    console.log(`Task date: ${taskDate}, Current date: ${currentDate.value}`);
+                }
+
                 const dateMatches = taskDate === currentDate.value;
+                if (!dateMatches) continue;
 
                 // Check if task is in the current hour
-                let hourMatches = false;
-                if (task.due_time) {
-                    const taskHour = extractHour(task.due_time);
-                    hourMatches = taskHour === hour;
+                if (!task.due_time) continue;
+
+                const taskHour = extractHour(task.due_time);
+                if (taskHour !== hour) continue;
+
+                // Task matches all criteria
+                // Create a copy of the task to avoid modifying the original
+                const taskCopy = { ...task };
+
+                // Add owner information to the task for display purposes
+                if (!isTaskOwner) {
+                    taskCopy.ownerInfo = task.user ? task.user.name : 'Shared Task';
                 }
 
-                // Debug for specific hour
-                if (hour === 9 && isTaskOwner && dateMatches) {
+                // Add a flag to indicate if this is the current user's task
+                taskCopy.isCurrentUserTask = isCurrentUserTask;
+
+                matchingTasks.push(taskCopy);
+
+                // Debug for hour 9
+                if (hour === 9) {
                     console.log(
-                        `Task ${task.id} (${task.title}): hour=${extractHour(task.due_time)}, matches=${hourMatches}`,
+                        `Found matching task: ${task.id} - ${task.title} - Owner: ${isTaskOwner ? 'Yes' : 'No'} - Shared: ${isSharedWithUser ? 'Yes' : 'No'}`,
                     );
                 }
-
-                return isTaskOwner && dateMatches && hourMatches;
-            });
-
-            // For debugging
-            if (matchingTasks.length > 0) {
-                console.log(
-                    `Found ${matchingTasks.length} tasks for hour ${hour}, user ${userId}`,
-                );
             }
 
             return matchingTasks;
         };
 
+        // Improved hour extraction
         const extractHour = (timeString) => {
             try {
+                if (!timeString) return null;
+
                 if (timeString instanceof Date) {
                     return timeString.getHours();
                 }
 
                 if (typeof timeString === "string") {
                     if (timeString.includes("T")) {
-                        // ISO format
+                        // ISO format: "2025-03-19T09:00:00.000000Z"
                         const date = new Date(timeString);
                         return date.getHours();
                     } else if (timeString.includes(":")) {
-                        // HH:MM format
+                        // HH:MM or HH:MM:SS format
                         return parseInt(timeString.split(":")[0], 10);
                     }
                 }
 
                 return null;
             } catch (e) {
-                console.error("Error extracting hour:", e);
+                console.error(
+                    "Error extracting hour:",
+                    e,
+                    "from timeString:",
+                    timeString,
+                );
                 return null;
             }
         };
 
+        // Improved date formatting for comparison
         const formatDateForComparison = (dateString) => {
             if (!dateString) return "";
 
             try {
-                // Handle different date formats
-                if (dateString instanceof Date) {
-                    return dateString.toISOString().split("T")[0];
+                // Check if already in YYYY-MM-DD format
+                if (
+                    typeof dateString === "string" &&
+                    /^\d{4}-\d{2}-\d{2}$/.test(dateString)
+                ) {
+                    return dateString;
                 }
 
-                if (typeof dateString === "string") {
-                    // If already in YYYY-MM-DD format, return as is
-                    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-                        return dateString;
-                    }
-
-                    // Otherwise parse it
-                    const date = new Date(dateString);
-                    return date.toISOString().split("T")[0];
+                // Convert date string to local date format
+                // Use local timezone to avoid date shifting issues
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    console.error("Invalid date:", dateString);
+                    return "";
                 }
 
-                return "";
+                // Format to YYYY-MM-DD in local timezone
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+
+                return `${year}-${month}-${day}`;
             } catch (e) {
-                console.error("Error formatting date:", e);
+                console.error(
+                    "Error formatting date:",
+                    e,
+                    "for dateString:",
+                    dateString,
+                );
                 return "";
             }
         };
 
         const getTaskClasses = (task) => {
-            const baseClasses = "w-[95%]";
+            const baseClasses = "w-full";
+
+            // Check if this is a shared task (has ownerInfo)
+            const isSharedTask = !!task.ownerInfo;
+
+            // Check if this is the current user's task
+            const isCurrentUserTask = task.isCurrentUserTask;
+
+            // Add visual indicators
+            let specialClasses = '';
+
+            // For shared tasks, add dashed border
+            if (isSharedTask) {
+                specialClasses += 'border-dashed border ';
+            }
+
+            // For current user's tasks in other columns, add highlight
+            if (isCurrentUserTask && isSharedTask) {
+                specialClasses += 'bg-blue-50 ';
+            }
 
             // Add status-specific classes
             if (task.status === "completed") {
-                return `${baseClasses} bg-gray-100 text-gray-600 line-through`;
+                return `${baseClasses} ${specialClasses} bg-gray-100 text-gray-600 line-through`;
             }
 
             // Add category color if available
             if (task.category) {
-                return `${baseClasses} border-l-4 bg-white border-l-[${task.category.color}]`;
+                return `${baseClasses} ${specialClasses} border-l-4 bg-white border-l-[${task.category.color}]`;
             }
 
-            return `${baseClasses} bg-white border-l-4 border-l-blue-500`;
+            // Default styling with special indicators if needed
+            return `${baseClasses} ${specialClasses} bg-white border-l-4 border-l-blue-500`;
         };
 
-        const getTaskPositionStyle = (task, hour) => {
-            // Task is positioned based on its minutes
-            // But always aligns to the left
-            let minuteOffset = 0;
-
-            if (task.due_time) {
-                try {
-                    const timeString =
-                        typeof task.due_time === "string"
-                            ? task.due_time
-                            : task.due_time.toISOString();
-
-                    let minutes = 0;
-
-                    if (timeString.includes("T")) {
-                        // ISO format
-                        const date = new Date(timeString);
-                        minutes = date.getMinutes();
-                    } else if (timeString.includes(":")) {
-                        // HH:MM format
-                        minutes = parseInt(timeString.split(":")[1], 10);
-                    }
-
-                    minuteOffset = (minutes / 60) * 100;
-                } catch (e) {
-                    minuteOffset = 0;
-                }
-            }
-
-            return {
-                top: `${minuteOffset}%`,
-                left: "0",
-                width: "95%",
-            };
-        };
+        // Function removed as we're no longer using absolute positioning for tasks
 
         const previousDay = () => {
             const date = new Date(currentDate.value);
@@ -605,13 +682,13 @@ export default {
             taskModalMode,
             selectedTaskId,
             selectedTaskData,
+            categories,
 
             // Methods
             formatHour,
             formatTaskTime,
             getTasksForHourAndUser,
             getTaskClasses,
-            getTaskPositionStyle,
             previousDay,
             nextDay,
             goToToday,
@@ -628,25 +705,77 @@ export default {
 </script>
 
 <style scoped>
+/* Set a minimum width and explicit height for cells */
 td {
-    height: 60px;
+    height: 50px;
+    padding: 0 !important; /* Remove default padding */
 }
 
-/* Set a min-width for user columns */
+/* Optimize width for user columns */
 table th,
 table td {
-    min-width: 120px;
+    min-width: 120px; /* Reduced from 150px */
 }
 
 /* Keep time column at a fixed width */
 table th:first-child,
 table td:first-child {
-    min-width: 60px;
-    width: 60px;
+    min-width: 40px; /* Reduced from 60px */
+    width: 40px;
 }
 
 /* Make position of task container relative to its cell */
 td {
     position: relative;
+    vertical-align: top;
+}
+
+/* Fix for table layout */
+.table-fixed {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Make sure tasks stand out better */
+[class*="border-l-"] {
+    border-left-width: 4px !important;
+}
+
+/* Reduce overall margins and padding */
+.shared-tasks-calendar {
+    margin: 0;
+    padding: 0;
+}
+
+/* Compact header */
+.shared-tasks-calendar .p-4 {
+    padding: 0.5rem !important;
+}
+
+/* Make task containers more compact */
+.mb-0\.5 {
+    margin-bottom: 0.125rem !important;
+}
+
+.p-0\.5 {
+    padding: 0.125rem !important;
+}
+
+/* Ensure task text is readable */
+.text-xs {
+    font-size: 0.7rem;
+    line-height: 1rem;
+}
+
+/* Reduce header height */
+th {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+/* Optimize space in the back button area */
+.px-2.py-1 {
+    padding: 0.25rem 0.5rem !important;
 }
 </style>
