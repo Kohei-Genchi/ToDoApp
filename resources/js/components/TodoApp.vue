@@ -34,13 +34,12 @@
                 @edit-task="openEditTaskModal"
             />
 
-            <!-- Shared Tasks Calendar View -->
             <shared-tasks-calendar-view
                 v-if="currentView === 'shared'"
                 @back="setView('today')"
-                @task-updated="loadTasks"
-                @task-created="loadTasks"
-                @task-deleted="loadTasks"
+                @task-updated="loadSharedTasks"
+                @task-created="loadSharedTasks"
+                @task-deleted="loadSharedTasks"
             />
 
             <!-- Task List (normal view) -->
@@ -447,6 +446,10 @@ export default {
             };
 
             showTaskModal.value = true;
+        }
+
+        async function loadSharedTasks() {
+            await loadTasks(); // This calls your existing loadTasks method
         }
 
         /**

@@ -80,4 +80,16 @@ class User extends Authenticatable
         return $this->slack_webhook_url ??
             config("services.slack.notifications.bot_user_oauth_token");
     }
+    public function globallySharedWith()
+    {
+        return $this->hasMany(GlobalShare::class, "user_id");
+    }
+
+    /**
+     * Get the users who have shared all tasks globally with this user.
+     */
+    public function globallySharedBy()
+    {
+        return $this->hasMany(GlobalShare::class, "shared_with_user_id");
+    }
 }

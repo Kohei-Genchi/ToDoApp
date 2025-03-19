@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\TodoApiController;
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\TaskShareController;
 use App\Http\Controllers\Api\MemoApiController;
+use App\Http\Controllers\Api\GlobalShareController;
 use App\Http\Controllers\StripSubscriptionController;
 
 /**
@@ -83,6 +84,32 @@ Route::prefix("categories")
         // Delete category
         Route::delete("/{category}", [CategoryApiController::class, "destroy"]);
     });
+
+Route::middleware(["web"])->group(function () {
+    // Get users with whom the authenticated user has globally shared tasks
+    Route::get("/global-shares", [GlobalShareController::class, "index"]);
+
+    // Share all tasks globally with a user
+    Route::post("/global-shares", [GlobalShareController::class, "store"]);
+
+    // Update global sharing permission for a user
+    Route::put("/global-shares/{globalShare}", [
+        GlobalShareController::class,
+        "update",
+    ]);
+
+    // Stop sharing globally with a user
+    Route::delete("/global-shares/{globalShare}", [
+        GlobalShareController::class,
+        "destroy",
+    ]);
+
+    // Get all tasks shared with the authenticated user via global sharing
+    Route::get("/global-shared-with-me", [
+        GlobalShareController::class,
+        "sharedWithMe",
+    ]);
+});
 
 /**
  * Memo API routes

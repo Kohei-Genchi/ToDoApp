@@ -38,7 +38,7 @@ class TodoApiController extends Controller
             $date = $request->date ? now()->parse($request->date) : now();
 
             // クエリの構築
-            $query = $this->buildBaseTaskQuery();
+            $query = $this->buildBaseTaskQuery($request);
             $this->applyViewFilters($query, $view, $date, $request);
 
             // Fetch tasks
@@ -108,9 +108,12 @@ class TodoApiController extends Controller
             }
 
             // Check if the user is authorized to view this task
-            if (Gate::denies('view', $todo)) {
+            if (Gate::denies("view", $todo)) {
                 return response()->json(
-                    ["error" => "Unauthorized access. You don't have permission to view this task."],
+                    [
+                        "error" =>
+                            "Unauthorized access. You don't have permission to view this task.",
+                    ],
                     403
                 );
             }
@@ -146,9 +149,12 @@ class TodoApiController extends Controller
             }
 
             // Check if the user is authorized to update this task
-            if (Gate::denies('update', $todo)) {
+            if (Gate::denies("update", $todo)) {
                 return response()->json(
-                    ["error" => "Unauthorized access. You don't have permission to edit this task."],
+                    [
+                        "error" =>
+                            "Unauthorized access. You don't have permission to edit this task.",
+                    ],
                     403
                 );
             }
@@ -195,9 +201,12 @@ class TodoApiController extends Controller
             }
 
             // Check if the user is authorized to toggle this task
-            if (Gate::denies('update', $todo)) {
+            if (Gate::denies("update", $todo)) {
                 return response()->json(
-                    ["error" => "Unauthorized access. You don't have permission to update this task."],
+                    [
+                        "error" =>
+                            "Unauthorized access. You don't have permission to update this task.",
+                    ],
                     403
                 );
             }
@@ -240,9 +249,12 @@ class TodoApiController extends Controller
             }
 
             // Check if the user is authorized to delete this task
-            if (Gate::denies('delete', $todo)) {
+            if (Gate::denies("delete", $todo)) {
                 return response()->json(
-                    ["error" => "Unauthorized access. You don't have permission to delete this task."],
+                    [
+                        "error" =>
+                            "Unauthorized access. You don't have permission to delete this task.",
+                    ],
                     403
                 );
             }
@@ -296,10 +308,28 @@ class TodoApiController extends Controller
     /**
      * Build base task query.
      *
+     * @param Request $request
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    private function buildBaseTaskQuery()
+    private function buildBaseTaskQuery($request = null)
     {
+        // 特定のユーザーIDが指定されている場合はそのユーザーのタスクを取得
+        // グローバル共有機能のために追加
+        if ($request && $request->has('user_id')) {
+            $userId = $request->user_id;
+
+            // 権限チェック - グローバル共有されているユーザーのタスクのみ取得可能
+            $isSharedGlobally = Auth::user()
+                ->globallySharedBy()
+                ->where('user_id', $userId)
+                ->exists();
+
+            if ($isSharedGlobally || Auth::id() == $userId) {
+                return Todo::where("user_id", $userId)->with(["category", "user"]);
+            }
+        }
+
+        // デフォルトは現在のユーザーのタスク
         return Todo::where("user_id", Auth::id())->with("category");
     }
 
@@ -338,6 +368,11 @@ class TodoApiController extends Controller
                 ]);
                 break;
             case "date":
+                // For specific date view
+                $query->whereDate("due_date", $date->format("Y-m-d"));
+                break;
+            default:
+                // If view is not specified, default to today
                 $query->whereDate("due_date", $date->format("Y-m-d"));
                 break;
         }

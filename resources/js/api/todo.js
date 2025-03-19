@@ -56,9 +56,21 @@ export default {
      * @returns {Promise} APIレスポンス
      */
     getTasks(view, date) {
-        // console.log("getTaskWith", view, date);
+        // Ensure we have valid parameters - handle both object and direct params
+        let params = {};
+
+        if (typeof view === "object" && view !== null) {
+            // Handle case where first argument is an object with params
+            params = view;
+        } else {
+            // Handle case where parameters are passed directly
+            params = { view, date };
+        }
+
+        console.log("GetTasks params:", params);
+
         return axios.get("/api/todos", {
-            params: { view, date },
+            params: params,
             headers: getCommonHeaders(),
         });
     },
