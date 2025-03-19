@@ -261,205 +261,212 @@ export default {
         /**
          * Load shared tasks
          */
-        const loadSharedTasks = async () => {
-            isLoading.value = true;
-            console.log("Loading shared tasks...");
+        // SharedTasksCalendarView.vue の loadSharedTasks 関数の修正部分
 
-            try {
-                // Get current user's info
-                const currentUser = window.Laravel?.user;
-                currentUserId.value = currentUser?.id;
+async function loadSharedTasks() {
+    isLoading.value = true;
+    console.log("Loading shared tasks...");
 
-                // First, load users to display in the calendar
-                try {
-                    // Get individually shared users - these are users who have individual tasks shared with the current user
-                    const sharedResponse = await TaskShareApi.getSharedWithMe();
-                    const sharedWithMeUsers = new Map();
+    try {
+        // 現在のユーザー情報を取得
+        const currentUser = window.Laravel?.user;
+        currentUserId.value = currentUser?.id;
 
-                    // Extract unique users who have shared tasks
-                    sharedResponse.data.forEach((task) => {
-                        if (task.user && !sharedWithMeUsers.has(task.user.id)) {
-                            sharedWithMeUsers.set(task.user.id, {
-                                id: task.user.id,
-                                name: task.user.name,
-                                email: task.user.email,
-                            });
-                        }
-                    });
+        // まずグローバル共有情報を読み込む
+        try {
+            // APIからグローバル共有情報を取得
+            const globalSharesResponse = await GlobalShareApi.getGlobalShares();
 
-                    // Get globally shared users - these are users who have shared all their tasks globally
-                    const globallySharedResponse =
-                        await GlobalShareApi.getGlobalShares();
+            // レスポンスを検証
+            if (globalSharesResponse && globalSharesResponse.data) {
+                // グローバル共有情報を保存
+                globalShares.value = Array.isArray(globalSharesResponse.data)
+                    ? globalSharesResponse.data
+                    : [];
 
-                    console.log(
-                        "Globally shared users:",
-                        globallySharedResponse.data,
-                    );
+                console.log("Loaded global shares:", globalShares.value);
+            } else {
+                console.warn("Global shares API returned unexpected response:", globalSharesResponse);
+                globalShares.value = [];
+            }
+        } catch (error) {
+            console.error("Error loading global shares:", error);
+            globalShares.value = [];
+        }
 
-                    // Store global shares for later use
-                    globalShares.value = globallySharedResponse.data;
+        // 共有ユーザーマップを初期化
+        const allSharedUsers = new Map();
 
-                    // Add global shares to users
-                    globallySharedResponse.data.forEach((share) => {
-                        if (!sharedWithMeUsers.has(share.user_id)) {
-                            sharedWithMeUsers.set(share.user_id, {
-                                id: share.user_id,
-                                name: share.name,
-                                email: share.email,
-                                isGlobalShare: true,
-                                globalSharePermission: share.permission,
-                            });
-                        }
-                    });
+        // 現在のユーザーを追加
+        if (currentUser) {
+            allSharedUsers.set(currentUser.id, {
+                id: currentUser.id,
+                name: currentUser.name,
+                email: currentUser.email
+            });
+        }
 
-                    // Start with current user
-                    const uniqueUsers = new Map();
-                    if (currentUser) {
-                        uniqueUsers.set(currentUser.id, {
-                            id: currentUser.id,
-                            name: currentUser.name,
-                            email: currentUser.email,
+        // 1. 個別共有ユーザーを読み込む
+        try {
+            const sharedResponse = await TaskShareApi.getSharedWithMe();
+
+            // 個別のタスク共有からユーザーを追加
+            if (sharedResponse && Array.isArray(sharedResponse.data)) {
+                sharedResponse.data.forEach(task => {
+                    if (task.user && !allSharedUsers.has(task.user.id)) {
+                        allSharedUsers.set(task.user.id, {
+                            id: task.user.id,
+                            name: task.user.name,
+                            email: task.user.email,
+                            individuallyShared: true
                         });
                     }
+                });
+            }
+        } catch (error) {
+            console.error("Error loading individually shared tasks:", error);
+        }
 
-                    // Add users who have shared with current user
-                    sharedWithMeUsers.forEach((user, id) => {
-                        uniqueUsers.set(id, user);
+        // 2. グローバル共有ユーザーを追加
+        if (globalShares.value && globalShares.value.length > 0) {
+            globalShares.value.forEach(share => {
+                // user_id を数値として処理
+                const userId = Number(share.user_id);
+
+                if (!allSharedUsers.has(userId)) {
+                    allSharedUsers.set(userId, {
+                        id: userId,
+                        name: share.name || 'User ' + userId,
+                        email: share.email || '',
+                        isGlobalShare: true,
+                        globalSharePermission: share.permission || 'view'
+                    });
+                } else {
+                    // 既存のユーザーにグローバル共有フラグを追加
+                    const user = allSharedUsers.get(userId);
+                    user.isGlobalShare = true;
+                    user.globalSharePermission = share.permission || 'view';
+                    allSharedUsers.set(userId, user);
+                }
+            });
+        }
+
+        // カレンダー表示用のユーザー一覧を更新
+        sharedUsers.value = Array.from(allSharedUsers.values());
+        console.log("Updated shared users list:", sharedUsers.value);
+
+        // すべてのタスクをロード
+        let allTasks = [];
+
+        // 1. 個別共有タスクをロード
+        try {
+            const sharedResponse = await TaskShareApi.getSharedWithMe();
+            if (sharedResponse && Array.isArray(sharedResponse.data)) {
+                console.log("Individually shared tasks:", sharedResponse.data);
+                allTasks = [...sharedResponse.data];
+            }
+        } catch (error) {
+            console.error("Error loading individually shared tasks:", error);
+        }
+
+        // 2. グローバル共有タスクをロード
+        try {
+            const globallySharedResponse = await GlobalShareApi.getGloballySharedWithMe();
+            if (globallySharedResponse && Array.isArray(globallySharedResponse.data)) {
+                console.log("Globally shared tasks:", globallySharedResponse.data);
+
+                // グローバル共有としてフラグ付け
+                const globalTasks = globallySharedResponse.data.map(task => ({
+                    ...task,
+                    isGloballyShared: true
+                }));
+
+                allTasks = [...allTasks, ...globalTasks];
+            }
+        } catch (error) {
+            console.error("Error loading globally shared tasks:", error);
+        }
+
+        // 3. グローバル共有されているユーザーのタスクを個別に取得
+        if (globalShares.value.length > 0) {
+            console.log("Loading tasks from global share users");
+
+            // グローバル共有ユーザーのIDをリストアップ
+            const globalShareUserIds = globalShares.value.map(share =>
+                typeof share.user_id === 'string' ? parseInt(share.user_id, 10) : share.user_id
+            );
+
+            // 各ユーザーのタスクを取得
+            for (const userId of globalShareUserIds) {
+                try {
+                    // user_id パラメータを明示的に含めてAPI呼び出し
+                    const userTasksResponse = await TodoApi.getTasks({
+                        view: "date",
+                        date: currentDate.value,
+                        user_id: userId
                     });
 
-                    // Update shared users (for the calendar columns)
-                    sharedUsers.value = Array.from(uniqueUsers.values());
-                    console.log("Shared users:", sharedUsers.value);
-                } catch (error) {
-                    console.error("Error loading shared users:", error);
-                }
-
-                // Now load all tasks
-                let allTasks = [];
-
-                // 1. Load individually shared tasks
-                try {
-                    const sharedResponse = await TaskShareApi.getSharedWithMe();
-                    console.log(
-                        "Individually shared tasks:",
-                        sharedResponse.data,
-                    );
-                    allTasks = [...sharedResponse.data];
-                } catch (error) {
-                    console.error(
-                        "Error loading individually shared tasks:",
-                        error,
-                    );
-                }
-
-                // 2. Load globally shared tasks
-                try {
-                    const globallySharedResponse =
-                        await GlobalShareApi.getGloballySharedWithMe();
-                    console.log(
-                        "Globally shared tasks:",
-                        globallySharedResponse.data,
-                    );
-
-                    // Add flag to identify these as globally shared
-                    const globalTasks = globallySharedResponse.data.map(
-                        (task) => ({
+                    if (userTasksResponse && Array.isArray(userTasksResponse.data)) {
+                        const userSharedTasks = userTasksResponse.data.map(task => ({
                             ...task,
                             isGloballyShared: true,
-                        }),
-                    );
+                            ownerInfo: `Shared by ${globalShares.value.find(
+                                share => parseInt(share.user_id, 10) === userId
+                            )?.name || 'User ' + userId}`
+                        }));
 
-                    allTasks = [...allTasks, ...globalTasks];
-                } catch (error) {
-                    console.error(
-                        "Error loading globally shared tasks:",
-                        error,
-                    );
-                }
-
-                // APIの成功のみを考慮して、グローバル共有ユーザーのタスクを取得
-                if (globalShares.value.length > 0) {
-                    console.log("Loading tasks from global share users");
-
-                    // グローバル共有ユーザーのIDを取得
-                    const globalShareUserIds = globalShares.value.map(share => Number(share.user_id));
-
-                    // 各ユーザーのタスクを取得
-                    for (const userId of globalShareUserIds) {
-                        try {
-                            // 通常のタスク取得APIを使用
-                            const userTasksResponse = await TodoApi.getTasks(
-                                "date",
-                                currentDate.value,
-                                { user_id: userId }
-                            );
-
-                            if (Array.isArray(userTasksResponse.data)) {
-                                // タスクにグローバル共有フラグを追加
-                                const userGlobalTasks = userTasksResponse.data.map(task => ({
-                                    ...task,
-                                    isGloballyShared: true,
-                                    ownerInfo: `Shared by ${globalShares.value.find(share => Number(share.user_id) === userId)?.name || 'User'}`
-                                }));
-
-                                allTasks = [...allTasks, ...userGlobalTasks];
-                                console.log(`Added ${userGlobalTasks.length} tasks from user ${userId}`);
-                            }
-                        } catch (userTaskError) {
-                            console.error(`Error loading tasks for user ${userId}:`, userTaskError);
-                        }
+                        allTasks = [...allTasks, ...userSharedTasks];
+                        console.log(`Added ${userSharedTasks.length} tasks from user ${userId}`);
                     }
+                } catch (userTaskError) {
+                    console.error(`Error loading tasks for user ${userId}:`, userTaskError);
                 }
+            }
+        }
 
-                // 3. Load current user's own tasks
-                if (currentUser) {
-                    try {
-                        const ownTasksResponse = await TodoApi.getTasks(
-                            "date",
-                            currentDate.value,
-                        );
-
-                        console.log(
-                            "Current user's tasks:",
-                            ownTasksResponse.data,
-                        );
-
-                        if (Array.isArray(ownTasksResponse.data)) {
-                            allTasks = [...allTasks, ...ownTasksResponse.data];
-                        }
-                    } catch (error) {
-                        console.error("Error loading own tasks:", error);
-                    }
-                }
-
-                console.log("All tasks before processing:", allTasks);
-
-                // Process tasks and remove duplicates
-                const taskMap = new Map();
-
-                allTasks.forEach((task) => {
-                    // Skip if already processed (prevent duplicates)
-                    if (taskMap.has(task.id)) return;
-
-                    // Ensure proper shared_with array
-                    if (!task.shared_with) {
-                        task.shared_with = [];
-                    }
-
-                    // Add processed task to map
-                    taskMap.set(task.id, task);
+        // 4. 現在のユーザーの自身のタスクをロード
+        if (currentUser) {
+            try {
+                const ownTasksResponse = await TodoApi.getTasks({
+                    view: "date",
+                    date: currentDate.value
                 });
 
-                // Convert map back to array
-                sharedTasks.value = Array.from(taskMap.values());
-
-                console.log("Processed tasks:", sharedTasks.value);
+                if (ownTasksResponse && Array.isArray(ownTasksResponse.data)) {
+                    console.log("Current user's tasks:", ownTasksResponse.data);
+                    allTasks = [...allTasks, ...ownTasksResponse.data];
+                }
             } catch (error) {
-                console.error("Error in loadSharedTasks:", error);
-            } finally {
-                isLoading.value = false;
+                console.error("Error loading own tasks:", error);
             }
-        };
+        }
+
+        // タスクを処理し、重複を除去
+        const taskMap = new Map();
+
+        allTasks.forEach(task => {
+            // すでに処理済みならスキップ（重複防止）
+            if (taskMap.has(task.id)) return;
+
+            // 必要なプロパティがない場合は初期化
+            if (!task.shared_with) {
+                task.shared_with = [];
+            }
+
+            // マップに処理済みタスクを追加
+            taskMap.set(task.id, task);
+        });
+
+        // マップを配列に戻す
+        sharedTasks.value = Array.from(taskMap.values());
+        console.log("Final processed tasks:", sharedTasks.value);
+
+    } catch (error) {
+        console.error("Error in loadSharedTasks:", error);
+    } finally {
+        isLoading.value = false;
+    }
+}
 
         const loadCategories = async () => {
             try {
@@ -580,136 +587,134 @@ export default {
         };
 
         const getTasksForHourAndUser = (hour, userId) => {
-            if (!userId || sharedTasks.value.length === 0) {
-                return [];
+    if (!userId || !sharedTasks.value || sharedTasks.value.length === 0) {
+        return [];
+    }
+
+    // デバッグログ用のフラグ
+    const isDebugHour = hour === 9;
+    if (isDebugHour) {
+        console.log(`Looking for tasks at ${hour}:00 for user ${userId}`);
+    }
+
+    const matchingTasks = [];
+    // 確実に数値として処理するため、parseIntを使用
+    const columnUserId = parseInt(userId, 10);
+
+    // ユーザーIDが無効な場合は空の配列を返す
+    if (isNaN(columnUserId)) {
+        console.warn("Invalid userId provided:", userId);
+        return [];
+    }
+
+    // 各タスクをチェック
+    for (const task of sharedTasks.value) {
+        try {
+            // タスクのベーシックデータを取得
+            const taskId = task.id;
+            // 文字列の場合もあるので、parseIntで確実に数値に変換
+            const taskUserId = task.user_id ? parseInt(task.user_id, 10) : null;
+
+            // 現在のユーザーのタスクかどうか
+            const isCurrentUserTask = taskUserId === currentUserId.value;
+
+            // このタスクをこのユーザーの列に表示すべきかどうか
+            let shouldDisplayInColumn = false;
+
+            // ケース1: このユーザーに属するタスク
+            if (taskUserId === columnUserId) {
+                shouldDisplayInColumn = true;
+                if (isDebugHour) console.log(`Task ${taskId} belongs to column user: ${columnUserId}`);
             }
+            // ケース2: 個別共有タスク
+            else if (task.shared_with && Array.isArray(task.shared_with)) {
+                const isIndividuallyShared = task.shared_with.some(share => {
+                    // shared_with_user_id または user_id がこの列のユーザーIDと一致するか
+                    const shareUserId = parseInt(share.shared_with_user_id || share.user_id, 10);
+                    return shareUserId === columnUserId;
+                });
 
-            // Debug logging for specific hour
-            const isDebugHour = hour === 9;
-            if (isDebugHour) {
-                console.log(
-                    `Looking for tasks at ${hour}:00 for user ${userId}`,
-                );
-            }
-
-            const matchingTasks = [];
-            userId = Number(userId);
-
-            // Find tasks for this user and hour
-            for (const task of sharedTasks.value) {
-                try {
-                    // Basic task data
-                    const taskId = task.id;
-                    const taskUserId = Number(task.user_id);
-                    const isCurrentUserTask =
-                        taskUserId === currentUserId.value;
-
-                    // Determine if task should be shown in this user's column
-                    let shouldDisplayInColumn = false;
-
-                    // Case 1: If the task belongs to this user
-                    if (taskUserId === userId) {
-                        shouldDisplayInColumn = true;
-                    }
-
-                    // Case 2: If the task is individually shared with this user
-                    else if (
-                        task.shared_with &&
-                        task.shared_with.some(
-                            (share) =>
-                                Number(share.user_id) === userId ||
-                                Number(share.shared_with_user_id) === userId,
-                        )
-                    ) {
-                        shouldDisplayInColumn = true;
-                    }
-
-                    // Case 3: If the task is globally shared
-                    else if (task.isGloballyShared) {
-                        // For global sharing, check if the owner has shared with this column's user
-                        const isSharedGlobally = globalShares.value.some(
-                            (share) =>
-                                Number(share.user_id) === taskUserId &&
-                                Number(share.shared_with_user_id) === userId,
-                        );
-
-                        shouldDisplayInColumn = isSharedGlobally;
-                    }
-
-                    // Case 4: Check if this task should be displayed based on global shares
-                    else if (globalShares.value.length > 0) {
-                        // APIの成功だけを考慮して、グローバル共有の条件を修正
-
-                        // 1. タスク所有者のカラムの場合は表示（自分のタスクは自分のカラムに表示）
-                        if (userId === taskUserId) {
-                            shouldDisplayInColumn = true;
-                        }
-                        // 2. グローバル共有されたタスクの場合
-                        else {
-                            // グローバル共有情報を確認
-                            const isTaskOwnerSharing = globalShares.value.some(
-                                (share) => Number(share.user_id) === taskUserId
-                            );
-
-                            // タスク所有者がグローバル共有している場合、そのタスクを表示
-                            if (isTaskOwnerSharing) {
-                                shouldDisplayInColumn = true;
-                            }
-                        }
-
-                        if (isDebugHour) {
-                            const isTaskOwnerSharing = globalShares.value.some(
-                                (share) => Number(share.user_id) === taskUserId
-                            );
-                            console.log(`Global sharing check: isTaskOwnerSharing=${isTaskOwnerSharing}, shouldDisplay=${shouldDisplayInColumn}`);
-                        }
-                    }
-
-                    // 最終手段の行を削除し、正しい条件に基づいてタスクを表示するようにします
-
-                    if (isDebugHour) {
-                        console.log(
-                            `Task ${task.id} - ${task.title} - Owner: ${taskUserId}, ThisColumn: ${userId}, ShouldDisplay: ${shouldDisplayInColumn}`,
-                        );
-                    }
-
-                    if (!shouldDisplayInColumn) continue;
-
-                    // Check if task is on the right date/time
-                    const taskDate = formatDateForComparison(task.due_date);
-                    const dateMatches = taskDate === currentDate.value;
-
-                    if (!dateMatches) continue;
-                    if (!task.due_time) continue;
-
-                    // Check the hour
-                    const taskHour = extractHour(task.due_time);
-                    if (taskHour !== hour) continue;
-
-                    // Task passes all checks, add it to results
-                    const taskCopy = { ...task };
-
-                    // Add owner info for shared tasks
-                    if (taskUserId !== userId) {
-                        taskCopy.ownerInfo = task.user
-                            ? task.user.name
-                            : "Shared Task";
-                    }
-
-                    taskCopy.isCurrentUserTask = isCurrentUserTask;
-
-                    matchingTasks.push(taskCopy);
-
-                    if (isDebugHour) {
-                        console.log(`✓ Added task: ${task.id} - ${task.title}`);
-                    }
-                } catch (error) {
-                    console.error("Error processing task:", error, task);
+                if (isIndividuallyShared) {
+                    shouldDisplayInColumn = true;
+                    if (isDebugHour) console.log(`Task ${taskId} is individually shared with column user: ${columnUserId}`);
                 }
             }
+            // ケース3: グローバル共有タスク
+            else if (task.isGloballyShared) {
+                // グローバル共有の場合、タスク所有者とこの列のユーザーの関係を確認する
+                if (globalShares.value && globalShares.value.length > 0) {
+                    // このタスクの所有者が、この列のユーザーとグローバル共有しているか
+                    const shareRelationship = globalShares.value.some(share => {
+                        const shareOwnerId = parseInt(share.user_id, 10);
+                        const shareWithUserId = parseInt(share.shared_with_user_id, 10);
 
-            return matchingTasks;
-        };
+                        // A) タスク所有者がこの列のユーザーとグローバル共有している
+                        const ownerSharesWithColumnUser = shareOwnerId === taskUserId && shareWithUserId === columnUserId;
+
+                        // B) この列のユーザーがタスク所有者とグローバル共有している
+                        const columnUserSharesWithOwner = shareOwnerId === columnUserId && shareWithUserId === taskUserId;
+
+                        return ownerSharesWithColumnUser || columnUserSharesWithOwner;
+                    });
+
+                    if (shareRelationship) {
+                        shouldDisplayInColumn = true;
+                        if (isDebugHour) console.log(`Task ${taskId} is globally shared between ${taskUserId} and ${columnUserId}`);
+                    }
+                }
+            }
+            // ケース4: フォールバック - 常に所有者の列にはタスクを表示
+            else if (taskUserId === columnUserId) {
+                shouldDisplayInColumn = true;
+                if (isDebugHour) console.log(`Task ${taskId} falls back to owner's column: ${columnUserId}`);
+            }
+
+            // このユーザーの列に表示すべきでない場合はスキップ
+            if (!shouldDisplayInColumn) continue;
+
+            // 日付と時間が一致するかチェック
+            const taskDate = formatDateForComparison(task.due_date);
+            const dateMatches = taskDate === currentDate.value;
+
+            if (!dateMatches) {
+                if (isDebugHour) console.log(`Task ${taskId} date doesn't match: ${taskDate} vs ${currentDate.value}`);
+                continue;
+            }
+
+            if (!task.due_time) {
+                if (isDebugHour) console.log(`Task ${taskId} has no due_time`);
+                continue;
+            }
+
+            // 時間が一致するかチェック
+            const taskHour = extractHour(task.due_time);
+            if (taskHour !== hour) {
+                if (isDebugHour) console.log(`Task ${taskId} hour doesn't match: ${taskHour} vs ${hour}`);
+                continue;
+            }
+
+            // すべての条件を満たしたタスクをコピー
+            const taskCopy = { ...task };
+
+            // 所有者情報を追加（他人のタスクの場合）
+            if (taskUserId !== columnUserId) {
+                taskCopy.ownerInfo = task.user
+                    ? task.user.name
+                    : task.ownerInfo || "Shared Task";
+            }
+
+            taskCopy.isCurrentUserTask = isCurrentUserTask;
+
+            // 結果に追加
+            matchingTasks.push(taskCopy);
+            if (isDebugHour) console.log(`✓ Added task: ${taskId} - ${task.title}`);
+        } catch (error) {
+            console.error("Error processing task:", error, task);
+        }
+    }
+
+    return matchingTasks;
+};
 
         // Improved hour extraction
         // Improved hour extraction

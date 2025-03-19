@@ -40,6 +40,21 @@ export default {
     getGlobalShares() {
         return axios.get(`/api/global-shares`, {
             headers: getCommonHeaders(),
+            // キャッシュを防ぐためのタイムスタンプパラメータを追加
+            params: { _t: new Date().getTime() }
+        })
+        .then(response => {
+            // レスポンスが空でないことを確認
+            if (!response.data) {
+                console.warn("Empty response from global-shares API");
+                return { data: [] };
+            }
+            return response;
+        })
+        .catch(error => {
+            console.error("Error in getGlobalShares:", error);
+            // エラー時には空の配列を返す
+            return { data: [] };
         });
     },
 
@@ -98,6 +113,21 @@ export default {
     getGloballySharedWithMe() {
         return axios.get("/api/global-shared-with-me", {
             headers: getCommonHeaders(),
+            // キャッシュを防ぐためのタイムスタンプパラメータを追加
+            params: { _t: new Date().getTime() }
+        })
+        .then(response => {
+            // レスポンスが空でないことを確認
+            if (!response.data) {
+                console.warn("Empty response from global-shared-with-me API");
+                return { data: [] };
+            }
+            return response;
+        })
+        .catch(error => {
+            console.error("Error in getGloballySharedWithMe:", error);
+            // エラー時には空の配列を返す
+            return { data: [] };
         });
     },
 };

@@ -312,22 +312,55 @@ class TodoApiController extends Controller
      * @return \Illuminate\Database\Eloquent\Builder
      */
     private function buildBaseTaskQuery($request = null)
-    {
-        // 特定のユーザーIDが指定されている場合はそのユーザーのタスクを取得
-        // グローバル共有機能のために追加
-        if ($request && $request->has('user_id')) {
-            $userId = $request->user_id;
+{
+    // リクエストと現在のユーザーが存在するか確認
+    if (!$request || !Auth::check()) {
+        return Todo::where("user_id", Auth::id())->with("category");
+    }
 
-            // 権限チェック - グローバル共有されているユーザーのタスクのみ取得可能
-            $isSharedGlobally = Auth::user()
-                ->globallySharedBy()
-                ->where('user_id', $userId)
-                ->exists();
+    // 特定のユーザーIDが指定されている場合はそのユーザーのタスクを取得
+    if ($request->has('user_id')) {
+        $requestedUserId = $request->user_id;
+        $currentUserId = Auth::id();
 
-            if ($isSharedGlobally || Auth::id() == $userId) {
-                return Todo::where("user_id", $userId)->with(["category", "user"]);
-            }
+        // ユーザーIDが数値であることを確認
+        $requestedUserId = is_numeric($requestedUserId) ? (int)$requestedUserId : null;
+
+        // 現在のユーザー自身のタスクを要求している場合
+        if ($requestedUserId === $currentUserId) {
+            return Todo::where("user_id", $currentUserId)->with(["category", "user"]);
         }
+
+        // グローバル共有の権限チェック
+        $isSharedGlobally = Auth::user()
+            ->globallySharedBy()
+            ->where('user_id', $requestedUserId)
+            ->exists();
+
+        // 現在のユーザーがグローバル共有しているユーザーのタスクかどうかチェック
+        $isUserSharingGlobally = Auth::user()
+            ->globallySharedWith()
+            ->where('shared_with_user_id', $requestedUserId)
+            ->exists();
+
+        if ($isSharedGlobally || $isUserSharingGlobally) {
+            // 許可された場合、指定されたユーザーのタスクを返す
+            return Todo::where("user_id", $requestedUserId)->with(["category", "user"]);
+        }
+
+        // 個別共有タスクのチェック - 指定ユーザーが共有したタスクのみ取得
+        $sharedTaskIds = Auth::user()
+            ->sharedTasks()
+            ->where('user_id', $requestedUserId)
+            ->pluck('id');
+
+        if ($sharedTaskIds->isNotEmpty()) {
+            // 個別に共有されたタスクのみを返す
+            return Todo::where('user_id', $requestedUserId)
+                ->whereIn('id', $sharedTaskIds)
+                ->with(["category", "user"]);
+        }
+    }
 
         // デフォルトは現在のユーザーのタスク
         return Todo::where("user_id", Auth::id())->with("category");

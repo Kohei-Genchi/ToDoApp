@@ -55,26 +55,39 @@ export default {
      * @param {string} date 日付（YYYY-MM-DD形式）
      * @returns {Promise} APIレスポンス
      */
-    getTasks(view, date) {
-        // Ensure we have valid parameters - handle both object and direct params
+    getTasks(view, date, additionalParams = {}) {
+        // パラメータを処理 - オブジェクトと直接パラメータの両方のケースを処理
         let params = {};
 
         if (typeof view === "object" && view !== null) {
-            // Handle case where first argument is an object with params
-            params = view;
+            // 最初の引数がオブジェクトの場合、それをパラメータとして使用
+            params = { ...view };
         } else {
-            // Handle case where parameters are passed directly
-            params = { view, date };
+            // パラメータが直接渡された場合
+            params = {
+                view: view || 'today',
+                date: date || new Date().toISOString().split('T')[0]
+            };
+
+            // 追加パラメータがある場合はマージ
+            if (additionalParams && typeof additionalParams === 'object') {
+                params = { ...params, ...additionalParams };
+            }
         }
 
-        console.log("GetTasks params:", params);
+        // user_id パラメータが存在する場合、確実に数値/文字列として送信
+        if (params.user_id !== undefined) {
+            // 明示的に文字列に変換（数値の場合も文字列になる）
+            params.user_id = String(params.user_id);
+        }
+
+        console.log("API Request params:", params);
 
         return axios.get("/api/todos", {
             params: params,
             headers: getCommonHeaders(),
         });
     },
-
     /**
      * 特定のタスクをIDで取得
      * @param {number} id タスクID

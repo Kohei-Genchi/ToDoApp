@@ -448,9 +448,17 @@ export default {
             showTaskModal.value = true;
         }
 
-        async function loadSharedTasks() {
-            await loadTasks(); // This calls your existing loadTasks method
-        }
+        const loadSharedTasks = async () => {
+    try {
+        // この関数は単に共有タスクビューとの連携用
+        // 実際の処理は SharedTasksCalendarView コンポーネント内で行われる
+        console.log("loadSharedTasks called in TodoApp");
+        return true;
+    } catch (error) {
+        console.error("Error in loadSharedTasks:", error);
+        return false;
+    }
+};
 
         /**
          * Open edit task modal
@@ -826,6 +834,7 @@ export default {
             // Other functions
             loadCategories,
             isRecurringTask,
+            loadSharedTasks,
         };
     },
 };
