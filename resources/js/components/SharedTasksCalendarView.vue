@@ -53,16 +53,6 @@
             </div>
         </div>
 
-        <!-- Back to task list button -->
-        <div class="flex justify-end px-2 py-1">
-            <button
-                @click="goBackToTaskList"
-                class="text-xs text-blue-600 hover:text-blue-800"
-            >
-                ← タスク一覧に戻る
-            </button>
-        </div>
-
         <!-- Calendar Table Layout - Increased width and removed overflow constraints -->
         <div class="w-full">
             <table class="w-full border-collapse table-fixed">
@@ -111,9 +101,13 @@
                             @click="addTaskAtTime(hour, user.id)"
                         >
                             <!-- Tasks for this hour and user - horizontal layout -->
-                            <div class="flex flex-col h-full w-full overflow-y-auto p-0.5">
+                            <div
+                                class="flex flex-col h-full w-full overflow-y-auto p-0.5"
+                            >
                                 <div
-                                    v-for="(task, index) in getTasksForHourAndUser(hour, user.id)"
+                                    v-for="(
+                                        task, index
+                                    ) in getTasksForHourAndUser(hour, user.id)"
                                     :key="`task-${task.id}`"
                                     class="mb-0.5 p-1 text-xs rounded overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md text-left flex-shrink-0"
                                     :class="getTaskClasses(task)"
@@ -231,23 +225,32 @@ export default {
                 if (window.Laravel && window.Laravel.user) {
                     try {
                         const ownTasksResponse = await TodoApi.getTasks({
-                            date: currentDate.value
+                            date: currentDate.value,
                         });
 
-                        if (ownTasksResponse.data && Array.isArray(ownTasksResponse.data)) {
-                            console.log("Loaded own tasks:", ownTasksResponse.data);
+                        if (
+                            ownTasksResponse.data &&
+                            Array.isArray(ownTasksResponse.data)
+                        ) {
+                            console.log(
+                                "Loaded own tasks:",
+                                ownTasksResponse.data,
+                            );
 
                             // Add the current user's tasks to the shared tasks list
                             allTasks = [...allTasks, ...ownTasksResponse.data];
                         }
                     } catch (ownTasksError) {
-                        console.error("Error loading own tasks:", ownTasksError);
+                        console.error(
+                            "Error loading own tasks:",
+                            ownTasksError,
+                        );
                     }
                 }
 
                 // Remove duplicates (in case a task is both shared and owned)
                 const taskIds = new Set();
-                sharedTasks.value = allTasks.filter(task => {
+                sharedTasks.value = allTasks.filter((task) => {
                     if (taskIds.has(task.id)) {
                         return false;
                     }
@@ -366,16 +369,21 @@ export default {
             for (const task of sharedTasks.value) {
                 // Check if the task should be displayed in this user's column
                 const isTaskOwner = Number(task.user_id) === Number(userId);
-                const isSharedWithUser = task.shared_with && task.shared_with.some(
-                    share => Number(share.user_id) === Number(userId)
-                );
-                const isCurrentUserTask = Number(task.user_id) === Number(currentUserId.value);
+                const isSharedWithUser =
+                    task.shared_with &&
+                    task.shared_with.some(
+                        (share) => Number(share.user_id) === Number(userId),
+                    );
+                const isCurrentUserTask =
+                    Number(task.user_id) === Number(currentUserId.value);
 
                 // Display logic:
                 // 1. If this is the task owner's column, show the task (each user's tasks in their own column)
                 // 2. If this is the current user's column, show tasks shared with them
-                const shouldDisplayInColumn = isTaskOwner ||
-                    (Number(userId) === Number(currentUserId.value) && isSharedWithUser);
+                const shouldDisplayInColumn =
+                    isTaskOwner ||
+                    (Number(userId) === Number(currentUserId.value) &&
+                        isSharedWithUser);
 
                 if (!shouldDisplayInColumn) continue;
 
@@ -384,7 +392,9 @@ export default {
 
                 // Debug date comparison
                 if (hour === 9) {
-                    console.log(`Task date: ${taskDate}, Current date: ${currentDate.value}`);
+                    console.log(
+                        `Task date: ${taskDate}, Current date: ${currentDate.value}`,
+                    );
                 }
 
                 const dateMatches = taskDate === currentDate.value;
@@ -402,7 +412,9 @@ export default {
 
                 // Add owner information to the task for display purposes
                 if (!isTaskOwner) {
-                    taskCopy.ownerInfo = task.user ? task.user.name : 'Shared Task';
+                    taskCopy.ownerInfo = task.user
+                        ? task.user.name
+                        : "Shared Task";
                 }
 
                 // Add a flag to indicate if this is the current user's task
@@ -413,7 +425,7 @@ export default {
                 // Debug for hour 9
                 if (hour === 9) {
                     console.log(
-                        `Found matching task: ${task.id} - ${task.title} - Owner: ${isTaskOwner ? 'Yes' : 'No'} - Shared: ${isSharedWithUser ? 'Yes' : 'No'}`,
+                        `Found matching task: ${task.id} - ${task.title} - Owner: ${isTaskOwner ? "Yes" : "No"} - Shared: ${isSharedWithUser ? "Yes" : "No"}`,
                     );
                 }
             }
@@ -476,8 +488,8 @@ export default {
 
                 // Format to YYYY-MM-DD in local timezone
                 const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const day = String(date.getDate()).padStart(2, "0");
 
                 return `${year}-${month}-${day}`;
             } catch (e) {
@@ -501,16 +513,16 @@ export default {
             const isCurrentUserTask = task.isCurrentUserTask;
 
             // Add visual indicators
-            let specialClasses = '';
+            let specialClasses = "";
 
             // For shared tasks, add dashed border
             if (isSharedTask) {
-                specialClasses += 'border-dashed border ';
+                specialClasses += "border-dashed border ";
             }
 
             // For current user's tasks in other columns, add highlight
             if (isCurrentUserTask && isSharedTask) {
-                specialClasses += 'bg-blue-50 ';
+                specialClasses += "bg-blue-50 ";
             }
 
             // Add status-specific classes
