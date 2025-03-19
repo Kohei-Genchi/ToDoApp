@@ -63,109 +63,100 @@
             </button>
         </div>
 
-        <!-- User columns header -->
-        <div class="grid" :class="userColumnsClass">
-            <div class="px-2 py-3 bg-gray-50 border-b border-r border-gray-200">
-                <div class="text-sm font-medium text-gray-500">時間</div>
-            </div>
-            <div
-                v-for="user in sharedUsers"
-                :key="user.id"
-                class="px-2 py-3 bg-gray-50 border-b border-r border-gray-200 text-center"
-            >
-                <div class="text-sm font-medium truncate">{{ user.name }}</div>
-                <div class="text-xs text-gray-500 truncate">
-                    {{ user.email }}
-                </div>
-            </div>
-            <!-- Empty column spacers if less than 5 users -->
-            <div
-                v-for="n in emptyColumns"
-                :key="`empty-${n}`"
-                class="px-2 py-3 bg-gray-50 border-b border-r border-gray-200"
-            ></div>
-        </div>
-
-        <!-- Time slots grid -->
-        <div
-            class="grid"
-            :class="userColumnsClass"
-            style="height: calc(100vh - 250px); overflow-y: auto"
-        >
-            <!-- Time slots from 8:00 to 20:00 -->
-            <template v-for="hour in hours" :key="hour">
-                <div
-                    class="px-2 py-2 border-b border-r border-gray-200 bg-gray-50 sticky left-0 z-10 text-left"
-                >
-                    <div class="text-xs text-gray-500">
-                        {{ formatHour(hour) }}
-                    </div>
-                </div>
-
-                <!-- Task cells for each user -->
-                <template
-                    v-for="(user, userIndex) in sharedUsers"
-                    :key="`${hour}-${user.id}`"
-                >
-                    <div
-                        class="border-b border-r border-gray-200 relative group min-h-[60px]"
-                        @click="addTaskAtTime(hour, user.id)"
-                    >
-                        <!-- Tasks for this hour and user -->
-                        <div
-                            v-for="task in getTasksForHourAndUser(
-                                hour,
-                                user.id,
-                            )"
-                            :key="task.id"
-                            class="absolute m-1 p-1 text-xs rounded overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md text-left"
-                            :class="getTaskClasses(task)"
-                            :style="getTaskPositionStyle(task, hour)"
-                            @click.stop="editTask(task)"
+        <!-- Calendar Table Layout -->
+        <div class="w-full overflow-auto">
+            <table class="w-full border-collapse">
+                <!-- Header Row -->
+                <thead>
+                    <tr>
+                        <th
+                            class="w-16 px-2 py-3 bg-gray-50 border border-gray-200 text-sm font-medium text-gray-500"
                         >
-                            <div class="font-medium truncate">
-                                {{ task.title }}
+                            時間
+                        </th>
+                        <th
+                            v-for="user in sharedUsers"
+                            :key="`header-${user.id}`"
+                            class="px-2 py-3 bg-gray-50 border border-gray-200 text-center min-w-40"
+                        >
+                            <div class="text-sm font-medium truncate">
+                                {{ user.name }}
                             </div>
+                            <div class="text-xs text-gray-500 truncate">
+                                {{ user.email }}
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+
+                <!-- Time & Task Rows -->
+                <tbody>
+                    <tr v-for="hour in fullHours" :key="`row-${hour}`">
+                        <!-- Time Cell -->
+                        <td
+                            class="w-16 px-2 py-2 border border-gray-200 bg-gray-50 text-left"
+                        >
+                            <div class="text-xs text-gray-500">
+                                {{ formatHour(hour) }}
+                            </div>
+                        </td>
+
+                        <!-- User Cells for this hour -->
+                        <td
+                            v-for="user in sharedUsers"
+                            :key="`cell-${hour}-${user.id}`"
+                            class="border border-gray-200 relative group min-h-[60px] p-0"
+                            @click="addTaskAtTime(hour, user.id)"
+                        >
+                            <!-- Tasks for this hour and user -->
                             <div
-                                v-if="task.due_time"
-                                class="text-xs opacity-75"
+                                v-for="task in getTasksForHourAndUser(
+                                    hour,
+                                    user.id,
+                                )"
+                                :key="`task-${task.id}`"
+                                class="absolute m-1 p-1 text-xs rounded overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md text-left"
+                                :class="getTaskClasses(task)"
+                                :style="getTaskPositionStyle(task, hour)"
+                                @click.stop="editTask(task)"
                             >
-                                {{ formatTaskTime(task.due_time) }}
-                            </div>
-                        </div>
-
-                        <!-- Add task button (only shown on hover) -->
-                        <div
-                            class="absolute inset-0 bg-blue-50 bg-opacity-0 group-hover:bg-opacity-20 flex items-center justify-center opacity-0 group-hover:opacity-100"
-                        >
-                            <button
-                                class="p-1 rounded-full bg-blue-100 text-blue-600"
-                                @click.stop="addTaskAtTime(hour, user.id)"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    class="h-4 w-4"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
+                                <div class="font-medium truncate">
+                                    {{ task.title }}
+                                </div>
+                                <div
+                                    v-if="task.due_time"
+                                    class="text-xs opacity-75"
                                 >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </template>
+                                    {{ formatTaskTime(task.due_time) }}
+                                </div>
+                            </div>
 
-                <!-- Empty cells for placeholder columns -->
-                <template v-for="n in emptyColumns" :key="`empty-${hour}-${n}`">
-                    <div
-                        class="border-b border-r border-gray-200 min-h-[60px]"
-                    ></div>
-                </template>
-            </template>
+                            <!-- Add task button (only shown on hover) -->
+                            <div
+                                class="absolute inset-0 bg-blue-50 bg-opacity-0 group-hover:bg-opacity-20 flex items-center justify-center opacity-0 group-hover:opacity-100"
+                            >
+                                <button
+                                    class="p-1 rounded-full bg-blue-100 text-blue-600"
+                                    @click.stop="addTaskAtTime(hour, user.id)"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-4 w-4"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
         <!-- Task modal for adding/editing tasks -->
@@ -184,7 +175,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import TaskModal from "./TaskModal.vue";
 import TodoApi from "../api/todo";
 import TaskShareApi from "../api/taskShare";
@@ -215,8 +206,8 @@ export default {
         const tempSelectedUser = ref(null);
         const tempSelectedHour = ref(null);
 
-        // Generate hours from 8:00 to 20:00
-        const hours = Array.from({ length: 13 }, (_, i) => i + 8); // 8 to 20
+        // Generate all hours from 8:00 to 20:00 (including every hour)
+        const fullHours = Array.from({ length: 13 }, (_, i) => i + 8); // 8 to 20
 
         // Methods
         const loadSharedTasks = async () => {
@@ -224,6 +215,7 @@ export default {
             try {
                 const response = await TaskShareApi.getSharedWithMe();
                 sharedTasks.value = response.data;
+                console.log("Loaded shared tasks:", sharedTasks.value);
 
                 // Extract unique users from shared tasks for the calendar view
                 const uniqueUsers = new Map();
@@ -251,6 +243,7 @@ export default {
                 });
 
                 sharedUsers.value = Array.from(uniqueUsers.values());
+                console.log("Shared users:", sharedUsers.value);
             } catch (error) {
                 console.error("Error loading shared tasks:", error);
             } finally {
@@ -276,17 +269,6 @@ export default {
                 day: "numeric",
                 weekday: "long",
             });
-        });
-
-        const userColumnsClass = computed(() => {
-            // First column for time labels + one column per user (max 5)
-            const columnCount = Math.min(sharedUsers.value.length, 5) + 1;
-            return `grid-cols-${columnCount}`;
-        });
-
-        const emptyColumns = computed(() => {
-            // Calculate how many empty columns we need to add to maintain layout
-            return Math.max(0, 5 - sharedUsers.value.length);
         });
 
         // Methods
@@ -325,22 +307,46 @@ export default {
         };
 
         const getTasksForHourAndUser = (hour, userId) => {
-            return sharedTasks.value.filter((task) => {
+            // For debugging
+            if (sharedTasks.value.length > 0 && hour === 9 && userId) {
+                console.log(
+                    `Looking for tasks at ${hour}:00 for user ${userId}`,
+                );
+            }
+
+            const matchingTasks = sharedTasks.value.filter((task) => {
                 // Check if task belongs to this user
-                if (task.user_id !== userId) return false;
+                const isTaskOwner = task.user_id === userId;
 
                 // Check if task is on the current date
                 const taskDate = formatDateForComparison(task.due_date);
-                if (taskDate !== currentDate.value) return false;
+                const dateMatches = taskDate === currentDate.value;
 
                 // Check if task is in the current hour
+                let hourMatches = false;
                 if (task.due_time) {
-                    const taskTime = extractHour(task.due_time);
-                    return taskTime === hour;
+                    const taskHour = extractHour(task.due_time);
+                    hourMatches = taskHour === hour;
                 }
 
-                return false;
+                // Debug for specific hour
+                if (hour === 9 && isTaskOwner && dateMatches) {
+                    console.log(
+                        `Task ${task.id} (${task.title}): hour=${extractHour(task.due_time)}, matches=${hourMatches}`,
+                    );
+                }
+
+                return isTaskOwner && dateMatches && hourMatches;
             });
+
+            // For debugging
+            if (matchingTasks.length > 0) {
+                console.log(
+                    `Found ${matchingTasks.length} tasks for hour ${hour}, user ${userId}`,
+                );
+            }
+
+            return matchingTasks;
         };
 
         const extractHour = (timeString) => {
@@ -362,6 +368,7 @@ export default {
 
                 return null;
             } catch (e) {
+                console.error("Error extracting hour:", e);
                 return null;
             }
         };
@@ -388,6 +395,7 @@ export default {
 
                 return "";
             } catch (e) {
+                console.error("Error formatting date:", e);
                 return "";
             }
         };
@@ -402,10 +410,7 @@ export default {
 
             // Add category color if available
             if (task.category) {
-                return (
-                    `${baseClasses} border-l-4 bg-white` +
-                    ` border-l-[${task.category.color}]`
-                );
+                return `${baseClasses} border-l-4 bg-white border-l-[${task.category.color}]`;
             }
 
             return `${baseClasses} bg-white border-l-4 border-l-blue-500`;
@@ -442,7 +447,7 @@ export default {
 
             return {
                 top: `${minuteOffset}%`,
-                left: "0", // Always align to the left
+                left: "0",
                 width: "95%",
             };
         };
@@ -548,6 +553,9 @@ export default {
                 }
 
                 closeTaskModal();
+
+                // Reload tasks to ensure everything is up to date
+                loadSharedTasks();
             } catch (error) {
                 console.error("Error submitting task:", error);
                 alert("タスクの保存に失敗しました");
@@ -571,6 +579,11 @@ export default {
             }
         };
 
+        // Watch for date changes to reload tasks
+        watch(currentDate, () => {
+            loadSharedTasks();
+        });
+
         // Initialize the component
         onMounted(() => {
             loadSharedTasks();
@@ -587,9 +600,7 @@ export default {
             formattedCurrentDate,
             sharedUsers,
             sharedTasks,
-            hours,
-            userColumnsClass,
-            emptyColumns,
+            fullHours,
             showTaskModal,
             taskModalMode,
             selectedTaskId,
@@ -617,23 +628,25 @@ export default {
 </script>
 
 <style scoped>
-/* Dynamic grid columns based on user count */
-.grid-cols-1 {
-    grid-template-columns: 60px;
+td {
+    height: 60px;
 }
-.grid-cols-2 {
-    grid-template-columns: 60px 1fr;
+
+/* Set a min-width for user columns */
+table th,
+table td {
+    min-width: 120px;
 }
-.grid-cols-3 {
-    grid-template-columns: 60px 1fr 1fr;
+
+/* Keep time column at a fixed width */
+table th:first-child,
+table td:first-child {
+    min-width: 60px;
+    width: 60px;
 }
-.grid-cols-4 {
-    grid-template-columns: 60px 1fr 1fr 1fr;
-}
-.grid-cols-5 {
-    grid-template-columns: 60px 1fr 1fr 1fr 1fr;
-}
-.grid-cols-6 {
-    grid-template-columns: 60px 1fr 1fr 1fr 1fr 1fr;
+
+/* Make position of task container relative to its cell */
+td {
+    position: relative;
 }
 </style>
