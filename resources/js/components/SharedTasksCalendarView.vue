@@ -11,6 +11,28 @@
                 <span class="text-sm text-gray-500">{{
                     formattedCurrentDate
                 }}</span>
+                <!-- 新しいユーザー共有ボタンを追加 -->
+                <button
+                    @click="openGlobalShareModal"
+                    class="ml-2 px-2 py-1 text-sm bg-green-600 text-white hover:bg-green-700 rounded flex items-center"
+                    title="ユーザーを追加して全てのタスクを共有"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4 mr-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                        />
+                    </svg>
+                    ユーザー共有
+                </button>
             </div>
             <div class="flex space-x-2">
                 <button
@@ -52,6 +74,12 @@
                 </button>
             </div>
         </div>
+
+        <task-share-modal
+            v-if="showGlobalShareModal"
+            :task="selectedGlobalTask"
+            @close="showGlobalShareModal = false"
+        />
 
         <!-- Calendar Table Layout - Increased width and removed overflow constraints -->
         <div class="w-full">
@@ -182,12 +210,14 @@ import { ref, computed, onMounted, watch } from "vue";
 import TaskModal from "./TaskModal.vue";
 import TodoApi from "../api/todo";
 import TaskShareApi from "../api/taskShare";
+import TaskShareModal from "./TaskShareModal.vue";
 
 export default {
     name: "SharedTasksCalendarView",
 
     components: {
         TaskModal,
+        TaskShareModal,
     },
 
     emits: ["task-updated", "task-created", "task-deleted", "back"],
@@ -208,6 +238,19 @@ export default {
         const selectedTaskData = ref(null);
         const tempSelectedUser = ref(null);
         const tempSelectedHour = ref(null);
+
+        const showGlobalShareModal = ref(false);
+        const selectedGlobalTask = ref(null);
+
+        function openGlobalShareModal() {
+            // ダミータスクオブジェクトを作成
+            selectedGlobalTask.value = {
+                id: "global-share", // 特別なID
+                title: "全てのタスク", // 全てのタスクを共有することを示すタイトル
+                isGlobalShare: true, // グローバル共有フラグ
+            };
+            showGlobalShareModal.value = true;
+        }
 
         // Generate all hours from 8:00 to 20:00 (including every hour)
         const fullHours = Array.from({ length: 13 }, (_, i) => i + 8); // 8 to 20
@@ -350,7 +393,6 @@ export default {
             }
         };
 
-        // Improved function to get tasks for a specific hour and user
         const getTasksForHourAndUser = (hour, userId) => {
             if (!userId || sharedTasks.value.length === 0) {
                 return [];
@@ -377,9 +419,6 @@ export default {
                 const isCurrentUserTask =
                     Number(task.user_id) === Number(currentUserId.value);
 
-                // Display logic:
-                // 1. If this is the task owner's column, show the task (each user's tasks in their own column)
-                // 2. If this is the current user's column, show tasks shared with them
                 const shouldDisplayInColumn =
                     isTaskOwner ||
                     (Number(userId) === Number(currentUserId.value) &&
@@ -538,8 +577,6 @@ export default {
             // Default styling with special indicators if needed
             return `${baseClasses} ${specialClasses} bg-white border-l-4 border-l-blue-500`;
         };
-
-        // Function removed as we're no longer using absolute positioning for tasks
 
         const previousDay = () => {
             const date = new Date(currentDate.value);
@@ -711,6 +748,9 @@ export default {
             submitTask,
             handleTaskDelete,
             loadSharedTasks,
+            showGlobalShareModal,
+            selectedGlobalTask,
+            openGlobalShareModal,
         };
     },
 };

@@ -39,7 +39,11 @@
                                 <option value="view">閲覧のみ</option>
                                 <option value="edit">編集可能</option>
                             </select>
-                            <select v-else class="text-xs border rounded p-1" disabled>
+                            <select
+                                v-else
+                                class="text-xs border rounded p-1"
+                                disabled
+                            >
                                 <option>権限なし</option>
                             </select>
                             <button
@@ -153,16 +157,55 @@ export default {
             return emailRegex.test(shareEmail.value);
         });
 
+        // グローバル共有モードかどうかを判定
+        const isGlobalShareMode = computed(() => {
+            return props.task.id === "global-share";
+        });
+
         // Methods
         const loadSharedUsers = async () => {
+            // グローバル共有モードの場合はAPIリクエストをスキップ
+            if (isGlobalShareMode.value) {
+                // ユーザーの共有設定をリストしておく
+                try {
+                    // 代わりに全ユーザーの共有設定を取得
+                    // 注: APIがない場合は空の配列を返す
+                    const response = await TaskShareApi.getSharedWithMe();
+
+                    // 共有ユーザーを重複なく抽出
+                    const uniqueUsers = new Map();
+                    if (response.data && Array.isArray(response.data)) {
+                        response.data.forEach((task) => {
+                            if (task.user) {
+                                uniqueUsers.set(task.user.id, {
+                                    id: task.user.id,
+                                    name: task.user.name,
+                                    email: task.user.email,
+                                    pivot: { permission: "view" }, // デフォルトは表示のみ
+                                });
+                            }
+                        });
+                    }
+
+                    sharedUsers.value = Array.from(uniqueUsers.values());
+                } catch (error) {
+                    console.log(
+                        "グローバル共有ユーザー取得に失敗しました。新規に共有を設定してください。",
+                    );
+                    sharedUsers.value = [];
+                }
+                return;
+            }
+
+            // 通常のタスク共有モード
             try {
                 const response = await TaskShareApi.getSharedUsers(
                     props.task.id,
                 );
                 // Ensure each user has a pivot property to avoid undefined errors
-                sharedUsers.value = response.data.map(user => {
+                sharedUsers.value = response.data.map((user) => {
                     if (!user.pivot) {
-                        user.pivot = { permission: 'view' }; // Default permission
+                        user.pivot = { permission: "view" }; // Default permission
                     }
                     return user;
                 });
@@ -182,6 +225,41 @@ export default {
             isSubmitting.value = true;
 
             try {
+                // グローバル共有モードの場合の処理
+                if (isGlobalShareMode.value) {
+                    // ここではバックエンドにグローバル共有APIがないため、
+                    // ユーザーが最初のタスクを共有したことにする（デモ用）
+                    // 実際の実装では、バックエンドに適切なAPIを用意することをお勧めします
+
+                    // 既存のユーザー一覧にあるか確認
+                    const existingUser = sharedUsers.value.find(
+                        (u) => u.email === shareEmail.value,
+                    );
+                    if (existingUser) {
+                        errorMessage.value =
+                            "指定されたユーザーは既に共有設定されています。";
+                        isSubmitting.value = false;
+                        return;
+                    }
+
+                    // 新しいユーザーを追加（フロントエンドのみの操作）
+                    const newUser = {
+                        id: Date.now(), // 一時的なID
+                        name: shareEmail.value.split("@")[0], // メールアドレスから名前を生成
+                        email: shareEmail.value,
+                        pivot: { permission: sharePermission.value },
+                    };
+
+                    sharedUsers.value.push(newUser);
+
+                    // フォームをクリア
+                    shareEmail.value = "";
+                    sharePermission.value = "view";
+                    isSubmitting.value = false;
+                    return;
+                }
+
+                // 通常のタスク共有モード
                 const response = await TaskShareApi.shareTask(
                     props.task.id,
                     shareEmail.value,
@@ -214,6 +292,13 @@ export default {
                 return;
             }
 
+            // グローバル共有モードの場合はAPIリクエストをスキップ
+            if (isGlobalShareMode.value) {
+                // 権限の更新はフロントエンドのみで行う（デモ用）
+                // 実際の実装では、バックエンドAPIを適切に呼び出す
+                return;
+            }
+
             try {
                 await TaskShareApi.updatePermission(
                     props.task.id,
@@ -230,6 +315,15 @@ export default {
 
         const unshareTask = async (user) => {
             if (!confirm(`${user.name} との共有を解除してもよろしいですか？`)) {
+                return;
+            }
+
+            // グローバル共有モードの場合
+            if (isGlobalShareMode.value) {
+                // フロントエンドでユーザーを削除（デモ用）
+                sharedUsers.value = sharedUsers.value.filter(
+                    (u) => u.id !== user.id,
+                );
                 return;
             }
 
@@ -261,6 +355,7 @@ export default {
             isSubmitting,
             errorMessage,
             isValidEmail,
+            isGlobalShareMode, // 追加
             shareTask,
             updatePermission,
             unshareTask,

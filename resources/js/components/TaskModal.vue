@@ -354,6 +354,7 @@
             </div>
 
             <!-- Footer -->
+            <!-- Footer - 共有ボタンを削除 -->
             <div class="bg-gray-50 px-4 py-2 border-t border-gray-200 mt-auto">
                 <div class="flex justify-between items-center">
                     <!-- Delete/Share Buttons (edit mode only) -->
@@ -366,29 +367,7 @@
                             削除
                         </button>
 
-                        <!-- Share button (edit mode only) -->
-                        <button
-                            v-if="mode === 'edit' && todoId"
-                            type="button"
-                            @click="openShareModal"
-                            class="inline-flex items-center ml-2 px-2.5 py-1.5 text-xs font-medium rounded border border-blue-300 text-blue-700 bg-white hover:bg-blue-50"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-4 w-4 mr-1"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                                />
-                            </svg>
-                            共有
-                        </button>
+                        <!-- 共有ボタンを削除 -->
                     </div>
 
                     <!-- Cancel/Save Buttons -->
@@ -412,25 +391,15 @@
             </div>
         </div>
     </div>
-
-    <!-- Task Share Modal -->
-    <task-share-modal
-        v-if="showShareModal"
-        :task="{ id: todoId, title: form.title }"
-        @close="showShareModal = false"
-    />
 </template>
 
 <script>
 import { ref, reactive, watch, onMounted, nextTick, computed } from "vue";
-import TaskShareModal from "./TaskShareModal.vue";
 
 export default {
     name: "TaskModal",
 
-    components: {
-        TaskShareModal,
-    },
+    components: {},
 
     props: {
         mode: {
@@ -495,9 +464,6 @@ export default {
             name: "",
             color: "#3b82f6",
         });
-
-        // Share modal state
-        const showShareModal = ref(false);
 
         // ===============================
         // Computed Properties
@@ -801,11 +767,6 @@ export default {
             emit("delete", props.todoId, shouldDeleteAllRecurring);
         }
 
-        // Open share modal
-        function openShareModal() {
-            showShareModal.value = true;
-        }
-
         // ===============================
         // Watchers & Lifecycle Hooks
         // ===============================
@@ -867,8 +828,6 @@ export default {
             setCurrentTimeIfEmpty,
             clearTimes,
             ensureEndTimeIsAfterStart,
-            showShareModal,
-            openShareModal,
         };
     },
 };
