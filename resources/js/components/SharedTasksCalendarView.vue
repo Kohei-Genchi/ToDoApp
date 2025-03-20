@@ -81,26 +81,46 @@
             @close="handleGlobalShareModalClose"
         />
 
-        <!-- Calendar Table Layout - Increased width and removed overflow constraints -->
-        <div class="w-full">
+        <!-- User names row - Added above the calendar container -->
+        <div
+            class="flex border-b border-gray-200 bg-white sticky top-0 z-20 px-1 py-2"
+        >
+            <div class="w-16 px-1 text-xs font-medium text-gray-500">
+                <!-- Empty cell for time column -->
+            </div>
+            <div
+                v-for="user in sharedUsers"
+                :key="`user-${user.id}`"
+                class="flex-1 px-2 text-center"
+                style="min-width: 120px; width: auto"
+            >
+                <div class="text-sm font-medium text-gray-800">
+                    {{ user.name }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Table Layout - With scrollable container for time-based scrolling -->
+        <div
+            class="w-full calendar-container"
+            ref="calendarContainer"
+            style="max-height: 70vh; overflow-y: auto"
+        >
             <table class="w-full border-collapse table-fixed">
                 <!-- Header Row -->
                 <thead>
                     <tr>
                         <th
-                            class="w-16 px-1 py-1 bg-gray-50 border border-gray-200 text-xs font-medium text-gray-500"
+                            class="w-16 px-1 py-1 bg-gray-50 border border-gray-200 text-xs font-medium text-gray-500 sticky top-0 z-10"
                         >
                             時間
                         </th>
                         <th
                             v-for="user in sharedUsers"
                             :key="`header-${user.id}`"
-                            class="px-1 py-1 bg-gray-50 border border-gray-200 text-center"
+                            class="px-1 py-1 bg-gray-50 border border-gray-200 text-center sticky top-0 z-10"
                             style="min-width: 120px; width: auto"
                         >
-                            <div class="text-xs font-medium truncate">
-                                {{ user.name }}
-                            </div>
                             <div class="text-xs text-gray-500 truncate">
                                 {{ user.email }}
                             </div>
@@ -110,12 +130,26 @@
 
                 <!-- Time & Task Rows -->
                 <tbody>
-                    <tr v-for="hour in fullHours" :key="`row-${hour}`">
+                    <tr
+                        v-for="hour in fullHours"
+                        :key="`row-${hour}`"
+                        :data-hour="hour"
+                        class="time-row"
+                        :class="{ 'bg-blue-50': isCurrentHour(hour) }"
+                    >
                         <!-- Time Cell -->
                         <td
                             class="w-12 px-1 py-1 border border-gray-200 bg-gray-50 text-left"
+                            :class="{
+                                'font-bold text-blue-600': isCurrentHour(hour),
+                            }"
                         >
-                            <div class="text-xs text-gray-500">
+                            <div
+                                class="text-xs text-gray-500"
+                                :class="{
+                                    'text-blue-600': isCurrentHour(hour),
+                                }"
+                            >
                                 {{ formatHour(hour) }}
                             </div>
                         </td>
@@ -124,24 +158,43 @@
                         <td
                             v-for="user in sharedUsers"
                             :key="`cell-${hour}-${user.id}`"
-                            class="border border-gray-200 relative group min-h-[50px] p-0"
-                            style="height: 50px"
-                            @click="addTaskAtTime(hour, user.id)"
+                            class="border border-gray-200 relative group min-h-[50px] p-0 overflow-hidden"
+                            style="height: 50px; max-width: 150px"
                         >
-                            <!-- Tasks for this hour and user - horizontal layout -->
-                            <div
-                                class="flex flex-col h-full w-full overflow-y-auto p-0.5"
-                            >
+                            <!-- Tasks for this hour and user - contained within column -->
+                            <div class="h-full w-full p-0.5">
+                                <!-- Limited to tasks for this specific user only -->
                                 <div
-                                    v-for="(
-                                        task, index
-                                    ) in getTasksForHourAndUser(hour, user.id)"
+                                    v-for="task in getTasksForHourAndUser(
+                                        hour,
+                                        user.id,
+                                    )"
                                     :key="`task-${task.id}`"
-                                    class="mb-0.5 p-1 text-xs rounded overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-md text-left flex-shrink-0"
-                                    :class="getTaskClasses(task)"
-                                    @click.stop="editTask(task)"
+                                    class="mb-0.5 py-1 px-2 text-xs rounded overflow-hidden transition-all duration-200 hover:shadow-md text-left flex items-center"
+                                    :class="getTaskStatusClasses(task)"
                                 >
-                                    <div class="flex items-center">
+                                    <!-- Status Dropdown - MODIFIED FOR NEW STATUS OPTIONS -->
+                                    <select
+                                        v-model="task.status"
+                                        @change="
+                                            updateTaskStatus(
+                                                task.id,
+                                                task.status,
+                                            )
+                                        "
+                                        class="mr-2 text-xs rounded border-0 h-6 focus:ring-0 focus:outline-none"
+                                        :class="getSelectClasses(task.status)"
+                                    >
+                                        <option value="pending">待機中</option>
+                                        <option value="ongoing">進行中</option>
+                                        <option value="Paused">一時停止</option>
+                                        <option value="completed">完了</option>
+                                    </select>
+
+                                    <!-- Task Title and Time -->
+                                    <div
+                                        class="flex items-center flex-1 overflow-hidden"
+                                    >
                                         <div class="font-medium truncate mr-1">
                                             {{ task.title }}
                                         </div>
@@ -152,30 +205,28 @@
                                             {{ formatTaskTime(task.due_time) }}
                                         </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            <!-- Add task button (only shown on hover) -->
-                            <div
-                                class="absolute inset-0 bg-blue-50 bg-opacity-0 group-hover:bg-opacity-20 flex items-center justify-center opacity-0 group-hover:opacity-100"
-                            >
-                                <button
-                                    class="p-1 rounded-full bg-blue-100 text-blue-600"
-                                    @click.stop="addTaskAtTime(hour, user.id)"
-                                >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        class="h-4 w-4"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
+                                    <!-- Edit button -->
+                                    <button
+                                        @click.stop="editTask(task)"
+                                        class="ml-1 text-gray-500 hover:text-blue-600 flex-shrink-0"
                                     >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </button>
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="h-3.5 w-3.5"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="2"
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -183,7 +234,7 @@
             </table>
         </div>
 
-        <!-- Task modal for adding/editing tasks -->
+        <!-- Task modal for editing tasks (no longer for adding) -->
         <task-modal
             v-if="showTaskModal"
             :mode="taskModalMode"
@@ -199,7 +250,14 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue";
+import {
+    ref,
+    computed,
+    onMounted,
+    watch,
+    nextTick,
+    onBeforeUnmount,
+} from "vue";
 import TaskModal from "./TaskModal.vue";
 import TodoApi from "../api/todo";
 import TaskShareApi from "../api/taskShare";
@@ -225,17 +283,43 @@ export default {
         const currentUserId = ref(null);
         const isLoading = ref(true);
         const globalShares = ref([]);
+        const calendarContainer = ref(null);
 
         // Task modal state
         const showTaskModal = ref(false);
-        const taskModalMode = ref("add");
+        const taskModalMode = ref("edit"); // Changed default to "edit" since we're removing "add"
         const selectedTaskId = ref(null);
         const selectedTaskData = ref(null);
-        const tempSelectedUser = ref(null);
-        const tempSelectedHour = ref(null);
 
         const showGlobalShareModal = ref(false);
         const selectedGlobalTask = ref(null);
+
+        // Status colors mapping - MODIFIED FOR NEW STATUSES
+        const statusColors = {
+            pending: {
+                bg: "bg-gray-100",
+                text: "text-gray-700",
+                select: "bg-gray-100 text-gray-700",
+            },
+            ongoing: {
+                bg: "bg-blue-100",
+                text: "text-blue-700",
+                select: "bg-blue-100 text-blue-700",
+            },
+            Paused: {
+                bg: "bg-yellow-100",
+                text: "text-yellow-700",
+                select: "bg-yellow-100 text-yellow-700",
+            },
+            completed: {
+                bg: "bg-green-100",
+                text: "text-green-700",
+                select: "bg-green-100 text-green-700",
+            },
+        };
+
+        // Hours array for the calendar
+        const fullHours = Array.from({ length: 24 }, (_, i) => i); // 0 to 23
 
         function openGlobalShareModal() {
             // ダミータスクオブジェクトを作成
@@ -247,14 +331,91 @@ export default {
             showGlobalShareModal.value = true;
         }
 
-        const fullHours = Array.from({ length: 24 }, (_, i) => i); // 0 to 23
-
         // Methods
+
+        // Get CSS classes based on task status
+        function getTaskStatusClasses(task) {
+            const statusStyle =
+                statusColors[task.status] || statusColors["pending"];
+
+            // Base classes - removed w-full to prevent overflow issues
+            const baseClasses = `${statusStyle.bg} ${statusStyle.text} w-full`;
+
+            // Special classes for shared or global tasks
+            const specialClasses = task.isGloballyShared
+                ? "border-2 border-green-300 "
+                : task.ownerInfo
+                  ? "border-dashed border "
+                  : "";
+
+            // Combine with task-specific classes
+            return `${baseClasses} ${specialClasses}`;
+        }
+
+        // Get CSS classes for the status select dropdown
+        function getSelectClasses(status) {
+            return (statusColors[status] || statusColors["pending"]).select;
+        }
+
+        // Update task status
+        async function updateTaskStatus(taskId, newStatus) {
+            try {
+                await TodoApi.updateTask(taskId, { status: newStatus });
+                // No need to manually update the task in the array since we'll reload
+                // Reload tasks to ensure everything is up to date
+                await loadSharedTasks();
+            } catch (error) {
+                console.error("Error updating task status:", error);
+                alert("タスクのステータス更新に失敗しました");
+            }
+        }
+
+        // Check if the given hour is the current hour
+        function isCurrentHour(hour) {
+            const now = new Date();
+            return now.getHours() === hour;
+        }
+
+        // Scroll to the current time in the calendar
+        function scrollToCurrentTime() {
+            if (!calendarContainer.value) return;
+
+            const now = new Date();
+            const currentHour = now.getHours();
+
+            // Find the row for the current hour
+            const rows =
+                calendarContainer.value.querySelectorAll("tr[data-hour]");
+            let currentRow = null;
+
+            for (const row of rows) {
+                const rowHour = parseInt(row.getAttribute("data-hour"));
+                if (rowHour === currentHour) {
+                    currentRow = row;
+                    break;
+                }
+            }
+
+            if (currentRow) {
+                // Calculate position to center the current hour row
+                const containerHeight = calendarContainer.value.clientHeight;
+                const rowPosition = currentRow.offsetTop;
+                const scrollPosition =
+                    rowPosition -
+                    containerHeight / 2 +
+                    currentRow.clientHeight / 2;
+
+                // Scroll to position with smooth animation
+                calendarContainer.value.scrollTo({
+                    top: scrollPosition,
+                    behavior: "smooth",
+                });
+            }
+        }
+
         /**
          * Load shared tasks
          */
-        // SharedTasksCalendarView.vue の loadSharedTasks 関数の修正部分
-
         async function loadSharedTasks() {
             isLoading.value = true;
 
@@ -494,6 +655,11 @@ export default {
                 console.error("Error in loadSharedTasks:", error);
             } finally {
                 isLoading.value = false;
+
+                // After loading tasks, scroll to current time
+                nextTick(() => {
+                    scrollToCurrentTime();
+                });
             }
         }
 
@@ -776,7 +942,6 @@ export default {
         };
 
         // Improved hour extraction
-        // Improved hour extraction
         const extractHour = (timeString) => {
             try {
                 if (!timeString) return null;
@@ -858,49 +1023,6 @@ export default {
             }
         };
 
-        const getTaskClasses = (task) => {
-            const baseClasses = "w-full";
-
-            // Check if this is a shared task (has ownerInfo)
-            const isSharedTask = !!task.ownerInfo;
-
-            // Check if this is the current user's task
-            const isCurrentUserTask = task.isCurrentUserTask;
-
-            // Check if this is globally shared
-            const isGloballyShared = task.isGloballyShared;
-
-            // Add visual indicators
-            let specialClasses = "";
-
-            // For globally shared tasks, add special indicator
-            if (isGloballyShared) {
-                specialClasses += "border-2 border-green-300 ";
-            }
-            // For individually shared tasks, add dashed border
-            else if (isSharedTask) {
-                specialClasses += "border-dashed border ";
-            }
-
-            // For current user's tasks in other columns, add highlight
-            if (isCurrentUserTask && isSharedTask) {
-                specialClasses += "bg-blue-50 ";
-            }
-
-            // Add status-specific classes
-            if (task.status === "completed") {
-                return `${baseClasses} ${specialClasses} bg-gray-100 text-gray-600 line-through`;
-            }
-
-            // Add category color if available
-            if (task.category) {
-                return `${baseClasses} ${specialClasses} border-l-4 bg-white border-l-[${task.category.color}]`;
-            }
-
-            // Default styling with special indicators if needed
-            return `${baseClasses} ${specialClasses} bg-white border-l-4 border-l-blue-500`;
-        };
-
         const previousDay = () => {
             const date = new Date(currentDate.value);
             date.setDate(date.getDate() - 1);
@@ -921,31 +1043,6 @@ export default {
             emit("back");
         };
 
-        const addTaskAtTime = (hour, userId) => {
-            tempSelectedUser.value = userId;
-            tempSelectedHour.value = hour;
-
-            // Set up for new task
-            taskModalMode.value = "add";
-            selectedTaskId.value = null;
-
-            // Create a date object for the task's due date and time
-            const taskDate = new Date(currentDate.value);
-            taskDate.setHours(hour, 0, 0, 0);
-
-            selectedTaskData.value = {
-                title: "",
-                due_date: currentDate.value,
-                due_time: `${hour.toString().padStart(2, "0")}:00`,
-                start_time: `${hour.toString().padStart(2, "0")}:00`,
-                end_time: `${(hour + 1).toString().padStart(2, "0")}:00`,
-                category_id: "",
-                user_id: userId,
-            };
-
-            showTaskModal.value = true;
-        };
-
         const editTask = (task) => {
             taskModalMode.value = "edit";
             selectedTaskId.value = task.id;
@@ -955,19 +1052,12 @@ export default {
 
         const closeTaskModal = () => {
             showTaskModal.value = false;
-            tempSelectedUser.value = null;
-            tempSelectedHour.value = null;
         };
 
         const submitTask = async (taskData) => {
             try {
                 // Clone data to avoid modifying original
                 const preparedData = { ...taskData };
-
-                // Set user_id from temporary storage if in add mode
-                if (taskModalMode.value === "add" && tempSelectedUser.value) {
-                    preparedData.user_id = tempSelectedUser.value;
-                }
 
                 let response;
 
@@ -1078,6 +1168,9 @@ export default {
             loadGlobalShares();
         };
 
+        // Set up an interval to update the current time highlight
+        let timeUpdateInterval = null;
+
         // Watch for date changes to reload tasks
         watch(
             () => currentDate.value,
@@ -1112,7 +1205,62 @@ export default {
                 "Global shares after initialization:",
                 globalShares.value,
             );
+
+            // Scroll to current time on initial load
+            nextTick(() => {
+                scrollToCurrentTime();
+            });
+
+            // Set up interval to update current time highlight every minute
+            timeUpdateInterval = setInterval(() => {
+                // This will update the highlighting for the current hour
+                // by triggering a re-render of the component
+                nextTick(() => {
+                    // Force component update to refresh current time highlight
+                    sharedTasks.value = [...sharedTasks.value];
+
+                    // Re-scroll to the current time
+                    scrollToCurrentTime();
+                });
+            }, 60000); // Update every minute
         });
+
+        // Clean up interval when component is unmounted
+        onBeforeUnmount(() => {
+            if (timeUpdateInterval) {
+                clearInterval(timeUpdateInterval);
+            }
+        });
+
+        // 重要: タスクがユーザーごとに正しくフィルタリングされていることを確認
+        watch(
+            () => sharedTasks.value,
+            (newTasks) => {
+                console.log("Shared tasks updated:", newTasks);
+                if (newTasks.length > 0) {
+                    // 最初のタスクのユーザー割り当てをログに出力
+                    const sampleTask = newTasks[0];
+                    console.log(
+                        `Sample task ${sampleTask.id} user_id: ${sampleTask.user_id}`,
+                    );
+
+                    // 17時台のタスクがあれば、そのユーザー割り当てをチェック
+                    const hour17Tasks = newTasks.filter((task) => {
+                        const taskHour = extractHour(task.due_time);
+                        return taskHour === 17;
+                    });
+                    console.log(`Found ${hour17Tasks.length} tasks at 17:00`);
+
+                    // 各ユーザーごとのタスク数をチェック
+                    const userTaskCounts = {};
+                    sharedUsers.value.forEach((user) => {
+                        const userTasks = getTasksForHourAndUser(17, user.id);
+                        userTaskCounts[user.name] = userTasks.length;
+                    });
+                    console.log("User task counts at 17:00:", userTaskCounts);
+                }
+            },
+        );
 
         return {
             currentDate,
@@ -1126,17 +1274,18 @@ export default {
             selectedTaskData,
             categories,
             globalShares,
+            calendarContainer,
 
             // Methods
             formatHour,
             formatTaskTime,
             getTasksForHourAndUser,
-            getTaskClasses,
+            getTaskStatusClasses,
+            getSelectClasses,
             previousDay,
             nextDay,
             goToToday,
             goBackToTaskList,
-            addTaskAtTime,
             editTask,
             closeTaskModal,
             submitTask,
@@ -1147,83 +1296,80 @@ export default {
             selectedGlobalTask,
             openGlobalShareModal,
             handleGlobalShareModalClose,
+            updateTaskStatus,
+            isCurrentHour,
+            scrollToCurrentTime,
         };
     },
 };
 </script>
 
 <style scoped>
-/* Set a minimum width and explicit height for cells */
-td {
-    height: 50px;
-    padding: 0 !important; /* Remove default padding */
+/* Set explicit dimensions */
+.user-cell {
+    width: 150px;
+    flex: 1 0 150px;
 }
 
-/* Optimize width for user columns */
-table th,
-table td {
-    min-width: 120px; /* Reduced from 150px */
-}
-
-/* Keep time column at a fixed width */
-table th:first-child,
-table td:first-child {
-    min-width: 40px; /* Reduced from 60px */
+.time-cell {
     width: 40px;
+    flex: 0 0 40px;
 }
 
-/* Make position of task container relative to its cell */
-td {
+/* Calendar grid structure */
+.calendar-row {
+    display: flex;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* Current time highlight */
+.current-hour-row .user-cell {
+    background-color: rgba(219, 234, 254, 0.5); /* Light blue background */
     position: relative;
-    vertical-align: top;
 }
 
-/* Fix for table layout */
-.table-fixed {
-    table-layout: fixed;
+.current-hour-row .user-cell::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background-color: rgb(59, 130, 246); /* Blue line */
+    z-index: 5;
+}
+
+/* Task styling */
+.task-item {
     width: 100%;
-    border-collapse: collapse;
 }
 
-/* Make sure tasks stand out better */
-[class*="border-l-"] {
-    border-left-width: 4px !important;
+/* Customize select dropdown appearance */
+select {
+    appearance: none;
+    padding: 0 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    max-width: 80px;
 }
 
-/* Reduce overall margins and padding */
-.shared-tasks-calendar {
-    margin: 0;
-    padding: 0;
+/* Custom scrollbar styles */
+.calendar-scroll-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-/* Compact header */
-.shared-tasks-calendar .p-4 {
-    padding: 0.5rem !important;
+.calendar-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
 }
 
-/* Make task containers more compact */
-.mb-0\.5 {
-    margin-bottom: 0.125rem !important;
+.calendar-scroll-container::-webkit-scrollbar-thumb {
+    background: #cccccc;
+    border-radius: 4px;
 }
 
-.p-0\.5 {
-    padding: 0.125rem !important;
-}
-
-/* Ensure task text is readable */
-.text-xs {
-    font-size: 0.7rem;
-    line-height: 1rem;
-}
-
-/* Reduce header height */
-th {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
-}
-
-/* Optimize space in the back button area */
-.px-2.py-1 {
-    padding: 0.25rem 0.5rem !important;
+.calendar-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #999999;
 }
 </style>
