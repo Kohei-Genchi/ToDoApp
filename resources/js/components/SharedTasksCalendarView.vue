@@ -509,27 +509,19 @@ async function loadSharedTasks() {
         // This is a debug function to add to the component setup
         // Add this after loadGlobalShares function
         const debugGlobalSharing = () => {
-            console.log("DEBUG - Current global shares:", globalShares.value);
-            console.log("DEBUG - Current users:", sharedUsers.value);
+    console.log("DEBUG - Current global shares:", globalShares.value);
+    console.log("DEBUG - Current users:", sharedUsers.value);
 
-            // Check if globalShares is being correctly populated
-            if (globalShares.value.length === 0) {
-                console.warn(
-                    "No global shares found - this might cause tasks not to display correctly",
-                );
-            }
-
-            // Check task sharing structure
-            if (sharedTasks.value.length > 0) {
-                console.log(
-                    "DEBUG - Sample task structure:",
-                    JSON.stringify(sharedTasks.value[0], null, 2),
-                );
-            }
-        };
-
-        // Call this at the end of loadSharedTasks function
-        debugGlobalSharing();
+    if (sharedTasks.value.length > 0) {
+        console.log(
+            "DEBUG - Sample task structure:",
+            JSON.stringify(sharedTasks.value[0], null, 2),
+        );
+    }
+};
+        if (process.env.NODE_ENV === 'development') {
+    debugGlobalSharing();
+}
 
         // Computed properties
         const formattedCurrentDate = computed(() => {
