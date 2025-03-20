@@ -173,7 +173,7 @@ export default {
 
             // グローバル共有モードの場合はグローバル共有ユーザーを取得
             if (isGlobalShareMode.value) {
-                console.log("グローバル共有モード: ユーザー一覧を取得");
+
 
                 try {
                     const response = await GlobalShareApi.getGlobalShares();
@@ -452,7 +452,7 @@ export default {
 
         // Lifecycle
         onMounted(() => {
-            console.log("TaskShareModal mounted, task:", props.task);
+
             loadSharedUsers();
         });
 

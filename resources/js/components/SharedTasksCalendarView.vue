@@ -257,7 +257,7 @@ export default {
 
 async function loadSharedTasks() {
     isLoading.value = true;
-    console.log("Loading shared tasks...");
+
 
     try {
         // 現在のユーザー情報を取得
@@ -276,13 +276,13 @@ async function loadSharedTasks() {
                     ? globalSharesResponse.data
                     : [];
 
-                console.log("Loaded global shares:", globalShares.value);
+
             } else {
                 console.warn("Global shares API returned unexpected response:", globalSharesResponse);
                 globalShares.value = [];
             }
         } catch (error) {
-            console.error("Error loading global shares:", error);
+
             globalShares.value = [];
         }
 
@@ -345,7 +345,7 @@ async function loadSharedTasks() {
 
         // カレンダー表示用のユーザー一覧を更新
         sharedUsers.value = Array.from(allSharedUsers.values());
-        console.log("Updated shared users list:", sharedUsers.value);
+
 
         // すべてのタスクをロード
         let allTasks = [];
@@ -354,7 +354,7 @@ async function loadSharedTasks() {
         try {
             const sharedResponse = await TaskShareApi.getSharedWithMe();
             if (sharedResponse && Array.isArray(sharedResponse.data)) {
-                console.log("Individually shared tasks:", sharedResponse.data);
+
                 allTasks = [...sharedResponse.data];
             }
         } catch (error) {
@@ -365,7 +365,7 @@ async function loadSharedTasks() {
         try {
             const globallySharedResponse = await GlobalShareApi.getGloballySharedWithMe();
             if (globallySharedResponse && Array.isArray(globallySharedResponse.data)) {
-                console.log("Globally shared tasks:", globallySharedResponse.data);
+
 
                 // グローバル共有としてフラグ付け
                 const globalTasks = globallySharedResponse.data.map(task => ({
@@ -408,7 +408,7 @@ async function loadSharedTasks() {
                         }));
 
                         allTasks = [...allTasks, ...userSharedTasks];
-                        console.log(`Added ${userSharedTasks.length} tasks from user ${userId}`);
+
                     }
                 } catch (userTaskError) {
                     console.error(`Error loading tasks for user ${userId}:`, userTaskError);
@@ -451,7 +451,7 @@ async function loadSharedTasks() {
 
         // マップを配列に戻す
         sharedTasks.value = Array.from(taskMap.values());
-        console.log("Final processed tasks:", sharedTasks.value);
+
 
     } catch (error) {
         console.error("Error in loadSharedTasks:", error);
@@ -506,22 +506,7 @@ async function loadSharedTasks() {
                 globalShares.value = [];
             }
         };
-        // This is a debug function to add to the component setup
-        // Add this after loadGlobalShares function
-        const debugGlobalSharing = () => {
-    console.log("DEBUG - Current global shares:", globalShares.value);
-    console.log("DEBUG - Current users:", sharedUsers.value);
 
-    if (sharedTasks.value.length > 0) {
-        console.log(
-            "DEBUG - Sample task structure:",
-            JSON.stringify(sharedTasks.value[0], null, 2),
-        );
-    }
-};
-        if (process.env.NODE_ENV === 'development') {
-    debugGlobalSharing();
-}
 
         // Computed properties
         const formattedCurrentDate = computed(() => {
