@@ -206,8 +206,9 @@
                                         </div>
                                     </div>
 
-                                    <!-- Edit button -->
+                                    <!-- Edit button - MODIFIED to only show for task owners -->
                                     <button
+                                        v-if="isCurrentUserOwner(task)"
                                         @click.stop="editTask(task)"
                                         class="ml-1 text-gray-500 hover:text-blue-600 flex-shrink-0"
                                     >
@@ -276,7 +277,11 @@ export default {
 
     setup(props, { emit }) {
         // State
-        const currentDate = ref(new Date().toISOString().split("T")[0]);
+        // Fix: Use local timezone date string instead of ISO string to correctly handle the timezone
+        const today = new Date();
+        const currentDate = ref(
+            `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`,
+        );
         const sharedUsers = ref([]);
         const sharedTasks = ref([]);
         const categories = ref([]);
@@ -1026,17 +1031,19 @@ export default {
         const previousDay = () => {
             const date = new Date(currentDate.value);
             date.setDate(date.getDate() - 1);
-            currentDate.value = date.toISOString().split("T")[0];
+            currentDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
         };
 
         const nextDay = () => {
             const date = new Date(currentDate.value);
             date.setDate(date.getDate() + 1);
-            currentDate.value = date.toISOString().split("T")[0];
+            currentDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
         };
 
         const goToToday = () => {
-            currentDate.value = new Date().toISOString().split("T")[0];
+            // Fix: Set to current local date, not using ISO string which could cause timezone issues
+            const today = new Date();
+            currentDate.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
         };
 
         const goBackToTaskList = () => {
@@ -1054,10 +1061,30 @@ export default {
             showTaskModal.value = false;
         };
 
+        // タスクの所有者チェック関数
+        const isCurrentUserOwner = (task) => {
+            if (!task || !currentUserId.value) return false;
+
+            // Convert IDs to number for comparison
+            const taskUserId = parseInt(task.user_id, 10);
+            const currentId = parseInt(currentUserId.value, 10);
+
+            return taskUserId === currentId;
+        };
+
         const submitTask = async (taskData) => {
             try {
                 // Clone data to avoid modifying original
                 const preparedData = { ...taskData };
+
+                // 現在の日付をデフォルトに設定
+                if (!preparedData.due_date) {
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const month = String(today.getMonth() + 1).padStart(2, "0");
+                    const day = String(today.getDate()).padStart(2, "0");
+                    preparedData.due_date = `${year}-${month}-${day}`;
+                }
 
                 let response;
 
@@ -1187,6 +1214,9 @@ export default {
                 console.log("Current user ID:", currentUserId.value);
             }
 
+            // Fix: Set to current local date on mount
+            goToToday();
+
             // 重要: 順序を変更 - まずグローバル共有情報を読み込む
             loadGlobalShares();
 
@@ -1299,6 +1329,7 @@ export default {
             updateTaskStatus,
             isCurrentHour,
             scrollToCurrentTime,
+            isCurrentUserOwner, // 追加: タスク所有者チェック関数を公開
         };
     },
 };

@@ -128,7 +128,12 @@ export default {
         const todos = ref([]);
         const categories = ref([]);
         const currentView = ref("today");
-        const currentDate = ref(new Date().toISOString().split("T")[0]);
+
+        // FIXED: Use local date format to prevent timezone issues
+        const today = new Date();
+        const currentDate = ref(
+            `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`,
+        );
 
         // Modal state
         const showTaskModal = ref(false);
@@ -371,7 +376,7 @@ export default {
         function setView(view) {
             currentView.value = view;
             if (view === "today") {
-                currentDate.value = new Date().toISOString().split("T")[0];
+                goToToday();
             }
             loadTasks();
         }
@@ -411,7 +416,8 @@ export default {
         function previousMonth() {
             const date = new Date(currentDate.value);
             date.setMonth(date.getMonth() - 1);
-            currentDate.value = date.toISOString().split("T")[0];
+            // FIXED: Use local date format to prevent timezone issues
+            currentDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
             loadTasks();
         }
 
@@ -421,7 +427,8 @@ export default {
         function nextMonth() {
             const date = new Date(currentDate.value);
             date.setMonth(date.getMonth() + 1);
-            currentDate.value = date.toISOString().split("T")[0];
+            // FIXED: Use local date format to prevent timezone issues
+            currentDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
             loadTasks();
         }
 
@@ -449,16 +456,16 @@ export default {
         }
 
         const loadSharedTasks = async () => {
-    try {
-        // この関数は単に共有タスクビューとの連携用
-        // 実際の処理は SharedTasksCalendarView コンポーネント内で行われる
-        console.log("loadSharedTasks called in TodoApp");
-        return true;
-    } catch (error) {
-        console.error("Error in loadSharedTasks:", error);
-        return false;
-    }
-};
+            try {
+                // この関数は単に共有タスクビューとの連携用
+                // 実際の処理は SharedTasksCalendarView コンポーネント内で行われる
+                console.log("loadSharedTasks called in TodoApp");
+                return true;
+            } catch (error) {
+                console.error("Error in loadSharedTasks:", error);
+                return false;
+            }
+        };
 
         /**
          * Open edit task modal
@@ -761,8 +768,37 @@ export default {
             }
         }
 
+        /**
+         * Go to today - FIXED to use local date format
+         */
+        function goToToday() {
+            const today = new Date();
+            currentDate.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        }
+
+        /**
+         * Go to previous day - FIXED to use local date format
+         */
+        function previousDay() {
+            const date = new Date(currentDate.value);
+            date.setDate(date.getDate() - 1);
+            currentDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        }
+
+        /**
+         * Go to next day - FIXED to use local date format
+         */
+        function nextDay() {
+            const date = new Date(currentDate.value);
+            date.setDate(date.getDate() + 1);
+            currentDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+        }
+
         // Initialization
         onMounted(() => {
+            // FIXED: Set today's date using local format
+            goToToday();
+
             loadTasks();
             loadCategories();
 
@@ -817,6 +853,9 @@ export default {
             selectDate,
             previousMonth,
             nextMonth,
+            previousDay,
+            nextDay,
+            goToToday,
 
             // Task modal functions
             openAddTaskModal,

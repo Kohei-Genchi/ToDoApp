@@ -161,7 +161,7 @@ export default {
         },
 
         /**
-         * Format a date as YYYY-MM-DD
+         * FIXED: Format a date as YYYY-MM-DD using local date
          */
         formatDate(date) {
             const year = date.getFullYear();
@@ -211,7 +211,7 @@ export default {
         },
 
         /**
-         * Go to today
+         * FIXED: Go to today using local date format
          */
         goToToday() {
             const today = new Date();
