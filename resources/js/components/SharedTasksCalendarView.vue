@@ -152,13 +152,6 @@
                                             {{ formatTaskTime(task.due_time) }}
                                         </div>
                                     </div>
-                                    <!-- Show owner info for shared tasks -->
-                                    <div
-                                        v-if="task.ownerInfo"
-                                        class="text-xs italic text-gray-600"
-                                    >
-                                        From: {{ task.ownerInfo }}
-                                    </div>
                                 </div>
                             </div>
 
@@ -254,8 +247,7 @@ export default {
             showGlobalShareModal.value = true;
         }
 
-        // Generate all hours from 8:00 to 20:00 (including every hour)
-        const fullHours = Array.from({ length: 13 }, (_, i) => i + 8); // 8 to 20
+        const fullHours = Array.from({ length: 24 }, (_, i) => i); // 0 to 23
 
         // Methods
         /**

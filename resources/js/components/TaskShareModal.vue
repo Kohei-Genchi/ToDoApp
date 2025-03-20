@@ -187,27 +187,8 @@ export default {
                     }));
                 } catch (error) {
                     console.error("Error loading global shares:", error);
-                    errorMessage.value =
-                        "グローバル共有ユーザーの読み込みに失敗しました。";
-
-                    // APIエラーの場合はlocalStorageからユーザー情報を取得
-                    try {
-                        // ユーザー固有のキーを使用
-                        const currentUserId = localStorage.getItem('currentUserId') || 'guest';
-                        const savedUsersKey = `sharedUsers_${currentUserId}`;
-
-                        const storedUsers = localStorage.getItem(savedUsersKey);
-                        if (storedUsers) {
-                            const parsedUsers = JSON.parse(storedUsers);
-                            console.log("Loaded shared users from localStorage:", parsedUsers);
-                            sharedUsers.value = parsedUsers;
-                        } else {
-                            sharedUsers.value = [];
-                        }
-                    } catch (storageError) {
-                        console.error("Error loading from localStorage:", storageError);
-                        sharedUsers.value = [];
-                    }
+                    errorMessage.value = "グローバル共有ユーザーの読み込みに失敗しました。";
+                    sharedUsers.value = [];
                 }
                 return;
             }
@@ -227,6 +208,7 @@ export default {
             } catch (error) {
                 console.error("Error loading shared users:", error);
                 errorMessage.value = "ユーザー情報の読み込みに失敗しました。";
+                sharedUsers.value = [];
             }
         };
 
@@ -280,16 +262,6 @@ export default {
                     // ユーザーを追加
                     sharedUsers.value.push(newUser);
                     console.log("ユーザーを追加しました:", newUser);
-
-                    // localStorageにも保存
-                    try {
-                        const currentUserId = localStorage.getItem('currentUserId') || 'guest';
-                        const savedUsersKey = `sharedUsers_${currentUserId}`;
-                        localStorage.setItem(savedUsersKey, JSON.stringify(sharedUsers.value));
-                        console.log("Saved users to localStorage");
-                    } catch (storageError) {
-                        console.error("Error saving to localStorage:", storageError);
-                    }
 
                     // フォームをクリア
                     shareEmail.value = "";
@@ -345,40 +317,21 @@ export default {
             } catch (error) {
                 console.error("Error sharing task:", error);
 
-                // APIエラーの場合でもlocalStorageを使用してユーザーを追加
-                if (isGlobalShareMode.value) {
-                    try {
-                        // 新しいユーザーを作成
-                        const newUser = {
-                            id: Date.now(), // 一時的なID
-                            name: shareEmail.value.split('@')[0], // メールアドレスからユーザー名を生成
-                            email: shareEmail.value,
-                            pivot: { permission: sharePermission.value },
-                            globalShareId: Date.now(), // 一時的なID
-                        };
-
-                        // ユーザーを追加
-                        sharedUsers.value.push(newUser);
-
-                        // localStorageに保存
-                        const currentUserId = localStorage.getItem('currentUserId') || 'guest';
-                        const savedUsersKey = `sharedUsers_${currentUserId}`;
-                        localStorage.setItem(savedUsersKey, JSON.stringify(sharedUsers.value));
-
-                        // フォームをクリア
-                        shareEmail.value = "";
-                        sharePermission.value = "view";
-
-                        // 成功メッセージを表示
-                        errorMessage.value = "ユーザーをローカルに追加しました（APIエラー）";
-                        setTimeout(() => {
-                            errorMessage.value = "";
-                        }, 3000);
-                    } catch (storageError) {
-                        console.error("Error saving to localStorage:", storageError);
-                        errorMessage.value = error.response?.data?.error || "共有に失敗しました。";
+                // Improved error message handling for validation errors
+                if (error.response && error.response.status === 422) {
+                    // Validation error - specifically for email not found in database
+                    if (error.response.data.errors && error.response.data.errors.email) {
+                        const emailErrors = error.response.data.errors.email;
+                        if (emailErrors.some(err => err.includes('exists'))) {
+                            errorMessage.value = "指定されたメールアドレスのユーザーは存在しません。";
+                        } else {
+                            errorMessage.value = emailErrors[0];
+                        }
+                    } else {
+                        errorMessage.value = "入力内容に誤りがあります。";
                     }
                 } else {
+                    // Other API errors
                     errorMessage.value = error.response?.data?.error || "共有に失敗しました。";
                 }
             } finally {
@@ -466,16 +419,6 @@ export default {
                         sharedUsers.value = sharedUsers.value.filter(
                             (u) => u.id !== user.id,
                         );
-
-                        // localStorageも更新
-                        try {
-                            const currentUserId = localStorage.getItem('currentUserId') || 'guest';
-                            const savedUsersKey = `sharedUsers_${currentUserId}`;
-                            localStorage.setItem(savedUsersKey, JSON.stringify(sharedUsers.value));
-                            console.log("Updated localStorage after removing user");
-                        } catch (storageError) {
-                            console.error("Error updating localStorage:", storageError);
-                        }
                     } else {
                         console.error(
                             "Global share ID missing for user:",
@@ -497,18 +440,6 @@ export default {
                 sharedUsers.value = sharedUsers.value.filter(
                     (u) => u.id !== user.id,
                 );
-
-                // 通常のタスク共有モードでもlocalStorageを更新
-                if (isGlobalShareMode.value) {
-                    try {
-                        const currentUserId = localStorage.getItem('currentUserId') || 'guest';
-                        const savedUsersKey = `sharedUsers_${currentUserId}`;
-                        localStorage.setItem(savedUsersKey, JSON.stringify(sharedUsers.value));
-                        console.log("Updated localStorage after removing user (task share mode)");
-                    } catch (storageError) {
-                        console.error("Error updating localStorage:", storageError);
-                    }
-                }
             } catch (error) {
                 console.error("Error unsharing task:", error);
                 errorMessage.value = "共有解除に失敗しました。";
