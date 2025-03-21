@@ -1,9 +1,9 @@
 <!-- resources/views/layouts/navigation.blade.php -->
 <nav class="bg-gray-800 text-white h-full w-full overflow-y-auto">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <div class="p-4">
+    <div class="pt-6 px-4 pb-4">
         @auth
-            <div class="flex justify-between items-center cursor-pointer p-2 rounded-md hover:bg-gray-700 transition-colors duration-200" onclick="toggleUserDropdown()">
+            <div class="flex justify-start items-center pl-10 mb-12 cursor-pointer" onclick="toggleUserDropdown()">
                 <div class="flex items-center">
                     <!-- User icon before username -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -11,14 +11,14 @@
                     </svg>
                     <span class="font-bold truncate">{{ Auth::user()->name }}</span>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
             </div>
 
             <!-- Dropdown Menu - Hidden by default -->
             <div id="userDropdown" class="relative">
-                <div class="absolute z-10 right-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg hidden border border-gray-600">
+                <div class="absolute z-10 left-0 mt-2 w-48 bg-gray-700 rounded-md shadow-lg hidden border border-gray-600">
                     <div class="py-1">
                         <a href="{{ route('home') }}" class="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-gray-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -87,7 +87,7 @@
 
         // Close dropdown when clicking outside
         document.addEventListener('click', function(event) {
-            const userMenu = document.querySelector('.flex.justify-between.items-center.cursor-pointer');
+            const userMenu = document.querySelector('.flex.justify-start.items-center.cursor-pointer');
             const dropdown = document.querySelector('#userDropdown > div');
 
             if (dropdown && userMenu &&

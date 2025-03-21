@@ -26,58 +26,105 @@
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100 flex flex-col md:flex-row">
-            <!-- Mobile menu toggle button (only visible on small screens) -->
-            <div class="md:hidden fixed top-0 left-0 z-50 p-4">
-                <button id="sidebarToggle" class="text-gray-500 hover:text-gray-900 focus:outline-none">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Sidebar -->
-            <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out md:relative md:sticky md:top-0 md:h-screen">
+            <!-- サイドバー -->
+            <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out md:relative md:sticky md:top-0 md:h-screen sidebar-collapsed">
                 @include('layouts.navigation')
             </div>
 
-            <!-- Page Content -->
-            <main class="flex-1 w-full transition-all duration-300 p-4 md:p-6">
+            <!-- メインコンテンツエリア -->
+            <main id="mainContent" class="flex-1 transition-all duration-300 px-1 py-1 md:py-2 main-expanded">
+                <!-- Todo App ヘッダー部分にトグルボタンを配置 -->
                 {{ $slot }}
             </main>
         </div>
 
         <script>
-            // Sidebar toggle functionality
             document.addEventListener('DOMContentLoaded', function() {
                 const sidebar = document.getElementById('sidebar');
-                const sidebarToggle = document.getElementById('sidebarToggle');
+                const mainContent = document.getElementById('mainContent');
 
-                if (sidebarToggle && sidebar) {
-                    sidebarToggle.addEventListener('click', function() {
-                        sidebar.classList.toggle('-translate-x-full');
-                    });
+                // サイドバーの状態をローカルストレージから取得
+                const sidebarState = localStorage.getItem('sidebarState') || 'expanded';
 
-                    // Close sidebar when clicking outside on mobile
-                    document.addEventListener('click', function(event) {
-                        const isClickInsideSidebar = sidebar.contains(event.target);
-                        const isClickOnToggle = sidebarToggle.contains(event.target);
+                // 初期状態を設定
+                updateSidebarState(sidebarState === 'collapsed');
 
-                        // Only handle clicks outside sidebar and toggle on mobile
-                        if (window.innerWidth < 768 && !isClickInsideSidebar && !isClickOnToggle) {
-                            sidebar.classList.add('-translate-x-full');
-                        }
-                    });
+                // サイドバー外をクリックで閉じる処理
+                document.addEventListener('click', function(event) {
+                    const isClickInsideSidebar = sidebar.contains(event.target);
+                    const isToggleButton = event.target.closest('#sidebarToggle');
 
-                    // Handle resize events
-                    window.addEventListener('resize', function() {
-                        if (window.innerWidth >= 768) {
-                            sidebar.classList.remove('-translate-x-full');
-                        } else {
-                            sidebar.classList.add('-translate-x-full');
-                        }
-                    });
+                    // モバイル表示でサイドバー外をクリックした場合
+                    if (window.innerWidth < 768 && !isClickInsideSidebar && !isToggleButton) {
+                        sidebar.classList.add('-translate-x-full');
+                    }
+                });
+
+                // 画面サイズ変更時の処理
+                window.addEventListener('resize', function() {
+                    // 保存された状態を反映
+                    updateSidebarState(localStorage.getItem('sidebarState') === 'collapsed');
+
+                    // モバイル表示では常に閉じる
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.add('-translate-x-full');
+                    }
+                });
+
+                // グローバル関数としてトグル関数を定義
+                window.toggleSidebar = function() {
+                    const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+                    updateSidebarState(!isCollapsed);
+
+                    // 状態をローカルストレージに保存
+                    localStorage.setItem('sidebarState', !isCollapsed ? 'collapsed' : 'expanded');
+                };
+
+                // サイドバー状態を更新する関数
+                function updateSidebarState(collapse) {
+                    if (collapse) {
+                        // サイドバーを折りたたむ
+                        sidebar.classList.add('sidebar-collapsed');
+                        sidebar.classList.add('-translate-x-full');
+                        sidebar.classList.remove('md:translate-x-0');
+                        mainContent.classList.add('main-expanded');
+                    } else {
+                        // サイドバーを展開
+                        sidebar.classList.remove('sidebar-collapsed');
+                        sidebar.classList.remove('-translate-x-full');
+                        sidebar.classList.add('md:translate-x-0');
+                        mainContent.classList.remove('main-expanded');
+                    }
                 }
             });
         </script>
+
+        <style>
+            /* サイドバー折りたたみ時のスタイル */
+            @media (min-width: 768px) {
+                .sidebar-collapsed {
+                    width: 0 !important;
+                    min-width: 0 !important;
+                    overflow: hidden;
+                }
+
+                .main-expanded {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                }
+            }
+
+            /* カスタムスクロールバー */
+            .custom-scrollbar::-webkit-scrollbar {
+                width: 4px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+                background: rgba(55, 65, 81, 0.1);
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                background: rgba(156, 163, 175, 0.5);
+                border-radius: 10px;
+            }
+        </style>
     </body>
 </html>
