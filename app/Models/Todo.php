@@ -13,7 +13,10 @@ class Todo extends Model
 
     // Status constants
     const STATUS_PENDING = "pending";
+    const STATUS_ONGOING = "ongoing";
+    const STATUS_PAUSED = "paused";
     const STATUS_COMPLETED = "completed";
+    const STATUS_TRASHED = "trashed";
 
     // Location constants
     const LOCATION_INBOX = "INBOX";

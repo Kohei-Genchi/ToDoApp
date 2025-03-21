@@ -65,12 +65,12 @@ export default {
         } else {
             // パラメータが直接渡された場合
             params = {
-                view: view || 'today',
-                date: date || new Date().toISOString().split('T')[0]
+                view: view || "today",
+                date: date || new Date().toISOString().split("T")[0],
             };
 
             // 追加パラメータがある場合はマージ
-            if (additionalParams && typeof additionalParams === 'object') {
+            if (additionalParams && typeof additionalParams === "object") {
                 params = { ...params, ...additionalParams };
             }
         }
@@ -119,32 +119,51 @@ export default {
      */
 
     //Networkタブで /api/todos/{id} へのリクエストを確認
+    // In resources/js/api/todo.js
+    // Find the updateTask method and replace it with this improved version:
+
+    /**
+     * Update existing task
+     * @param {number} id Task ID
+     * @param {Object} taskData Update data
+     * @returns {Promise} API response
+     */
     updateTask(id, taskData) {
         validateId(id, "updateTask");
 
-        // Laravel用のPUT操作（POST + _method）
+        // Create a copy of the data to avoid modifying the original
+        const data = { ...taskData };
+
+        // Format dates properly to prevent timezone issues
+        if (data.due_date && typeof data.due_date === "string") {
+            // Ensure we're using YYYY-MM-DD format without any timezone adjustment
+            if (data.due_date.includes("T")) {
+                // If it's an ISO string, extract just the date part
+                data.due_date = data.due_date.split("T")[0];
+            }
+        }
+
+        // Handle due_time separately to prevent timezone issues
+        if (data.due_time) {
+            // If due_time is a full datetime, just keep the time portion
+            if (
+                typeof data.due_time === "string" &&
+                data.due_time.includes("T")
+            ) {
+                const timePart = data.due_time.split("T")[1].substring(0, 5); // Get HH:MM
+                data.due_time = timePart;
+            }
+        }
+
+        console.log("Sending task update with data:", data);
+
+        // Use POST with _method param for Laravel's PUT handling
         return axios.post(
             `/api/todos/${id}`,
             {
-                ...taskData,
+                ...data,
                 _method: "PUT",
             },
-            {
-                headers: getCsrfHeaders(),
-            },
-        );
-    },
-
-    /**
-     * タスクの完了状態を切り替え
-     * @param {number} id タスクID
-     * @returns {Promise} APIレスポンス
-     */
-    toggleTask(id) {
-        validateId(id, "toggleTask");
-        return axios.patch(
-            `/api/todos/${id}/toggle`,
-            {},
             {
                 headers: getCsrfHeaders(),
             },

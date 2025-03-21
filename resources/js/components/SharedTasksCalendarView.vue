@@ -185,9 +185,9 @@
                                         class="mr-2 text-xs rounded border-0 h-6 focus:ring-0 focus:outline-none"
                                         :class="getSelectClasses(task.status)"
                                     >
-                                        <option value="pending">待機中</option>
-                                        <option value="ongoing">進行中</option>
-                                        <option value="Paused">一時停止</option>
+                                        <option value="pending">待機</option>
+                                        <option value="ongoing">進行</option>
+                                        <option value="paused">中断</option>
                                         <option value="completed">完了</option>
                                     </select>
 
@@ -311,7 +311,7 @@ export default {
                 text: "text-blue-700",
                 select: "bg-blue-100 text-blue-700",
             },
-            Paused: {
+            paused: {
                 bg: "bg-yellow-100",
                 text: "text-yellow-700",
                 select: "bg-yellow-100 text-yellow-700",
@@ -365,13 +365,69 @@ export default {
         // Update task status
         async function updateTaskStatus(taskId, newStatus) {
             try {
-                await TodoApi.updateTask(taskId, { status: newStatus });
-                // No need to manually update the task in the array since we'll reload
-                // Reload tasks to ensure everything is up to date
-                await loadSharedTasks();
+                // Find the task in the sharedTasks array
+                const taskIndex = sharedTasks.value.findIndex(
+                    (t) => t.id === taskId,
+                );
+                if (taskIndex === -1) {
+                    console.error("Task not found:", taskId);
+                    return;
+                }
+
+                const task = sharedTasks.value[taskIndex];
+
+                // Store original status in case we need to revert
+                const originalStatus = task.status;
+
+                // IMPORTANT: Create a local copy of the task to avoid direct binding issues
+                const updatedTask = { ...task, status: newStatus };
+
+                // Apply optimistic update - update the local state immediately
+                // This prevents UI flickering and gives immediate feedback
+                sharedTasks.value[taskIndex] = updatedTask;
+
+                // Only send the status in the update to avoid any date issues
+                const updateData = {
+                    status: newStatus,
+                };
+
+                console.log("Updating task status:", taskId, newStatus);
+
+                // Make API request
+                try {
+                    await TodoApi.updateTask(taskId, updateData);
+                    console.log("Status update successful");
+
+                    // No need to immediately reload tasks since we've already updated the UI
+                    // We'll reload in the background to ensure consistency
+                    loadSharedTasks().catch((e) =>
+                        console.error("Background task reload failed:", e),
+                    );
+                } catch (error) {
+                    // If the API call fails, revert the optimistic update
+                    console.error("API error updating task status:", error);
+
+                    // Revert the task status in the local state
+                    sharedTasks.value[taskIndex] = {
+                        ...updatedTask,
+                        status: originalStatus,
+                    };
+
+                    // Show appropriate error message
+                    if (error.response && error.response.status === 403) {
+                        alert(
+                            "権限がありません：このタスクを更新する権限がありません。",
+                        );
+                    } else {
+                        alert(
+                            "タスクのステータス更新に失敗しました: " +
+                                (error.response?.data?.error || error.message),
+                        );
+                    }
+                }
             } catch (error) {
-                console.error("Error updating task status:", error);
-                alert("タスクのステータス更新に失敗しました");
+                console.error("Error in updateTaskStatus:", error);
+                alert("タスクのステータス更新中にエラーが発生しました。");
             }
         }
 
@@ -952,9 +1008,6 @@ export default {
                 if (!timeString) return null;
 
                 // Debug for time parsing
-                console.log(
-                    `Parsing time: ${timeString}, type: ${typeof timeString}`,
-                );
 
                 if (timeString instanceof Date) {
                     return timeString.getHours();

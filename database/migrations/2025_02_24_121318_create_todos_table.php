@@ -17,7 +17,13 @@ return new class extends Migration {
             $table->date("due_date")->nullable();
             $table->time("due_time")->nullable();
             $table
-                ->enum("status", ["pending", "completed", "trashed"])
+                ->enum("status", [
+                    "pending",
+                    "ongoing",
+                    "paused",
+                    "completed",
+                    "trashed",
+                ])
                 ->default("pending");
             $table->string("recurrence_type")->nullable(); // Added here
             $table->date("recurrence_end_date")->nullable(); // Added here

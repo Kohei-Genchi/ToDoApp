@@ -136,7 +136,7 @@ class TodoApiController extends Controller
      * @param Todo $todo
      * @return JsonResponse
      */
-    public function update(TodoUpdateRequest $request, Todo $todo): JsonResponse
+    public function update(Request $request, Todo $todo): JsonResponse
     {
         Log::info("タスク更新リクエスト:", $request->all());
         try {
@@ -159,8 +159,34 @@ class TodoApiController extends Controller
                 );
             }
 
-            // Update the task
-            $todo->update($request->validated());
+            // Prepare the data for update
+            $updateData = [];
+
+            // Only include fields that are present in the request
+            if ($request->has("title")) {
+                $updateData["title"] = $request->input("title");
+            }
+
+            if ($request->has("status")) {
+                $updateData["status"] = $request->input("status");
+            }
+
+            if ($request->has("category_id")) {
+                $updateData["category_id"] = $request->input("category_id");
+            }
+
+            // Handle date and time carefully to prevent timezone issues
+            if ($request->has("due_date")) {
+                // Use the date as provided without timezone adjustments
+                $updateData["due_date"] = $request->input("due_date");
+            }
+
+            if ($request->has("due_time")) {
+                $updateData["due_time"] = $request->input("due_time");
+            }
+
+            // Update the task with only the provided fields
+            $todo->update($updateData);
             $todo->refresh();
 
             // Update location if due date changed
@@ -176,6 +202,12 @@ class TodoApiController extends Controller
                 "todo" => $todo,
             ]);
         } catch (\Exception $e) {
+            Log::error("Error updating task: " . $e->getMessage(), [
+                "exception" => $e,
+                "request" => $request->all(),
+                "task_id" => $todo->id,
+            ]);
+
             return response()->json(
                 ["error" => "Error updating task: " . $e->getMessage()],
                 500
@@ -312,55 +344,63 @@ class TodoApiController extends Controller
      * @return \Illuminate\Database\Eloquent\Builder
      */
     private function buildBaseTaskQuery($request = null)
-{
-    // リクエストと現在のユーザーが存在するか確認
-    if (!$request || !Auth::check()) {
-        return Todo::where("user_id", Auth::id())->with("category");
-    }
-
-    // 特定のユーザーIDが指定されている場合はそのユーザーのタスクを取得
-    if ($request->has('user_id')) {
-        $requestedUserId = $request->user_id;
-        $currentUserId = Auth::id();
-
-        // ユーザーIDが数値であることを確認
-        $requestedUserId = is_numeric($requestedUserId) ? (int)$requestedUserId : null;
-
-        // 現在のユーザー自身のタスクを要求している場合
-        if ($requestedUserId === $currentUserId) {
-            return Todo::where("user_id", $currentUserId)->with(["category", "user"]);
+    {
+        // リクエストと現在のユーザーが存在するか確認
+        if (!$request || !Auth::check()) {
+            return Todo::where("user_id", Auth::id())->with("category");
         }
 
-        // グローバル共有の権限チェック
-        $isSharedGlobally = Auth::user()
-            ->globallySharedBy()
-            ->where('user_id', $requestedUserId)
-            ->exists();
+        // 特定のユーザーIDが指定されている場合はそのユーザーのタスクを取得
+        if ($request->has("user_id")) {
+            $requestedUserId = $request->user_id;
+            $currentUserId = Auth::id();
 
-        // 現在のユーザーがグローバル共有しているユーザーのタスクかどうかチェック
-        $isUserSharingGlobally = Auth::user()
-            ->globallySharedWith()
-            ->where('shared_with_user_id', $requestedUserId)
-            ->exists();
+            // ユーザーIDが数値であることを確認
+            $requestedUserId = is_numeric($requestedUserId)
+                ? (int) $requestedUserId
+                : null;
 
-        if ($isSharedGlobally || $isUserSharingGlobally) {
-            // 許可された場合、指定されたユーザーのタスクを返す
-            return Todo::where("user_id", $requestedUserId)->with(["category", "user"]);
+            // 現在のユーザー自身のタスクを要求している場合
+            if ($requestedUserId === $currentUserId) {
+                return Todo::where("user_id", $currentUserId)->with([
+                    "category",
+                    "user",
+                ]);
+            }
+
+            // グローバル共有の権限チェック
+            $isSharedGlobally = Auth::user()
+                ->globallySharedBy()
+                ->where("user_id", $requestedUserId)
+                ->exists();
+
+            // 現在のユーザーがグローバル共有しているユーザーのタスクかどうかチェック
+            $isUserSharingGlobally = Auth::user()
+                ->globallySharedWith()
+                ->where("shared_with_user_id", $requestedUserId)
+                ->exists();
+
+            if ($isSharedGlobally || $isUserSharingGlobally) {
+                // 許可された場合、指定されたユーザーのタスクを返す
+                return Todo::where("user_id", $requestedUserId)->with([
+                    "category",
+                    "user",
+                ]);
+            }
+
+            // 個別共有タスクのチェック - 指定ユーザーが共有したタスクのみ取得
+            $sharedTaskIds = Auth::user()
+                ->sharedTasks()
+                ->where("user_id", $requestedUserId)
+                ->pluck("id");
+
+            if ($sharedTaskIds->isNotEmpty()) {
+                // 個別に共有されたタスクのみを返す
+                return Todo::where("user_id", $requestedUserId)
+                    ->whereIn("id", $sharedTaskIds)
+                    ->with(["category", "user"]);
+            }
         }
-
-        // 個別共有タスクのチェック - 指定ユーザーが共有したタスクのみ取得
-        $sharedTaskIds = Auth::user()
-            ->sharedTasks()
-            ->where('user_id', $requestedUserId)
-            ->pluck('id');
-
-        if ($sharedTaskIds->isNotEmpty()) {
-            // 個別に共有されたタスクのみを返す
-            return Todo::where('user_id', $requestedUserId)
-                ->whereIn('id', $sharedTaskIds)
-                ->with(["category", "user"]);
-        }
-    }
 
         // デフォルトは現在のユーザーのタスク
         return Todo::where("user_id", Auth::id())->with("category");
