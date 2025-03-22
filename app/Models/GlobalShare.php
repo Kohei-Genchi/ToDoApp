@@ -13,7 +13,9 @@ class GlobalShare extends Model
     protected $fillable = ["user_id", "shared_with_user_id", "permission"];
 
     /**
-     * Get the user who shared their tasks.
+     * タスクを共有したユーザー（所有者）を取得
+     *
+     * @return BelongsTo
      */
     public function user(): BelongsTo
     {
@@ -21,7 +23,9 @@ class GlobalShare extends Model
     }
 
     /**
-     * Get the user with whom tasks are shared.
+     * タスクを共有された側のユーザーを取得
+     *
+     * @return BelongsTo
      */
     public function sharedWithUser(): BelongsTo
     {

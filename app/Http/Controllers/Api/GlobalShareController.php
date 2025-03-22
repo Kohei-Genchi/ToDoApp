@@ -13,12 +13,62 @@ use Illuminate\Support\Facades\Log;
 
 class GlobalShareController extends Controller
 {
-    /**
-     * Get users with whom the authenticated user has globally shared tasks.
-     */
+    //標準的なAPIレスポンスを生成する共通メソッド
+    private function successResponse(
+        $data,
+        string $message = "",
+        int $status = 200
+    ): JsonResponse {
+        return response()->json(
+            [
+                "success" => true,
+                "message" => $message,
+                "data" => $data,
+            ],
+            $status
+        );
+    }
+
+    //エラーレスポンスを生成する共通メソッド
+    private function errorResponse(
+        \Exception $e,
+        string $context,
+        int $status = 500
+    ): JsonResponse {
+        $message = "Error $context: " . $e->getMessage();
+        Log::error($message);
+
+        return response()->json(
+            [
+                "success" => false,
+                "error" => $message,
+            ],
+            $status
+        );
+    }
+
+    //現在のユーザーが所有者であるか確認
+    private function authorizeOwner(GlobalShare $globalShare)
+    {
+        if ($globalShare->user_id !== Auth::id()) {
+            return response()->json(
+                [
+                    "success" => false,
+                    "error" =>
+                        "認証エラー：このグローバル共有の権限がありません",
+                ],
+                403
+            );
+        }
+
+        return true;
+    }
+
+    // 共有相手一覧を返す
     public function index(): JsonResponse
     {
         try {
+            // ユーザーがグローバル共有している相手を取得し、必要な情報にマッピング
             $globalShares = Auth::user()
                 ->globallySharedWith()
                 ->with("sharedWithUser")
@@ -35,173 +85,144 @@ class GlobalShareController extends Controller
 
             return response()->json($globalShares);
         } catch (\Exception $e) {
-            Log::error("Error retrieving global shares: " . $e->getMessage());
-            return response()->json(
-                [
-                    "error" =>
-                        "Error retrieving global shares: " . $e->getMessage(),
-                ],
-                500
-            );
+            return $this->errorResponse($e, "retrieving global shares");
         }
     }
 
-    /**
-     * Share all tasks globally with a user.
-     */
+    // /新規共有を作成（同じ相手との重複や自分自身との共有を防止）
     public function store(Request $request): JsonResponse
     {
-        // Validate request
+        // リクエストの検証
         $request->validate([
             "email" => "required|email|exists:users,email",
             "permission" => "required|in:view,edit",
         ]);
 
         try {
-            // Find the user by email
+            // メールアドレスからユーザーを検索
             $user = User::where("email", $request->email)->first();
 
-            // Don't allow sharing with oneself
+            // 自分自身との共有は許可しない
             if ($user->id === Auth::id()) {
                 return response()->json(
-                    ["error" => "Cannot share with yourself"],
+                    ["error" => "自分自身と共有することはできません"],
                     400
                 );
             }
 
-            // Check if already shared with this user
+            // すでに共有済みかチェック
             $existingShare = GlobalShare::where("user_id", Auth::id())
                 ->where("shared_with_user_id", $user->id)
                 ->first();
 
             if ($existingShare) {
                 return response()->json(
-                    ["error" => "Already shared globally with this user"],
+                    ["error" => "すでにこのユーザーとグローバル共有しています"],
                     400
                 );
             }
 
-            // Create the global share
+            // グローバル共有を作成
             $globalShare = GlobalShare::create([
                 "user_id" => Auth::id(),
                 "shared_with_user_id" => $user->id,
                 "permission" => $request->permission,
             ]);
 
-            return response()->json([
-                "success" => true,
-                "message" => "All tasks shared globally with user",
-                "user" => [
-                    "id" => $user->id,
-                    "name" => $user->name,
-                    "email" => $user->email,
-                    "permission" => $request->permission,
+            return $this->successResponse(
+                [
+                    "user" => [
+                        "id" => $user->id,
+                        "name" => $user->name,
+                        "email" => $user->email,
+                        "permission" => $request->permission,
+                    ],
                 ],
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error sharing globally: " . $e->getMessage());
-            return response()->json(
-                ["error" => "Error sharing globally: " . $e->getMessage()],
-                500
+                "すべてのタスクをユーザーとグローバル共有しました",
+                201
             );
+        } catch (\Exception $e) {
+            return $this->errorResponse($e, "sharing globally");
         }
     }
 
-    /**
-     * Update global sharing permission for a user.
-     */
+    //権限を更新（所有者のみ可能）
     public function update(
         Request $request,
         GlobalShare $globalShare
     ): JsonResponse {
-        // Check if the authenticated user owns this global share
-        if ($globalShare->user_id !== Auth::id()) {
-            return response()->json(["error" => "Unauthorized"], 403);
+        // 権限チェック
+        $authCheck = $this->authorizeOwner($globalShare);
+        if ($authCheck !== true) {
+            return $authCheck;
         }
 
-        // Validate request
+        // リクエストの検証
         $request->validate([
             "permission" => "required|in:view,edit",
         ]);
 
         try {
-            // Update the permission
+            // 権限を更新
             $globalShare->update([
                 "permission" => $request->permission,
             ]);
 
-            return response()->json([
-                "success" => true,
-                "message" => "Global sharing permission updated successfully",
-            ]);
-        } catch (\Exception $e) {
-            Log::error(
-                "Error updating global sharing permission: " . $e->getMessage()
+            return $this->successResponse(
+                null,
+                "グローバル共有の権限を正常に更新しました"
             );
-            return response()->json(
-                [
-                    "error" =>
-                        "Error updating global sharing permission: " .
-                        $e->getMessage(),
-                ],
-                500
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                $e,
+                "updating global sharing permission"
             );
         }
     }
 
-    /**
-     * Stop sharing globally with a user.
-     */
+    //共有を削除（所有者のみ可能）
     public function destroy(GlobalShare $globalShare): JsonResponse
     {
-        // Check if the authenticated user owns this global share
-        if ($globalShare->user_id !== Auth::id()) {
-            return response()->json(["error" => "Unauthorized"], 403);
+        // 権限チェック
+        $authCheck = $this->authorizeOwner($globalShare);
+        if ($authCheck !== true) {
+            return $authCheck;
         }
 
         try {
-            // Delete the global share
             $globalShare->delete();
 
-            return response()->json([
-                "success" => true,
-                "message" => "Global sharing removed successfully",
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error removing global sharing: " . $e->getMessage());
-            return response()->json(
-                [
-                    "error" =>
-                        "Error removing global sharing: " . $e->getMessage(),
-                ],
-                500
+            return $this->successResponse(
+                null,
+                "グローバル共有を正常に削除しました"
             );
+        } catch (\Exception $e) {
+            return $this->errorResponse($e, "removing global sharing");
         }
     }
 
-    /**
-     * Get all tasks shared with the authenticated user via global sharing.
-     */
+    // 自分に共有されているタスク一覧を返す
     public function sharedWithMe(): JsonResponse
     {
         try {
-            // Get IDs of users who have globally shared with the authenticated user
+            // 認証済みユーザーとグローバル共有しているユーザーIDを取得
             $sharerIds = Auth::user()
                 ->globallySharedBy()
                 ->pluck("user_id")
                 ->toArray();
 
-            // Get all tasks from those users
+            // それらのユーザーからのすべてのタスクを取得
             $sharedTasks = Todo::whereIn("user_id", $sharerIds)
                 ->with(["category", "user"])
                 ->get()
                 ->map(function ($task) {
-                    // Find the global share to determine permission
+                    // 権限を決定するためのグローバル共有を検索
                     $globalShare = Auth::user()
                         ->globallySharedBy()
                         ->where("user_id", $task->user_id)
                         ->first();
 
+                    // タスクにピボット情報を追加（権限情報を含む）
                     $task->pivot = [
                         "permission" => $globalShare
                             ? $globalShare->permission
@@ -213,17 +234,7 @@ class GlobalShareController extends Controller
 
             return response()->json($sharedTasks);
         } catch (\Exception $e) {
-            Log::error(
-                "Error retrieving globally shared tasks: " . $e->getMessage()
-            );
-            return response()->json(
-                [
-                    "error" =>
-                        "Error retrieving globally shared tasks: " .
-                        $e->getMessage(),
-                ],
-                500
-            );
+            return $this->errorResponse($e, "retrieving globally shared tasks");
         }
     }
 }
