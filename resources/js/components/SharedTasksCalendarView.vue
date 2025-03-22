@@ -541,7 +541,7 @@ export default {
                 }
 
                 if (currentRow) {
-                    // Calculate position to center the current hour
+                    // Calculate position to center the current time
                     const containerHeight =
                         calendarContainer.value.clientHeight;
                     const rowHeight = currentRow.clientHeight;
@@ -563,11 +563,7 @@ export default {
                     });
 
                     // Add the current time indicator
-                    addCurrentTimeIndicator(
-                        currentRow,
-                        currentMinute,
-                        rowHeight,
-                    );
+                    addCurrentTimeIndicator();
 
                     console.log(
                         `Scrolled to hour: ${currentHour}:${currentMinute}`,
@@ -1344,7 +1340,10 @@ export default {
                 // Create the indicator
                 const indicator = document.createElement("div");
                 indicator.id = "current-time-indicator";
-                indicator.className = "current-time-indicator";
+
+                // Add Tailwind classes
+                indicator.className =
+                    "absolute w-full h-0.5 bg-red-500 z-30 shadow-md transform -translate-y-1/2";
 
                 // Calculate position based on minutes
                 const rowHeight = currentRow.clientHeight;
@@ -1353,6 +1352,15 @@ export default {
                     currentRow.offsetTop + rowHeight * minutePercentage;
 
                 indicator.style.top = `${topOffset}px`;
+                indicator.style.left = "0";
+                indicator.style.right = "0";
+
+                // Add a time label to the indicator
+                const timeLabel = document.createElement("div");
+                timeLabel.className =
+                    "absolute left-0 -translate-y-1/2 bg-red-500 text-white text-xs px-1 py-0.5 rounded-r shadow";
+                timeLabel.textContent = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+                indicator.appendChild(timeLabel);
 
                 // Add the indicator to the calendar container
                 calendarContainer.value.appendChild(indicator);
@@ -1427,12 +1435,26 @@ export default {
     },
 };
 </script>
+
 <style scoped>
-/* Enhanced animation for current hour highlight */
-.scroll-highlight {
-    animation: currentTimeHighlight 2s ease-in-out;
+/* Current time indicator styles */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
 }
 
+#current-time-indicator {
+    animation: pulse 2s infinite;
+}
+
+/* Current hour highlight animation */
 @keyframes currentTimeHighlight {
     0% {
         background-color: rgba(59, 130, 246, 0.1);
@@ -1443,5 +1465,9 @@ export default {
     100% {
         background-color: rgba(59, 130, 246, 0.1);
     }
+}
+
+.scroll-highlight {
+    animation: currentTimeHighlight 2s ease-in-out;
 }
 </style>
