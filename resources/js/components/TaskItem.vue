@@ -1,5 +1,7 @@
 <template>
-    <li class="hover:bg-gray-50 transition-colors">
+    <li
+        class="cosmic-task-item hover:bg-gray-800/50 transition-all duration-300"
+    >
         <div class="p-3 sm:px-4 flex items-center">
             <!-- Checkbox -->
             <div class="mr-3 flex-shrink-0">
@@ -7,7 +9,7 @@
                     type="checkbox"
                     :checked="todo.status === 'completed'"
                     @change="$emit('toggle', todo)"
-                    class="h-5 w-5 text-blue-600 rounded focus:ring-blue-500"
+                    class="h-5 w-5 text-orange-500 rounded focus:ring-orange-500 cosmic-checkbox"
                 />
             </div>
 
@@ -22,8 +24,8 @@
                         class="font-medium"
                         :class="
                             todo.status === 'completed'
-                                ? 'line-through text-gray-500'
-                                : 'text-gray-900'
+                                ? 'line-through text-gray-400'
+                                : 'text-gray-100'
                         "
                     >
                         {{ todo.title }}
@@ -34,9 +36,9 @@
                         v-if="isShared"
                         class="ml-2 p-0.5 rounded text-xs border flex items-center"
                         :class="{
-                            'text-green-600 border-green-200 bg-green-50':
+                            'text-orange-400 border-orange-500/30 bg-orange-900/20':
                                 todo.user_id === myUserId,
-                            'text-blue-600 border-blue-200 bg-blue-50':
+                            'text-blue-400 border-blue-500/30 bg-blue-900/20':
                                 todo.user_id !== myUserId,
                         }"
                         :title="sharedTooltip"
@@ -61,17 +63,19 @@
                     <!-- Category label -->
                     <span
                         v-if="category"
-                        class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium"
+                        class="ml-2 px-2 py-0.5 rounded-full text-xs font-medium backdrop-blur-sm shadow-sm"
                         :style="{
-                            backgroundColor: categoryColor,
+                            backgroundColor: `${category.color}30`,
                             color: category.color,
+                            borderColor: `${category.color}50`,
+                            borderWidth: '1px',
                         }"
                     >
                         {{ category.name }}
                     </span>
 
                     <!-- Recurrence icon -->
-                    <span v-if="isRecurring" class="ml-2 text-xs text-gray-500">
+                    <span v-if="isRecurring" class="ml-2 text-xs text-gray-300">
                         <span class="inline-flex items-center">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -95,7 +99,7 @@
                 <!-- Time display -->
                 <div
                     v-if="formattedTime || isShared"
-                    class="text-sm text-gray-500 mt-0.5 flex space-x-2"
+                    class="text-sm text-gray-400 mt-0.5 flex space-x-2"
                 >
                     <span v-if="formattedTime" class="inline-flex items-center">
                         <svg
@@ -185,7 +189,7 @@
                 <button
                     v-if="todo.user_id === myUserId"
                     @click.stop="$emit('share', todo)"
-                    class="text-gray-400 hover:text-blue-600 transition-colors"
+                    class="text-gray-400 hover:text-orange-400 transition-colors"
                     title="共有"
                 >
                     <svg
@@ -206,7 +210,7 @@
                 <!-- Delete button -->
                 <button
                     @click.stop="$emit('delete')"
-                    class="text-gray-400 hover:text-red-600 transition-colors"
+                    class="text-gray-400 hover:text-red-400 transition-colors"
                     title="削除"
                 >
                     <svg
@@ -367,3 +371,35 @@ export default {
     },
 };
 </script>
+
+<style scoped>
+.cosmic-task-item {
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    border-left: 3px solid #ff9933;
+    margin-bottom: 4px;
+    border-radius: 0.375rem;
+}
+
+.cosmic-task-item::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255, 153, 51, 0.05), transparent);
+    pointer-events: none;
+}
+
+.cosmic-checkbox {
+    border: 2px solid #ff9933;
+    transition: all 0.2s ease;
+}
+
+.cosmic-checkbox:checked {
+    background-color: #ff9933;
+    border-color: #ff9933;
+}
+</style>
