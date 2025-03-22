@@ -2,6 +2,36 @@
     <div
         class="shared-tasks-calendar bg-white rounded-lg shadow-sm overflow-hidden w-full"
     >
+        <!-- Loading indicator that doesn't hide the entire component -->
+        <div
+            v-if="initialLoading"
+            class="fixed top-4 right-4 bg-white rounded-lg shadow-md p-3 z-50"
+        >
+            <div class="flex items-center">
+                <svg
+                    class="animate-spin h-5 w-5 text-blue-500 mr-2"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                    ></circle>
+                    <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                </svg>
+                <span class="text-sm">カレンダーを読み込み中...</span>
+            </div>
+        </div>
+
         <!-- Header with date navigation -->
         <div
             class="p-2 flex justify-between items-center border-b border-gray-200"
@@ -81,158 +111,206 @@
             @close="handleGlobalShareModalClose"
         />
 
-        <!-- User names row - Added above the calendar container -->
-        <div
-            class="flex border-b border-gray-200 bg-white sticky top-0 z-20 px-1 py-2"
-        >
-            <div class="w-16 px-1 text-xs font-medium text-gray-500">
-                <!-- Empty cell for time column -->
-            </div>
+        <!-- Flexbox-based layout for perfect alignment -->
+        <div class="flex flex-col w-full">
+            <!-- Header row with user names -->
             <div
-                v-for="user in sharedUsers"
-                :key="`user-${user.id}`"
-                class="flex-1 px-2 text-center"
-                style="min-width: 120px; width: auto"
+                class="flex border-b border-gray-200 bg-white sticky top-0 z-20"
             >
-                <div class="text-sm font-medium text-gray-800">
-                    {{ user.name }}
+                <!-- Time column header (fixed width) -->
+                <div
+                    class="w-16 px-1 py-2 text-xs font-medium text-gray-500 flex-shrink-0"
+                >
+                    <!-- Empty cell for time column -->
+                </div>
+
+                <!-- User name columns (equal flex width) -->
+                <div class="flex flex-1">
+                    <div
+                        v-for="user in sharedUsers"
+                        :key="`user-${user.id}`"
+                        class="flex-1 min-w-[250px] px-2 py-2 text-center border-l border-gray-200"
+                    >
+                        <div class="text-sm font-medium text-gray-800 truncate">
+                            {{ user.name }}
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Calendar Table Layout - With scrollable container for time-based scrolling -->
-        <div
-            class="w-full calendar-container"
-            ref="calendarContainer"
-            style="max-height: 70vh; overflow-y: auto"
-        >
-            <table class="w-full border-collapse table-fixed">
-                <!-- Header Row -->
-                <thead>
-                    <tr>
-                        <th
-                            class="w-16 px-1 py-1 bg-gray-50 border border-gray-200 text-xs font-medium text-gray-500 sticky top-0 z-10"
-                        >
-                            時間
-                        </th>
-                        <th
-                            v-for="user in sharedUsers"
-                            :key="`header-${user.id}`"
-                            class="px-1 py-1 bg-gray-50 border border-gray-200 text-center sticky top-0 z-10"
-                            style="min-width: 120px; width: auto"
-                        >
-                            <div class="text-xs text-gray-500 truncate">
-                                {{ user.email }}
-                            </div>
-                        </th>
-                    </tr>
-                </thead>
+            <!-- Email row header -->
+            <div
+                class="flex border-b border-gray-200 bg-gray-50 sticky top-8 z-10"
+            >
+                <!-- Time header (fixed width) -->
+                <div
+                    class="w-16 px-1 py-1 text-xs font-medium text-gray-500 text-center flex-shrink-0"
+                >
+                    時間
+                </div>
 
-                <!-- Time & Task Rows -->
-                <tbody>
-                    <tr
-                        v-for="hour in fullHours"
-                        :key="`row-${hour}`"
-                        :data-hour="hour"
-                        class="time-row"
-                        :class="{ 'bg-blue-50': isCurrentHour(hour) }"
+                <!-- Email columns (equal flex width) -->
+                <div class="flex flex-1">
+                    <div
+                        v-for="user in sharedUsers"
+                        :key="`header-${user.id}`"
+                        class="flex-1 min-w-[250px] px-1 py-1 text-center border-l border-gray-200"
                     >
-                        <!-- Time Cell -->
-                        <td
-                            class="w-12 px-1 py-1 border border-gray-200 bg-gray-50 text-left"
-                            :class="{
-                                'font-bold text-blue-600': isCurrentHour(hour),
-                            }"
-                        >
-                            <div
-                                class="text-xs text-gray-500"
-                                :class="{
-                                    'text-blue-600': isCurrentHour(hour),
-                                }"
-                            >
-                                {{ formatHour(hour) }}
-                            </div>
-                        </td>
+                        <div class="text-xs text-gray-500 truncate">
+                            {{ user.email }}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                        <!-- User Cells for this hour -->
-                        <td
+            <!-- Calendar container with flexbox layout -->
+            <div
+                class="w-full overflow-y-auto max-h-[70vh]"
+                ref="calendarContainer"
+            >
+                <!-- Time rows using flex -->
+                <div
+                    v-for="hour in fullHours"
+                    :key="`row-${hour}`"
+                    :data-hour="hour"
+                    :class="[
+                        'flex border-b border-gray-200 min-h-[60px]',
+                        isCurrentHour(hour) ? 'bg-blue-50 relative' : '',
+                    ]"
+                >
+                    <!-- Time Cell (fixed width) -->
+                    <div
+                        class="w-16 px-1 py-1 border-r border-gray-200 text-left flex-shrink-0"
+                        :class="[
+                            isCurrentHour(hour)
+                                ? 'bg-blue-100 font-bold text-blue-700'
+                                : 'bg-gray-50 text-gray-500',
+                        ]"
+                    >
+                        <div
+                            class="text-xs"
+                            :class="{ 'text-blue-700': isCurrentHour(hour) }"
+                        >
+                            {{ formatHour(hour) }}
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="isCurrentHour(hour)"
+                        class="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"
+                    ></div>
+
+                    <!-- User cell columns (equal flex width) -->
+                    <div class="flex flex-1">
+                        <div
                             v-for="user in sharedUsers"
                             :key="`cell-${hour}-${user.id}`"
-                            class="border border-gray-200 relative group min-h-[50px] p-0 overflow-hidden"
-                            style="height: 50px; max-width: 150px"
+                            class="flex-1 min-w-[250px] border-r border-gray-200 relative min-h-12 p-0.5 overflow-hidden border-l border-gray-200"
                         >
-                            <!-- Tasks for this hour and user - contained within column -->
-                            <div class="h-full w-full p-0.5">
-                                <!-- Limited to tasks for this specific user only -->
-                                <div
-                                    v-for="task in getTasksForHourAndUser(
-                                        hour,
-                                        user.id,
-                                    )"
-                                    :key="`task-${task.id}`"
-                                    class="mb-0.5 py-1 px-2 text-xs rounded overflow-hidden transition-all duration-200 hover:shadow-md text-left flex items-center"
-                                    :class="getTaskStatusClasses(task)"
+                            <!-- Tasks for this hour and user -->
+                            <div
+                                v-for="task in getTasksForHourAndUser(
+                                    hour,
+                                    user.id,
+                                )"
+                                :key="`task-${task.id}`"
+                                class="mb-1 py-1.5 px-2 text-xs rounded overflow-hidden transition-colors duration-200 hover:shadow-md text-left flex items-center"
+                                :class="getTaskStatusClasses(task)"
+                            >
+                                <!-- Status Dropdown -->
+                                <select
+                                    v-model="task.status"
+                                    @change="
+                                        updateTaskStatus(task.id, task.status)
+                                    "
+                                    class="mr-2 text-xs rounded py-1 px-2 font-medium border shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    :class="getSelectClasses(task.status)"
                                 >
-                                    <!-- Status Dropdown - MODIFIED FOR NEW STATUS OPTIONS -->
-                                    <select
-                                        v-model="task.status"
-                                        @change="
-                                            updateTaskStatus(
-                                                task.id,
-                                                task.status,
-                                            )
-                                        "
-                                        class="mr-2 text-xs rounded border-0 h-6 focus:ring-0 focus:outline-none"
-                                        :class="getSelectClasses(task.status)"
-                                    >
-                                        <option value="pending">待機</option>
-                                        <option value="ongoing">進行</option>
-                                        <option value="paused">中断</option>
-                                        <option value="completed">完了</option>
-                                    </select>
+                                    <option value="pending">待機</option>
+                                    <option value="ongoing">進行</option>
+                                    <option value="paused">中断</option>
+                                    <option value="completed">完了</option>
+                                </select>
 
-                                    <!-- Task Title and Time -->
-                                    <div
-                                        class="flex items-center flex-1 overflow-hidden"
-                                    >
-                                        <div class="font-medium truncate mr-1">
-                                            {{ task.title }}
-                                        </div>
+                                <!-- Task Title and Time -->
+                                <div
+                                    class="flex flex-col flex-1 overflow-hidden"
+                                >
+                                    <div class="font-medium text-sm truncate">
+                                        {{ task.title }}
+                                    </div>
+                                    <div class="flex items-center mt-0.5">
                                         <div
                                             v-if="task.due_time"
-                                            class="text-xs opacity-75 whitespace-nowrap"
+                                            class="text-xs opacity-75 mr-2"
                                         >
-                                            {{ formatTaskTime(task.due_time) }}
+                                            <span
+                                                class="bg-gray-100 px-1 py-0.5 rounded inline-flex items-center"
+                                            >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    class="h-3 w-3 mr-0.5"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                    />
+                                                </svg>
+                                                {{
+                                                    formatTaskTime(
+                                                        task.due_time,
+                                                    )
+                                                }}
+                                            </span>
+                                        </div>
+                                        <div
+                                            v-if="task.category"
+                                            class="text-xs"
+                                        >
+                                            <span
+                                                class="px-1.5 py-0.5 rounded"
+                                                :style="{
+                                                    backgroundColor: `${task.category.color}25`,
+                                                    color: task.category.color,
+                                                }"
+                                            >
+                                                {{ task.category.name }}
+                                            </span>
                                         </div>
                                     </div>
-
-                                    <!-- Edit button - MODIFIED to only show for task owners -->
-                                    <button
-                                        v-if="isCurrentUserOwner(task)"
-                                        @click.stop="editTask(task)"
-                                        class="ml-1 text-gray-500 hover:text-blue-600 flex-shrink-0"
-                                    >
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            class="h-3.5 w-3.5"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                            />
-                                        </svg>
-                                    </button>
                                 </div>
+
+                                <!-- Edit button -->
+                                <button
+                                    v-if="isCurrentUserOwner(task)"
+                                    @click.stop="editTask(task)"
+                                    class="ml-1 text-gray-500 hover:text-blue-600 flex-shrink-0"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                        />
+                                    </svg>
+                                </button>
                             </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Task modal for editing tasks (no longer for adding) -->
@@ -287,6 +365,7 @@ export default {
         const categories = ref([]);
         const currentUserId = ref(null);
         const isLoading = ref(true);
+        const initialLoading = ref(true);
         const globalShares = ref([]);
         const calendarContainer = ref(null);
 
@@ -343,7 +422,7 @@ export default {
             const statusStyle =
                 statusColors[task.status] || statusColors["pending"];
 
-            // Base classes - removed w-full to prevent overflow issues
+            // Base classes - improved visibility and contrast
             const baseClasses = `${statusStyle.bg} ${statusStyle.text} w-full`;
 
             // Special classes for shared or global tasks
@@ -437,40 +516,65 @@ export default {
             return now.getHours() === hour;
         }
 
-        // Scroll to the current time in the calendar
         function scrollToCurrentTime() {
             if (!calendarContainer.value) return;
 
             const now = new Date();
             const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
 
-            // Find the row for the current hour
-            const rows =
-                calendarContainer.value.querySelectorAll("tr[data-hour]");
-            let currentRow = null;
+            try {
+                // Find the row for the current hour using data-hour attribute
+                const hourRows =
+                    calendarContainer.value.querySelectorAll("[data-hour]");
+                let currentRow = null;
+                let currentRowOffsetTop = 0;
 
-            for (const row of rows) {
-                const rowHour = parseInt(row.getAttribute("data-hour"));
-                if (rowHour === currentHour) {
-                    currentRow = row;
-                    break;
+                // Find the current hour row
+                for (const row of hourRows) {
+                    const hourAttr = row.getAttribute("data-hour");
+                    if (hourAttr && parseInt(hourAttr, 10) === currentHour) {
+                        currentRow = row;
+                        currentRowOffsetTop = row.offsetTop;
+                        break;
+                    }
                 }
-            }
 
-            if (currentRow) {
-                // Calculate position to center the current hour row
-                const containerHeight = calendarContainer.value.clientHeight;
-                const rowPosition = currentRow.offsetTop;
-                const scrollPosition =
-                    rowPosition -
-                    containerHeight / 2 +
-                    currentRow.clientHeight / 2;
+                if (currentRow) {
+                    // Calculate position to center the current hour
+                    const containerHeight =
+                        calendarContainer.value.clientHeight;
+                    const rowHeight = currentRow.clientHeight;
 
-                // Scroll to position with smooth animation
-                calendarContainer.value.scrollTo({
-                    top: scrollPosition,
-                    behavior: "smooth",
-                });
+                    // Calculate minute offset to position more precisely within the hour
+                    const minuteOffset = (currentMinute / 60) * rowHeight;
+
+                    // Position calculation: position the current time line in the middle of the viewport
+                    const scrollPosition =
+                        currentRowOffsetTop +
+                        minuteOffset -
+                        containerHeight / 2 +
+                        rowHeight / 2;
+
+                    // Scroll with smooth animation
+                    calendarContainer.value.scrollTo({
+                        top: Math.max(0, scrollPosition),
+                        behavior: "smooth",
+                    });
+
+                    // Add the current time indicator
+                    addCurrentTimeIndicator(
+                        currentRow,
+                        currentMinute,
+                        rowHeight,
+                    );
+
+                    console.log(
+                        `Scrolled to hour: ${currentHour}:${currentMinute}`,
+                    );
+                }
+            } catch (error) {
+                console.error("Error during scrollToCurrentTime:", error);
             }
         }
 
@@ -716,6 +820,7 @@ export default {
                 console.error("Error in loadSharedTasks:", error);
             } finally {
                 isLoading.value = false;
+                initialLoading.value = false;
 
                 // After loading tasks, scroll to current time
                 nextTick(() => {
@@ -826,174 +931,49 @@ export default {
                 return [];
             }
 
-            // デバッグログ用のフラグ
-            const isDebugHour = hour === 9;
-            if (isDebugHour) {
-                console.log(
-                    `Looking for tasks at ${hour}:00 for user ${userId}`,
-                );
-            }
-
-            const matchingTasks = [];
-            // 確実に数値として処理するため、parseIntを使用
+            // Force consistent number type for userId to ensure proper comparison
             const columnUserId = parseInt(userId, 10);
-
-            // ユーザーIDが無効な場合は空の配列を返す
             if (isNaN(columnUserId)) {
                 console.warn("Invalid userId provided:", userId);
                 return [];
             }
 
-            // 各タスクをチェック
+            const matchingTasks = [];
+
+            // Loop through each task to determine if it belongs in this column
             for (const task of sharedTasks.value) {
                 try {
-                    // タスクのベーシックデータを取得
+                    // Ensure IDs are always treated as numbers for comparison
                     const taskId = task.id;
-                    // 文字列の場合もあるので、parseIntで確実に数値に変換
-                    const taskUserId = task.user_id
+                    const taskOwnerId = task.user_id
                         ? parseInt(task.user_id, 10)
                         : null;
 
-                    // 現在のユーザーのタスクかどうか
-                    const isCurrentUserTask =
-                        taskUserId === currentUserId.value;
-
-                    // このタスクをこのユーザーの列に表示すべきかどうか
-                    let shouldDisplayInColumn = false;
-
-                    // ケース1: このユーザーに属するタスク
-                    if (taskUserId === columnUserId) {
-                        shouldDisplayInColumn = true;
-                        if (isDebugHour)
-                            console.log(
-                                `Task ${taskId} belongs to column user: ${columnUserId}`,
-                            );
-                    }
-                    // ケース2: 個別共有タスク
-                    else if (
-                        task.shared_with &&
-                        Array.isArray(task.shared_with)
-                    ) {
-                        const isIndividuallyShared = task.shared_with.some(
-                            (share) => {
-                                // shared_with_user_id または user_id がこの列のユーザーIDと一致するか
-                                const shareUserId = parseInt(
-                                    share.shared_with_user_id || share.user_id,
-                                    10,
-                                );
-                                return shareUserId === columnUserId;
-                            },
-                        );
-
-                        if (isIndividuallyShared) {
-                            shouldDisplayInColumn = true;
-                            if (isDebugHour)
-                                console.log(
-                                    `Task ${taskId} is individually shared with column user: ${columnUserId}`,
-                                );
-                        }
-                    }
-                    // ケース3: グローバル共有タスク
-                    else if (task.isGloballyShared) {
-                        // グローバル共有の場合、タスク所有者とこの列のユーザーの関係を確認する
-                        if (
-                            globalShares.value &&
-                            globalShares.value.length > 0
-                        ) {
-                            // このタスクの所有者が、この列のユーザーとグローバル共有しているか
-                            const shareRelationship = globalShares.value.some(
-                                (share) => {
-                                    const shareOwnerId = parseInt(
-                                        share.user_id,
-                                        10,
-                                    );
-                                    const shareWithUserId = parseInt(
-                                        share.shared_with_user_id,
-                                        10,
-                                    );
-
-                                    // A) タスク所有者がこの列のユーザーとグローバル共有している
-                                    const ownerSharesWithColumnUser =
-                                        shareOwnerId === taskUserId &&
-                                        shareWithUserId === columnUserId;
-
-                                    // B) この列のユーザーがタスク所有者とグローバル共有している
-                                    const columnUserSharesWithOwner =
-                                        shareOwnerId === columnUserId &&
-                                        shareWithUserId === taskUserId;
-
-                                    return (
-                                        ownerSharesWithColumnUser ||
-                                        columnUserSharesWithOwner
-                                    );
-                                },
-                            );
-
-                            if (shareRelationship) {
-                                shouldDisplayInColumn = true;
-                                if (isDebugHour)
-                                    console.log(
-                                        `Task ${taskId} is globally shared between ${taskUserId} and ${columnUserId}`,
-                                    );
-                            }
-                        }
-                    }
-                    // ケース4: フォールバック - 常に所有者の列にはタスクを表示
-                    else if (taskUserId === columnUserId) {
-                        shouldDisplayInColumn = true;
-                        if (isDebugHour)
-                            console.log(
-                                `Task ${taskId} falls back to owner's column: ${columnUserId}`,
-                            );
+                    // IMPORTANT: Check if this task belongs directly to this user's column
+                    // This is the key fix - we only want tasks that belong to THIS user in THEIR column
+                    if (taskOwnerId !== columnUserId) {
+                        continue; // Skip if the task doesn't belong to this user
                     }
 
-                    // このユーザーの列に表示すべきでない場合はスキップ
-                    if (!shouldDisplayInColumn) continue;
-
-                    // 日付と時間が一致するかチェック
+                    // Check if the task's date matches the current date
                     const taskDate = formatDateForComparison(task.due_date);
-                    const dateMatches = taskDate === currentDate.value;
-
-                    if (!dateMatches) {
-                        if (isDebugHour)
-                            console.log(
-                                `Task ${taskId} date doesn't match: ${taskDate} vs ${currentDate.value}`,
-                            );
+                    if (taskDate !== currentDate.value) {
                         continue;
                     }
 
+                    // Check if the task has a due time and if it matches the current hour
                     if (!task.due_time) {
-                        if (isDebugHour)
-                            console.log(`Task ${taskId} has no due_time`);
                         continue;
                     }
 
-                    // 時間が一致するかチェック
+                    // Extract hour from task time and check if it matches the current hour
                     const taskHour = extractHour(task.due_time);
                     if (taskHour !== hour) {
-                        if (isDebugHour)
-                            console.log(
-                                `Task ${taskId} hour doesn't match: ${taskHour} vs ${hour}`,
-                            );
                         continue;
                     }
 
-                    // すべての条件を満たしたタスクをコピー
-                    const taskCopy = { ...task };
-
-                    // 所有者情報を追加（他人のタスクの場合）
-                    if (taskUserId !== columnUserId) {
-                        taskCopy.ownerInfo = task.user
-                            ? task.user.name
-                            : task.ownerInfo || "Shared Task";
-                    }
-
-                    taskCopy.isCurrentUserTask = isCurrentUserTask;
-
-                    // 結果に追加
-                    matchingTasks.push(taskCopy);
-                    if (isDebugHour)
-                        console.log(`✓ Added task: ${taskId} - ${task.title}`);
+                    // This task belongs to this user and time slot - add it
+                    matchingTasks.push({ ...task });
                 } catch (error) {
                     console.error("Error processing task:", error, task);
                 }
@@ -1006,8 +986,6 @@ export default {
         const extractHour = (timeString) => {
             try {
                 if (!timeString) return null;
-
-                // Debug for time parsing
 
                 if (timeString instanceof Date) {
                     return timeString.getHours();
@@ -1106,7 +1084,16 @@ export default {
         const editTask = (task) => {
             taskModalMode.value = "edit";
             selectedTaskId.value = task.id;
-            selectedTaskData.value = { ...task };
+
+            // 共有タスクビューから編集するときのフラグを追加
+            const isSharedViewEdit = true;
+
+            // タスクデータに共有ビューからの編集フラグを追加
+            selectedTaskData.value = {
+                ...task,
+                _isSharedViewEdit: isSharedViewEdit,
+            };
+
             showTaskModal.value = true;
         };
 
@@ -1264,35 +1251,48 @@ export default {
             // Get current user ID
             if (window.Laravel && window.Laravel.user) {
                 currentUserId.value = window.Laravel.user.id;
-                console.log("Current user ID:", currentUserId.value);
             }
 
             // Fix: Set to current local date on mount
             goToToday();
 
-            // 重要: 順序を変更 - まずグローバル共有情報を読み込む
-            loadGlobalShares();
+            // Start by loading minimal data to get the layout ready
+            sharedUsers.value = [
+                {
+                    id: currentUserId.value || 0,
+                    name: window.Laravel?.user?.name || "Current User",
+                    email: window.Laravel?.user?.email || "",
+                },
+            ];
 
-            // その後、タスクとカテゴリを読み込む
-            loadSharedTasks();
-            loadCategories();
-
-            // デバッグ情報を表示
-            console.log(
-                "Component mounted, initial shared users:",
-                sharedUsers.value,
+            // Start loading critical data immediately, don't wait
+            loadGlobalShares().catch((e) =>
+                console.error("Error loading global shares:", e),
+            );
+            loadCategories().catch((e) =>
+                console.error("Error loading categories:", e),
             );
 
-            // 追加のデバッグ情報
-            console.log(
-                "Global shares after initialization:",
-                globalShares.value,
-            );
+            // Load task data with minimal delay
+            setTimeout(() => {
+                loadSharedTasks().finally(() => {
+                    initialLoading.value = false;
 
-            // Scroll to current time on initial load
-            nextTick(() => {
-                scrollToCurrentTime();
-            });
+                    // Implement multiple scroll attempts to ensure it works
+                    // First attempt - immediate
+                    scrollToCurrentTime();
+
+                    // Second attempt - after a short delay for DOM to settle
+                    setTimeout(() => {
+                        scrollToCurrentTime();
+                    }, 300);
+
+                    // Final attempt - after all rendering should be complete
+                    setTimeout(() => {
+                        scrollToCurrentTime();
+                    }, 1000);
+                });
+            }, 100);
 
             // Set up interval to update current time highlight every minute
             timeUpdateInterval = setInterval(() => {
@@ -1302,10 +1302,79 @@ export default {
                     // Force component update to refresh current time highlight
                     sharedTasks.value = [...sharedTasks.value];
 
-                    // Re-scroll to the current time
-                    scrollToCurrentTime();
+                    // Re-scroll to the current time every hour
+                    const now = new Date();
+                    if (now.getMinutes() === 0) {
+                        scrollToCurrentTime();
+                    }
                 });
             }, 60000); // Update every minute
+        });
+
+        // Add current time indicator
+        const addCurrentTimeIndicator = () => {
+            if (!calendarContainer.value) return;
+
+            // Remove any existing indicator
+            const existingIndicator = document.getElementById(
+                "current-time-indicator",
+            );
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
+            // Find the current hour row
+            const hourRows =
+                calendarContainer.value.querySelectorAll("[data-hour]");
+            let currentRow = null;
+
+            for (const row of hourRows) {
+                const hourAttr = row.getAttribute("data-hour");
+                if (hourAttr && parseInt(hourAttr, 10) === currentHour) {
+                    currentRow = row;
+                    break;
+                }
+            }
+
+            if (currentRow) {
+                // Create the indicator
+                const indicator = document.createElement("div");
+                indicator.id = "current-time-indicator";
+                indicator.className = "current-time-indicator";
+
+                // Calculate position based on minutes
+                const rowHeight = currentRow.clientHeight;
+                const minutePercentage = currentMinute / 60;
+                const topOffset =
+                    currentRow.offsetTop + rowHeight * minutePercentage;
+
+                indicator.style.top = `${topOffset}px`;
+
+                // Add the indicator to the calendar container
+                calendarContainer.value.appendChild(indicator);
+            }
+        };
+
+        // 既存のonMountedフック内に追加
+        onMounted(() => {
+            // ... 既存のコード ...
+
+            // Add current time indicator
+            addCurrentTimeIndicator();
+
+            // Update indicator every minute
+            const indicatorInterval = setInterval(() => {
+                addCurrentTimeIndicator();
+            }, 60000);
+
+            // Clean up interval when component is unmounted
+            onBeforeUnmount(() => {
+                clearInterval(indicatorInterval);
+            });
         });
 
         // Clean up interval when component is unmounted
@@ -1314,36 +1383,6 @@ export default {
                 clearInterval(timeUpdateInterval);
             }
         });
-
-        // 重要: タスクがユーザーごとに正しくフィルタリングされていることを確認
-        watch(
-            () => sharedTasks.value,
-            (newTasks) => {
-                console.log("Shared tasks updated:", newTasks);
-                if (newTasks.length > 0) {
-                    // 最初のタスクのユーザー割り当てをログに出力
-                    const sampleTask = newTasks[0];
-                    console.log(
-                        `Sample task ${sampleTask.id} user_id: ${sampleTask.user_id}`,
-                    );
-
-                    // 17時台のタスクがあれば、そのユーザー割り当てをチェック
-                    const hour17Tasks = newTasks.filter((task) => {
-                        const taskHour = extractHour(task.due_time);
-                        return taskHour === 17;
-                    });
-                    console.log(`Found ${hour17Tasks.length} tasks at 17:00`);
-
-                    // 各ユーザーごとのタスク数をチェック
-                    const userTaskCounts = {};
-                    sharedUsers.value.forEach((user) => {
-                        const userTasks = getTasksForHourAndUser(17, user.id);
-                        userTaskCounts[user.name] = userTasks.length;
-                    });
-                    console.log("User task counts at 17:00:", userTaskCounts);
-                }
-            },
-        );
 
         return {
             currentDate,
@@ -1358,6 +1397,7 @@ export default {
             categories,
             globalShares,
             calendarContainer,
+            initialLoading,
 
             // Methods
             formatHour,
@@ -1382,78 +1422,26 @@ export default {
             updateTaskStatus,
             isCurrentHour,
             scrollToCurrentTime,
-            isCurrentUserOwner, // 追加: タスク所有者チェック関数を公開
+            isCurrentUserOwner,
         };
     },
 };
 </script>
-
 <style scoped>
-/* Set explicit dimensions */
-.user-cell {
-    width: 150px;
-    flex: 1 0 150px;
+/* Enhanced animation for current hour highlight */
+.scroll-highlight {
+    animation: currentTimeHighlight 2s ease-in-out;
 }
 
-.time-cell {
-    width: 40px;
-    flex: 0 0 40px;
-}
-
-/* Calendar grid structure */
-.calendar-row {
-    display: flex;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-/* Current time highlight */
-.current-hour-row .user-cell {
-    background-color: rgba(219, 234, 254, 0.5); /* Light blue background */
-    position: relative;
-}
-
-.current-hour-row .user-cell::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 2px;
-    background-color: rgb(59, 130, 246); /* Blue line */
-    z-index: 5;
-}
-
-/* Task styling */
-.task-item {
-    width: 100%;
-}
-
-/* Customize select dropdown appearance */
-select {
-    appearance: none;
-    padding: 0 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    line-height: 1.25rem;
-    max-width: 80px;
-}
-
-/* Custom scrollbar styles */
-.calendar-scroll-container::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.calendar-scroll-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
-.calendar-scroll-container::-webkit-scrollbar-thumb {
-    background: #cccccc;
-    border-radius: 4px;
-}
-
-.calendar-scroll-container::-webkit-scrollbar-thumb:hover {
-    background: #999999;
+@keyframes currentTimeHighlight {
+    0% {
+        background-color: rgba(59, 130, 246, 0.1);
+    }
+    50% {
+        background-color: rgba(59, 130, 246, 0.3);
+    }
+    100% {
+        background-color: rgba(59, 130, 246, 0.1);
+    }
 }
 </style>

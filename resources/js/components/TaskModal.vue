@@ -43,6 +43,37 @@
 
             <!-- Body -->
             <div class="p-4 overflow-y-auto">
+                <!-- 共有ビューからの編集時の制約説明テキスト -->
+                <div
+                    v-if="isSharedViewEdit"
+                    class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800"
+                >
+                    <div class="flex items-start">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5 mr-2 mt-0.5 text-blue-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                        </svg>
+                        <div>
+                            <p class="font-medium mb-1">
+                                共有タスク編集時の制限
+                            </p>
+                            <p>
+                                共有タスクビューからの編集では、カテゴリーと繰り返し設定はできません。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <form @submit.prevent="submitForm" class="space-y-4">
                     <!-- Title -->
                     <div>
@@ -182,8 +213,8 @@
                         </div>
                     </div>
 
-                    <!-- Category Selection -->
-                    <div>
+                    <!-- Category Selection - 共有ビューからの編集時には非表示 -->
+                    <div v-if="!isSharedViewEdit">
                         <div class="flex justify-between items-center">
                             <label
                                 for="category_id"
@@ -204,8 +235,11 @@
                         </div>
                     </div>
 
-                    <!-- Category Select -->
-                    <div v-if="!showCategoryInput" class="mt-1">
+                    <!-- Category Select - 共有ビューからの編集時には非表示 -->
+                    <div
+                        v-if="!showCategoryInput && !isSharedViewEdit"
+                        class="mt-1"
+                    >
                         <select
                             id="category_id"
                             v-model="form.category_id"
@@ -236,9 +270,9 @@
                         </div>
                     </div>
 
-                    <!-- New Category Form -->
+                    <!-- New Category Form - 共有ビューからの編集時には非表示 -->
                     <div
-                        v-if="showCategoryInput"
+                        v-if="showCategoryInput && !isSharedViewEdit"
                         class="mt-3 overflow-hidden transition-all duration-300 transform"
                     >
                         <div
@@ -308,8 +342,8 @@
                         </div>
                     </div>
 
-                    <!-- Recurrence Type -->
-                    <div>
+                    <!-- Recurrence Type - 共有ビューからの編集時には非表示 -->
+                    <div v-if="!isSharedViewEdit">
                         <label
                             for="recurrence_type"
                             class="block text-sm font-medium text-gray-700"
@@ -327,9 +361,10 @@
                         </select>
                     </div>
 
-                    <!-- Recurrence End Date -->
+                    <!-- Recurrence End Date - 共有ビューからの編集時には非表示 -->
                     <div
                         v-if="
+                            !isSharedViewEdit &&
                             form.recurrence_type &&
                             form.recurrence_type !== 'none'
                         "
@@ -354,7 +389,6 @@
             </div>
 
             <!-- Footer -->
-            <!-- Footer - 共有ボタンを削除 -->
             <div class="bg-gray-50 px-4 py-2 border-t border-gray-200 mt-auto">
                 <div class="flex justify-between items-center">
                     <!-- Delete/Share Buttons (edit mode only) -->
@@ -366,8 +400,6 @@
                         >
                             削除
                         </button>
-
-                        <!-- 共有ボタンを削除 -->
                     </div>
 
                     <!-- Cancel/Save Buttons -->
@@ -463,6 +495,11 @@ export default {
         const newCategory = reactive({
             name: "",
             color: "#3b82f6",
+        });
+
+        // 共有ビューからの編集かどうかを判定
+        const isSharedViewEdit = computed(() => {
+            return props.todoData && props.todoData._isSharedViewEdit === true;
         });
 
         // ===============================
@@ -663,7 +700,6 @@ export default {
             form.recurrence_end_date = props.todoData.recurrence_end_date
                 ? formatDateString(props.todoData.recurrence_end_date)
                 : "";
-            // console.log("モーダルにデータをロード:", props.todoData);
         }
 
         // Submit form
@@ -707,8 +743,6 @@ export default {
                 ...formData,
                 category: categoryObject,
             };
-
-            console.log("フォーム送信データ:", formData);
 
             emit("submit", updatedTodo);
             emit("close");
@@ -789,6 +823,20 @@ export default {
             { immediate: true },
         );
 
+        // Watch for shared view edit mode to reset category and recurrence fields
+        watch(
+            () => isSharedViewEdit.value,
+            (isSharedView) => {
+                if (isSharedView) {
+                    // 共有ビューからの編集時はカテゴリーと繰り返し設定をリセット
+                    form.category_id = "";
+                    form.recurrence_type = "none";
+                    form.recurrence_end_date = "";
+                }
+            },
+            { immediate: true },
+        );
+
         // Set default date based on current view
         watch(
             () => props.currentDate,
@@ -821,6 +869,7 @@ export default {
             categoriesArray,
             getSelectedCategory,
             activeDuration,
+            isSharedViewEdit,
             setDuration,
             submitForm,
             createCategory,
