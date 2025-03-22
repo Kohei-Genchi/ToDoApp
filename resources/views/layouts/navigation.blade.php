@@ -52,7 +52,7 @@
                 </div>
             </div>
         @else
-            <div class="flex justify-between items-center mb-6">
+            <div class="flex justify-between items-center ml-8 mb-6">
                 <span class="font-bold">ゲスト</span>
                 <div class="flex space-x-3">
                     <a href="{{ route('login') }}" class="text-sm text-gray-400 hover:text-white" title="ログイン">
