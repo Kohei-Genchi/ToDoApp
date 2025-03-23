@@ -1,14 +1,15 @@
 <template>
     <div
-        class="mb-2 py-2 px-3 text-sm rounded overflow-hidden transition-colors duration-200 hover:shadow-md text-left flex items-center"
+        class="mb-1 py-1 px-2 text-sm rounded overflow-hidden transition-colors duration-200 hover:shadow-md text-left flex items-center"
         :class="taskStatusClasses"
     >
-        <!-- Status selection -->
+        <!-- Status selection - slightly smaller -->
         <select
             v-model="taskStatus"
             @change="updateStatus"
-            class="mr-2 text-xs rounded py-1 px-2 font-medium border shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            class="mr-2 text-xs rounded py-0.5 px-1 font-medium border shadow-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
             :class="selectStatusClasses"
+            style="max-width: 60px"
         >
             <option value="pending">待機</option>
             <option value="ongoing">進行</option>
@@ -16,42 +17,48 @@
             <option value="completed">完了</option>
         </select>
 
-        <!-- Task title and time -->
-        <div class="flex flex-col flex-1 overflow-hidden">
-            <div class="font-medium text-base truncate">
+        <!-- Main content area with title and category in a row -->
+        <div class="flex flex-row items-center flex-1 overflow-hidden">
+            <!-- Task title -->
+            <div class="font-medium text-sm truncate flex-1">
                 {{ task.title }}
             </div>
-            <div class="flex items-center mt-0.5">
-                <div v-if="task.due_time" class="text-xs opacity-75 mr-2">
-                    <span
-                        class="bg-gray-100 px-1 py-0.5 rounded inline-flex items-center"
+
+            <!-- Category as small badge -->
+            <div v-if="task.category" class="text-xs mx-1">
+                <span class="px-1 py-0.5 rounded-full" :style="categoryStyle">
+                    {{ task.category.name }}
+                </span>
+            </div>
+
+            <!-- Time display - moved horizontally -->
+            <div
+                v-if="task.due_time"
+                class="text-xs opacity-75 ml-1 flex-shrink-0"
+            >
+                <span
+                    class="bg-gray-100 px-1.5 py-0.5 rounded flex items-center"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-3 w-3 mr-0.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
                     >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 mr-0.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                        </svg>
-                        {{ formattedTime }}
-                    </span>
-                </div>
-                <div v-if="task.category" class="text-xs">
-                    <span class="px-1.5 py-0.5 rounded" :style="categoryStyle">
-                        {{ task.category.name }}
-                    </span>
-                </div>
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                    </svg>
+                    {{ formattedTime }}
+                </span>
             </div>
         </div>
 
-        <!-- Edit button (owner only) -->
+        <!-- Edit button (owner only) - slightly smaller -->
         <button
             v-if="isOwner"
             @click.stop="$emit('edit', task)"
@@ -59,7 +66,7 @@
         >
             <svg
                 xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4"
+                class="h-3.5 w-3.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"

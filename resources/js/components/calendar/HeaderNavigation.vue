@@ -1,17 +1,19 @@
 <template>
-    <div class="p-2 flex justify-between items-center border-b border-gray-200">
-        <div class="flex items-center space-x-2">
-            <h2 class="text-lg font-medium text-gray-900">共有タスク</h2>
-            <span class="text-sm text-gray-500">{{ formattedDate }}</span>
+    <div
+        class="py-0.5 px-1 flex justify-between items-center border-b border-gray-200"
+    >
+        <div class="flex items-center space-x-1">
+            <h2 class="text-sm font-medium text-gray-900">共有タスク</h2>
+            <span class="text-xs text-gray-500">{{ formattedDate }}</span>
             <!-- User sharing button -->
             <button
                 @click="$emit('open-global-share')"
-                class="ml-2 px-2 py-1 text-sm bg-green-600 text-white hover:bg-green-700 rounded flex items-center"
+                class="ml-1 px-1.5 py-0.5 text-xs bg-green-600 text-white hover:bg-green-700 rounded flex items-center"
                 title="ユーザーを追加して全てのタスクを共有"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4 mr-1"
+                    class="h-3 w-3 mr-0.5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -26,14 +28,14 @@
                 ユーザー共有
             </button>
         </div>
-        <div class="flex space-x-2">
+        <div class="flex space-x-1">
             <button
                 @click="$emit('previous-day')"
-                class="p-1 rounded hover:bg-gray-100"
+                class="p-0.5 rounded hover:bg-gray-100"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5 text-gray-600"
+                    class="h-4 w-4 text-gray-600"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                 >
@@ -46,17 +48,17 @@
             </button>
             <button
                 @click="$emit('go-to-today')"
-                class="px-2 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                class="px-1.5 py-0.5 text-xs text-blue-600 hover:bg-blue-50 rounded"
             >
                 今日
             </button>
             <button
                 @click="$emit('next-day')"
-                class="p-1 rounded hover:bg-gray-100"
+                class="p-0.5 rounded hover:bg-gray-100"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5 text-gray-600"
+                    class="h-4 w-4 text-gray-600"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                 >

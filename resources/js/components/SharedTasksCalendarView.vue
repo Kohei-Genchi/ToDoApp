@@ -26,29 +26,29 @@
 
         <!-- Calendar as a table -->
         <div class="w-full overflow-y-auto max-h-[85vh]">
-            <table class="w-full border-collapse table-fixed">
+            <table class="w-full border-collapse table-fixed text-xs">
                 <thead class="sticky top-0 z-20">
                     <!-- User names row -->
                     <tr class="bg-white">
                         <!-- Time column header -->
                         <th
-                            class="w-24 border-b border-r border-gray-200 px-2 py-3 text-left"
+                            class="w-6 border-b border-r border-gray-200 px-0.5 py-1 text-left"
                         ></th>
                         <!-- User name headers -->
                         <th
                             v-for="user in sharedUsers"
                             :key="'header-' + user.id"
-                            class="border-b border-r border-gray-200 px-2 py-3 text-center font-medium text-gray-800"
+                            class="border-b border-r border-gray-200 px-1 py-1 text-center font-medium text-gray-800"
                             :style="userColumnStyle"
                         >
                             {{ user.name }}
                         </th>
                     </tr>
                     <!-- Email row -->
-                    <tr class="bg-gray-50 sticky top-12 z-10">
+                    <tr class="bg-gray-50 sticky top-8 z-10">
                         <!-- Time column header -->
                         <th
-                            class="w-24 border-b border-r border-gray-200 px-2 py-2 text-sm font-medium text-gray-500 text-center"
+                            class="w-6 border-b border-r border-gray-200 px-0.5 py-1 text-xs font-medium text-gray-500 text-center"
                         >
                             時間
                         </th>
@@ -56,10 +56,10 @@
                         <th
                             v-for="user in sharedUsers"
                             :key="'email-' + user.id"
-                            class="border-b border-r border-gray-200 px-2 py-2 text-center text-xs text-gray-500"
+                            class="border-b border-r border-gray-200 px-1 py-1 text-center text-xs text-gray-500"
                             :style="userColumnStyle"
                         >
-                            <div class="truncate">{{ user.email }}</div>
+                            <div class="truncate text-xs">{{ user.email }}</div>
                         </th>
                     </tr>
                 </thead>
@@ -70,18 +70,18 @@
                         :key="'row-' + hour"
                         :data-hour="hour"
                         :class="[isCurrentHour(hour) ? 'bg-blue-50' : '']"
-                        class="h-20"
+                        class="h-8"
                     >
                         <!-- Time cell -->
                         <td
-                            class="border-b border-r border-gray-200 px-2 py-2 text-left align-top w-24"
+                            class="border-b border-r border-gray-200 px-0.5 py-0 text-left align-top w-6"
                             :class="[
                                 isCurrentHour(hour)
                                     ? 'bg-blue-100 font-bold text-blue-700'
                                     : 'bg-gray-50 text-gray-500',
                             ]"
                         >
-                            <div class="text-base">{{ hour }}:00</div>
+                            <div class="text-xs">{{ hour }}</div>
 
                             <!-- Current time indicator -->
                             <div
@@ -95,7 +95,7 @@
                         <td
                             v-for="user in sharedUsers"
                             :key="'cell-' + hour + '-' + user.id"
-                            class="border-b border-r border-gray-200 p-1 align-top"
+                            class="border-b border-r border-gray-200 p-0.5 align-top"
                             :style="userColumnStyle"
                         >
                             <!-- Tasks for this user at this hour -->
@@ -199,7 +199,7 @@ export default {
         const userColumnStyle = computed(() => {
             const userCount = sharedUsers.value.length || 5; // Default to 5 if no users
             return {
-                width: `calc((100% - 6rem) / ${userCount})`,
+                width: `calc((100% - 1.5rem) / ${userCount})`,
             };
         });
 
