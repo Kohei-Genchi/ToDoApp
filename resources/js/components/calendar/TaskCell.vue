@@ -1,9 +1,9 @@
 <template>
     <div
-        class="mb-1 py-1.5 px-2 text-xs rounded overflow-hidden transition-colors duration-200 hover:shadow-md text-left flex items-center"
+        class="mb-2 py-2 px-3 text-sm rounded overflow-hidden transition-colors duration-200 hover:shadow-md text-left flex items-center"
         :class="taskStatusClasses"
     >
-        <!-- ステータス選択 -->
+        <!-- Status selection -->
         <select
             v-model="taskStatus"
             @change="updateStatus"
@@ -16,9 +16,9 @@
             <option value="completed">完了</option>
         </select>
 
-        <!-- タスクのタイトルと時間 -->
+        <!-- Task title and time -->
         <div class="flex flex-col flex-1 overflow-hidden">
-            <div class="font-medium text-sm truncate">
+            <div class="font-medium text-base truncate">
                 {{ task.title }}
             </div>
             <div class="flex items-center mt-0.5">
@@ -51,7 +51,7 @@
             </div>
         </div>
 
-        <!-- 編集ボタン（所有者の場合のみ） -->
+        <!-- Edit button (owner only) -->
         <button
             v-if="isOwner"
             @click.stop="$emit('edit', task)"
@@ -93,7 +93,7 @@ export default {
     emits: ["update-status", "edit"],
 
     setup(props, { emit }) {
-        // ステータスに応じた色設定
+        // Status colors
         const STATUS_COLORS = {
             pending: {
                 bg: "bg-gray-100",
@@ -117,18 +117,16 @@ export default {
             },
         };
 
-        // 現在のタスクステータス
+        // Task status
         const taskStatus = ref(props.task.status || "pending");
 
-        /**
-         * タスクのステータスに応じたCSSクラス
-         */
+        // Task status classes
         const taskStatusClasses = computed(() => {
             const statusStyle =
                 STATUS_COLORS[props.task.status] || STATUS_COLORS["pending"];
             const baseClasses = `${statusStyle.bg} ${statusStyle.text} w-full`;
 
-            // 共有タイプに応じた特別なスタイル
+            // Special styles based on share type
             const specialClasses = props.task.isGloballyShared
                 ? "border-2 border-green-300 "
                 : props.task.ownerInfo
@@ -138,18 +136,14 @@ export default {
             return `${baseClasses} ${specialClasses}`;
         });
 
-        /**
-         * ステータス選択のCSSクラス
-         */
+        // Status select classes
         const selectStatusClasses = computed(() => {
             return (
                 STATUS_COLORS[props.task.status] || STATUS_COLORS["pending"]
             ).select;
         });
 
-        /**
-         * カテゴリのスタイル
-         */
+        // Category style
         const categoryStyle = computed(() => {
             if (!props.task.category || !props.task.category.color) return {};
             return {
@@ -158,23 +152,17 @@ export default {
             };
         });
 
-        /**
-         * フォーマットされたタスク時刻
-         */
+        // Formatted time
         const formattedTime = computed(() => {
             return formatTaskTime(props.task.due_time);
         });
 
-        /**
-         * タスクステータスの更新
-         */
+        // Update status
         function updateStatus() {
             emit("update-status", props.task.id, taskStatus.value);
         }
 
-        /**
-         * 時間のフォーマット
-         */
+        // Format task time
         function formatTaskTime(timeString) {
             try {
                 if (timeString instanceof Date) {
@@ -186,21 +174,21 @@ export default {
 
                 if (typeof timeString === "string") {
                     if (timeString.includes("T")) {
-                        // ISO形式
+                        // ISO format
                         const date = new Date(timeString);
                         return date.toLocaleTimeString("ja-JP", {
                             hour: "2-digit",
                             minute: "2-digit",
                         });
                     } else if (timeString.includes(":")) {
-                        // HH:MM形式
+                        // HH:MM format
                         return timeString.substr(0, 5);
                     }
                 }
 
                 return timeString;
             } catch (e) {
-                console.error("時間フォーマットエラー:", e);
+                console.error("Time format error:", e);
                 return timeString;
             }
         }

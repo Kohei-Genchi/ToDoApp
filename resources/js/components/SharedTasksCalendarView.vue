@@ -1,14 +1,14 @@
 <template>
     <div
-        class="shared-tasks-calendar bg-white rounded-lg shadow-sm overflow-hidden w-full"
+        class="shared-tasks-calendar bg-white rounded-lg shadow-sm overflow-hidden w-full max-w-full"
     >
-        <!-- ローディングインジケーター -->
+        <!-- Loading indicator -->
         <loading-indicator
             v-if="initialLoading"
             message="カレンダーを読み込み中..."
         />
 
-        <!-- ヘッダー部分（日付ナビゲーション） -->
+        <!-- Header navigation -->
         <header-navigation
             :formatted-date="formattedCurrentDate"
             @previous-day="previousDay"
@@ -17,36 +17,106 @@
             @open-global-share="openGlobalShareModal"
         />
 
-        <!-- ユーザー共有モーダル -->
+        <!-- Global share modal -->
         <task-share-modal
             v-if="showGlobalShareModal"
             :task="selectedGlobalTask"
             @close="handleGlobalShareModalClose"
         />
 
-        <!-- カレンダーレイアウト -->
-        <div class="flex flex-col w-full">
-            <!-- ヘッダー行（ユーザー名） -->
-            <calendar-header-row :shared-users="sharedUsers" />
+        <!-- Calendar as a table -->
+        <div class="w-full overflow-y-auto max-h-[85vh]">
+            <table class="w-full border-collapse table-fixed">
+                <thead class="sticky top-0 z-20">
+                    <!-- User names row -->
+                    <tr class="bg-white">
+                        <!-- Time column header -->
+                        <th
+                            class="w-24 border-b border-r border-gray-200 px-2 py-3 text-left"
+                        ></th>
+                        <!-- User name headers -->
+                        <th
+                            v-for="user in sharedUsers"
+                            :key="'header-' + user.id"
+                            class="border-b border-r border-gray-200 px-2 py-3 text-center font-medium text-gray-800"
+                            :style="userColumnStyle"
+                        >
+                            {{ user.name }}
+                        </th>
+                    </tr>
+                    <!-- Email row -->
+                    <tr class="bg-gray-50 sticky top-12 z-10">
+                        <!-- Time column header -->
+                        <th
+                            class="w-24 border-b border-r border-gray-200 px-2 py-2 text-sm font-medium text-gray-500 text-center"
+                        >
+                            時間
+                        </th>
+                        <!-- User email headers -->
+                        <th
+                            v-for="user in sharedUsers"
+                            :key="'email-' + user.id"
+                            class="border-b border-r border-gray-200 px-2 py-2 text-center text-xs text-gray-500"
+                            :style="userColumnStyle"
+                        >
+                            <div class="truncate">{{ user.email }}</div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Time rows -->
+                    <tr
+                        v-for="hour in fullHours"
+                        :key="'row-' + hour"
+                        :data-hour="hour"
+                        :class="[isCurrentHour(hour) ? 'bg-blue-50' : '']"
+                        class="h-20"
+                    >
+                        <!-- Time cell -->
+                        <td
+                            class="border-b border-r border-gray-200 px-2 py-2 text-left align-top w-24"
+                            :class="[
+                                isCurrentHour(hour)
+                                    ? 'bg-blue-100 font-bold text-blue-700'
+                                    : 'bg-gray-50 text-gray-500',
+                            ]"
+                        >
+                            <div class="text-base">{{ hour }}:00</div>
 
-            <!-- ヘッダー行（メールアドレス） -->
-            <calendar-email-row :shared-users="sharedUsers" />
+                            <!-- Current time indicator -->
+                            <div
+                                v-if="isCurrentHour(hour)"
+                                class="absolute left-0 w-1 bg-blue-500"
+                                :style="getTimeIndicatorStyle(hour)"
+                            ></div>
+                        </td>
 
-            <!-- カレンダー本体 -->
-            <calendar-body
-                :full-hours="fullHours"
-                :shared-users="sharedUsers"
-                :current-date="currentDate"
-                :shared-tasks="sharedTasks"
-                :current-user-id="currentUserId"
-                @edit-task="editTask"
-                @update-task-status="updateTaskStatus"
-                @scroll-to-current-time="scrollToCurrentTime"
-                ref="calendarContainer"
-            />
+                        <!-- User cells for this hour -->
+                        <td
+                            v-for="user in sharedUsers"
+                            :key="'cell-' + hour + '-' + user.id"
+                            class="border-b border-r border-gray-200 p-1 align-top"
+                            :style="userColumnStyle"
+                        >
+                            <!-- Tasks for this user at this hour -->
+                            <task-cell
+                                v-for="task in getTasksForHourAndUser(
+                                    hour,
+                                    user.id,
+                                )"
+                                :key="'task-' + task.id"
+                                :task="task"
+                                :is-owner="isCurrentUserOwner(task)"
+                                @update-status="onUpdateTaskStatus"
+                                @edit="onEditTask"
+                            />
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
-        <!-- タスク編集モーダル -->
+        <!-- Task edit modal -->
         <task-modal
             v-if="showTaskModal"
             :mode="taskModalMode"
@@ -66,24 +136,20 @@ import {
     ref,
     computed,
     onMounted,
-    watch,
-    nextTick,
     onBeforeUnmount,
+    nextTick,
+    watch,
 } from "vue";
 import TaskModal from "./TaskModal.vue";
 import TaskShareModal from "./TaskShareModal.vue";
+import TaskCell from "./calendar/TaskCell.vue";
+import HeaderNavigation from "./calendar/HeaderNavigation.vue";
+import LoadingIndicator from "./common/LoadingIndicator.vue";
 import TodoApi from "../api/todo";
 import TaskShareApi from "../api/taskShare";
 import GlobalShareApi from "../api/globalShare";
 
-// インポート各種コンポーネント - 外部ファイルに分離
-import HeaderNavigation from "./calendar/HeaderNavigation.vue";
-import CalendarHeaderRow from "./calendar/CalendarHeaderRow.vue";
-import CalendarEmailRow from "./calendar/CalendarEmailRow.vue";
-import CalendarBody from "./calendar/CalendarBody.vue";
-import LoadingIndicator from "./common/LoadingIndicator.vue";
-
-// 定数定義
+// Constants
 const HOURS_IN_DAY = 24;
 
 export default {
@@ -93,32 +159,28 @@ export default {
         TaskModal,
         TaskShareModal,
         HeaderNavigation,
-        CalendarHeaderRow,
-        CalendarEmailRow,
-        CalendarBody,
         LoadingIndicator,
+        TaskCell,
     },
 
     emits: ["task-updated", "task-created", "task-deleted", "back"],
 
     setup(props, { emit }) {
-        // =============== 状態管理 - グループ化 ===============
-        // 日付・ユーザー関連
+        // State
         const currentDate = ref(formatTodayDate());
         const sharedUsers = ref([]);
-        const currentUserId = ref(0); // 未初期化の警告防止のため0として初期化
+        const currentUserId = ref(0);
 
-        // タスク関連
+        // Tasks and categories
         const sharedTasks = ref([]);
         const categories = ref([]);
         const globalShares = ref([]);
 
-        // UI状態管理
+        // UI state
         const isLoading = ref(true);
         const initialLoading = ref(true);
-        const calendarContainer = ref(null);
 
-        // モーダル関連
+        // Modal state
         const showTaskModal = ref(false);
         const taskModalMode = ref("edit");
         const selectedTaskId = ref(null);
@@ -126,13 +188,22 @@ export default {
         const showGlobalShareModal = ref(false);
         const selectedGlobalTask = ref(null);
 
-        // カレンダーの時間設定
-        const fullHours = Array.from({ length: HOURS_IN_DAY }, (_, i) => i); // 0〜23時
+        // Time tracking for indicator
+        const currentMinute = ref(new Date().getMinutes());
+        let timeUpdateInterval = null;
 
-        // =============== 計算プロパティ ===============
-        /**
-         * フォーマットされた現在日付
-         */
+        // Hours for the calendar
+        const fullHours = Array.from({ length: HOURS_IN_DAY }, (_, i) => i);
+
+        // Calculate user column width
+        const userColumnStyle = computed(() => {
+            const userCount = sharedUsers.value.length || 5; // Default to 5 if no users
+            return {
+                width: `calc((100% - 6rem) / ${userCount})`,
+            };
+        });
+
+        // =============== Computed Properties ===============
         const formattedCurrentDate = computed(() => {
             const date = new Date(currentDate.value);
             return date.toLocaleDateString("ja-JP", {
@@ -143,58 +214,166 @@ export default {
             });
         });
 
-        // =============== ユーティリティ関数 ===============
-        /**
-         * 今日の日付をYYYY-MM-DD形式で取得
-         */
+        // =============== Methods ===============
+        // Format today's date in YYYY-MM-DD format
         function formatTodayDate() {
             const today = new Date();
             return formatDateToString(today);
         }
 
-        /**
-         * 日付をYYYY-MM-DD形式の文字列に変換
-         */
+        // Format a date object to YYYY-MM-DD string
         function formatDateToString(date) {
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
         }
 
-        // =============== メソッド - データ読み込み ===============
-        /**
-         * 共有タスクデータを読み込む
-         */
+        // Check if an hour is the current hour
+        function isCurrentHour(hour) {
+            const now = new Date();
+            return now.getHours() === hour;
+        }
+
+        // Get style for time indicator based on current minute
+        function getTimeIndicatorStyle(hour) {
+            if (!isCurrentHour(hour)) return {};
+
+            const now = new Date();
+            const minute = now.getMinutes();
+            const percentage = (minute / 60) * 100;
+
+            return {
+                height: "100%",
+                top: "0",
+                opacity: "0.8",
+                boxShadow: "0 0 4px rgba(59, 130, 246, 0.5)",
+            };
+        }
+
+        // Date comparison formatter
+        function formatDateForComparison(dateString) {
+            if (!dateString) return "";
+
+            try {
+                if (
+                    typeof dateString === "string" &&
+                    /^\d{4}-\d{2}-\d{2}$/.test(dateString)
+                ) {
+                    return dateString;
+                }
+
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) {
+                    return "";
+                }
+
+                return formatDateToString(date);
+            } catch (e) {
+                console.error("Date format error:", e);
+                return "";
+            }
+        }
+
+        // Extract hour from time string
+        function extractHour(timeString) {
+            try {
+                if (!timeString) return null;
+
+                if (timeString instanceof Date) {
+                    return timeString.getHours();
+                }
+
+                if (typeof timeString === "string") {
+                    if (timeString.includes("T")) {
+                        const date = new Date(timeString);
+                        return date.getHours();
+                    } else if (timeString.includes(":")) {
+                        return parseInt(timeString.split(":")[0], 10);
+                    }
+                }
+
+                const num = parseInt(timeString, 10);
+                if (!isNaN(num) && num >= 0 && num < 24) {
+                    return num;
+                }
+
+                return null;
+            } catch (e) {
+                console.error("Time extraction error:", e);
+                return null;
+            }
+        }
+
+        // Get tasks for a specific hour and user
+        function getTasksForHourAndUser(hour, userId) {
+            if (
+                !userId ||
+                !sharedTasks.value ||
+                sharedTasks.value.length === 0
+            ) {
+                return [];
+            }
+
+            const columnUserId = parseInt(userId, 10);
+            if (isNaN(columnUserId)) {
+                return [];
+            }
+
+            return sharedTasks.value.filter((task) => {
+                try {
+                    const taskOwnerId = task.user_id
+                        ? parseInt(task.user_id, 10)
+                        : null;
+                    if (taskOwnerId !== columnUserId) return false;
+
+                    const taskDate = formatDateForComparison(task.due_date);
+                    if (taskDate !== currentDate.value) return false;
+
+                    if (!task.due_time) return false;
+                    const taskHour = extractHour(task.due_time);
+                    return taskHour === hour;
+                } catch (error) {
+                    console.error("Task processing error:", error);
+                    return false;
+                }
+            });
+        }
+
+        // Check if current user is the owner of a task
+        function isCurrentUserOwner(task) {
+            if (!task || !currentUserId.value) return false;
+            const taskUserId = parseInt(task.user_id, 10);
+            const currentId = parseInt(currentUserId.value, 10);
+            return taskUserId === currentId;
+        }
+
+        // Update the current minute
+        function updateCurrentTime() {
+            const now = new Date();
+            currentMinute.value = now.getMinutes();
+        }
+
+        // Load all shared tasks
         async function loadSharedTasks() {
             isLoading.value = true;
 
             try {
-                // 1. 現在のユーザー情報を取得
                 await initializeCurrentUser();
-
-                // 2. グローバル共有情報を読み込む
                 await loadGlobalShares();
-
-                // 3. 共有ユーザーリストを構築
                 await buildSharedUsersList();
-
-                // 4. 全てのタスクを読み込む（個別共有、グローバル共有、自分のタスク）
                 await loadAllTasksData();
             } catch (error) {
-                console.error("タスク読み込みエラー:", error);
-                handleError("タスクデータの読み込みに失敗しました。");
+                console.error("Task loading error:", error);
+                alert("Failed to load task data.");
             } finally {
                 isLoading.value = false;
                 initialLoading.value = false;
 
-                // タスク読み込み後に現在時刻にスクロール
                 nextTick(() => {
                     scrollToCurrentTime();
                 });
             }
         }
 
-        /**
-         * 現在のユーザー情報を初期化
-         */
+        // Initialize the current user
         async function initializeCurrentUser() {
             const currentUser = window.Laravel?.user;
             if (currentUser && currentUser.id) {
@@ -202,9 +381,7 @@ export default {
             }
         }
 
-        /**
-         * グローバル共有情報を読み込む
-         */
+        // Load global shares
         async function loadGlobalShares() {
             try {
                 const response = await GlobalShareApi.getGlobalShares();
@@ -212,19 +389,16 @@ export default {
                     ? response.data
                     : [];
             } catch (error) {
-                console.error("グローバル共有情報の読み込みエラー:", error);
+                console.error("Global share loading error:", error);
                 globalShares.value = [];
             }
         }
 
-        /**
-         * 共有ユーザーリストを構築する
-         */
+        // Build the list of shared users
         async function buildSharedUsersList() {
-            // ユーザーマップを初期化（重複排除のため）
             const allSharedUsers = new Map();
 
-            // 1. 現在のユーザーを追加
+            // Add current user
             const currentUser = window.Laravel?.user;
             if (currentUser) {
                 allSharedUsers.set(currentUser.id, {
@@ -234,19 +408,17 @@ export default {
                 });
             }
 
-            // 2. 個別共有ユーザーを追加
+            // Add individually shared users
             await addIndividuallySharedUsers(allSharedUsers);
 
-            // 3. グローバル共有ユーザーを追加
+            // Add globally shared users
             addGlobalSharedUsers(allSharedUsers);
 
-            // マップから配列に変換して状態を更新
+            // Update the shared users state
             sharedUsers.value = Array.from(allSharedUsers.values());
         }
 
-        /**
-         * 個別共有ユーザーを読み込む
-         */
+        // Add individually shared users
         async function addIndividuallySharedUsers(userMap) {
             try {
                 const response = await TaskShareApi.getSharedWithMe();
@@ -263,20 +435,17 @@ export default {
                     });
                 }
             } catch (error) {
-                console.error("個別共有ユーザーの読み込みエラー:", error);
+                console.error("Individual share loading error:", error);
             }
         }
 
-        /**
-         * グローバル共有ユーザーをマップに追加
-         */
+        // Add globally shared users
         function addGlobalSharedUsers(userMap) {
             if (!globalShares.value || globalShares.value.length === 0) return;
 
             globalShares.value.forEach((share) => {
                 const userId = Number(share.user_id);
                 if (!userMap.has(userId)) {
-                    // 新規ユーザーとして追加
                     userMap.set(userId, {
                         id: userId,
                         name: share.name || "User " + userId,
@@ -285,7 +454,6 @@ export default {
                         globalSharePermission: share.permission || "view",
                     });
                 } else {
-                    // 既存ユーザーの情報を更新
                     const user = userMap.get(userId);
                     user.isGlobalShare = true;
                     user.globalSharePermission = share.permission || "view";
@@ -294,13 +462,11 @@ export default {
             });
         }
 
-        /**
-         * 全てのタスクデータを読み込む
-         */
+        // Load all task data
         async function loadAllTasksData() {
             const allTasks = await fetchAllTasks();
 
-            // タスクの重複を排除
+            // Remove duplicates
             const taskMap = new Map();
             allTasks.forEach((task) => {
                 if (!taskMap.has(task.id)) {
@@ -311,27 +477,24 @@ export default {
                 }
             });
 
-            // 最終的なタスクリストを更新
             sharedTasks.value = Array.from(taskMap.values());
         }
 
-        /**
-         * すべてのタスクを取得（個別共有、グローバル共有、自分のタスク）
-         */
+        // Fetch all tasks
         async function fetchAllTasks() {
             let allTasks = [];
 
-            // 1. 個別共有タスクの読み込み
+            // 1. Get individually shared tasks
             try {
                 const response = await TaskShareApi.getSharedWithMe();
                 if (response && Array.isArray(response.data)) {
                     allTasks = [...response.data];
                 }
             } catch (error) {
-                console.error("個別共有タスクの読み込みエラー:", error);
+                console.error("Individual shared task loading error:", error);
             }
 
-            // 2. グローバル共有タスクの読み込み
+            // 2. Get globally shared tasks
             try {
                 const response = await GlobalShareApi.getGloballySharedWithMe();
                 if (response && Array.isArray(response.data)) {
@@ -342,14 +505,14 @@ export default {
                     allTasks = [...allTasks, ...globalTasks];
                 }
             } catch (error) {
-                console.error("グローバル共有タスクの読み込みエラー:", error);
+                console.error("Global shared task loading error:", error);
             }
 
-            // 3. グローバル共有ユーザーのタスク読み込み
+            // 3. Get globally shared user tasks
             const globalUserTasks = await fetchGlobalUserTasks();
             allTasks = [...allTasks, ...globalUserTasks];
 
-            // 4. 自分自身のタスクを読み込む
+            // 4. Get current user's tasks
             if (currentUserId.value) {
                 try {
                     const response = await TodoApi.getTasks({
@@ -361,16 +524,14 @@ export default {
                         allTasks = [...allTasks, ...response.data];
                     }
                 } catch (error) {
-                    console.error("自分のタスク読み込みエラー:", error);
+                    console.error("User task loading error:", error);
                 }
             }
 
             return allTasks;
         }
 
-        /**
-         * グローバル共有ユーザーのタスクを取得
-         */
+        // Fetch tasks from globally shared users
         async function fetchGlobalUserTasks() {
             let tasks = [];
 
@@ -404,84 +565,54 @@ export default {
                         tasks = [...tasks, ...userTasks];
                     }
                 } catch (error) {
-                    console.error(
-                        `ユーザー ${userId} のタスク読み込みエラー:`,
-                        error,
-                    );
+                    console.error(`User ${userId} task loading error:`, error);
                 }
             }
 
             return tasks;
         }
 
-        /**
-         * カテゴリ一覧を読み込む
-         */
-        async function loadCategories() {
-            try {
-                const response = await axios.get("/api/web-categories");
-                categories.value = response.data || [];
-            } catch (error) {
-                console.error("カテゴリー読み込みエラー:", error);
-            }
-        }
-
-        // =============== メソッド - UI制御 ===============
-        /**
-         * 特定の時間帯へスクロール（デフォルトは現在時刻）
-         */
+        // Scroll to current time
         function scrollToCurrentTime() {
             const container = document.querySelector(".w-full.overflow-y-auto");
             if (!container) return;
 
             const now = new Date();
             const currentHour = now.getHours();
-            const currentMinute = now.getMinutes();
 
             try {
-                // 現在の時間帯の行を検索
+                // Find the current hour row
                 const hourRows = container.querySelectorAll("[data-hour]");
                 let currentRow = null;
-                let currentRowOffsetTop = 0;
 
                 for (const row of hourRows) {
                     const hourAttr = row.getAttribute("data-hour");
                     if (hourAttr && parseInt(hourAttr, 10) === currentHour) {
                         currentRow = row;
-                        currentRowOffsetTop = row.offsetTop;
                         break;
                     }
                 }
 
                 if (currentRow) {
-                    // コンテナの高さと行の高さを取得
+                    // Scroll to position
                     const containerHeight = container.clientHeight;
                     const rowHeight = currentRow.clientHeight;
+                    const rowTop = currentRow.offsetTop;
 
-                    // 分数に基づく位置の調整
-                    const minuteOffset = (currentMinute / 60) * rowHeight;
-
-                    // スクロール位置の計算（現在時刻を中央に配置）
-                    const scrollPosition =
-                        currentRowOffsetTop +
-                        minuteOffset -
-                        containerHeight / 2 +
-                        rowHeight / 2;
-
-                    // スムーズスクロール
                     container.scrollTo({
-                        top: Math.max(0, scrollPosition),
+                        top: Math.max(
+                            0,
+                            rowTop - containerHeight / 2 + rowHeight / 2,
+                        ),
                         behavior: "smooth",
                     });
                 }
             } catch (error) {
-                console.error("スクロール処理エラー:", error);
+                console.error("Scroll error:", error);
             }
         }
 
-        /**
-         * グローバル共有モーダルを開く
-         */
+        // Open global share modal
         function openGlobalShareModal() {
             selectedGlobalTask.value = {
                 id: "global-share",
@@ -491,39 +622,30 @@ export default {
             showGlobalShareModal.value = true;
         }
 
-        /**
-         * グローバル共有モーダルのクローズ処理
-         */
+        // Handle global share modal close
         function handleGlobalShareModalClose(data) {
             showGlobalShareModal.value = false;
 
-            // モーダルから共有ユーザー情報を受け取った場合は更新
             if (data?.sharedUsers && Array.isArray(data.sharedUsers)) {
                 updateSharedUsersList(data.sharedUsers);
             }
 
-            // 共有タスクとグローバル共有の再読み込み
             loadSharedTasks();
             loadGlobalShares();
         }
 
-        /**
-         * 共有ユーザーリストを更新
-         */
+        // Update shared users list
         function updateSharedUsersList(newUsers) {
-            // 既存ユーザーIDのセット
             const existingUserIds = new Set(
                 sharedUsers.value.map((user) => user.id),
             );
 
-            // 新規ユーザーの追加
             newUsers.forEach((user) => {
                 if (!existingUserIds.has(user.id)) {
                     sharedUsers.value.push(user);
                 }
             });
 
-            // ローカルストレージへの保存（後方互換性のため）
             if (currentUserId.value) {
                 try {
                     localStorage.setItem(
@@ -531,20 +653,16 @@ export default {
                         JSON.stringify(newUsers),
                     );
                 } catch (e) {
-                    console.error("共有ユーザー情報の保存エラー:", e);
+                    console.error("Shared user save error:", e);
                 }
             }
         }
 
-        // =============== メソッド - タスク操作 ===============
-        /**
-         * タスクの編集モーダルを開く
-         */
-        function editTask(task) {
+        // Open task edit modal
+        function onEditTask(task) {
             taskModalMode.value = "edit";
             selectedTaskId.value = task.id;
 
-            // 共有ビューからの編集時のフラグ
             selectedTaskData.value = {
                 ...task,
                 _isSharedViewEdit: true,
@@ -553,31 +671,24 @@ export default {
             showTaskModal.value = true;
         }
 
-        /**
-         * タスクモーダルを閉じる
-         */
+        // Close task modal
         function closeTaskModal() {
             showTaskModal.value = false;
-            selectedTaskData.value = null; // 参照の解放
+            selectedTaskData.value = null;
         }
 
-        /**
-         * タスクの保存（作成または更新）
-         */
+        // Submit task (create or update)
         async function submitTask(taskData) {
             try {
-                // 日付がない場合は現在の日付をデフォルトに
                 if (!taskData.due_date) {
                     taskData.due_date = formatTodayDate();
                 }
 
                 let response;
                 if (taskModalMode.value === "add") {
-                    // 新規タスク作成
                     response = await TodoApi.createTask(taskData);
                     emit("task-created", response.data?.todo);
                 } else {
-                    // タスク更新
                     response = await TodoApi.updateTask(
                         selectedTaskId.value,
                         taskData,
@@ -586,18 +697,14 @@ export default {
                 }
 
                 closeTaskModal();
-
-                // タスク一覧を再読み込み
                 await loadSharedTasks();
             } catch (error) {
-                console.error("タスク保存エラー:", error);
-                handleError("タスクの保存に失敗しました");
+                console.error("Task save error:", error);
+                alert("Failed to save task");
             }
         }
 
-        /**
-         * タスクの削除
-         */
+        // Handle task delete
         async function handleTaskDelete(taskId) {
             try {
                 await TodoApi.deleteTask(taskId);
@@ -607,17 +714,14 @@ export default {
                 emit("task-deleted", taskId);
                 closeTaskModal();
             } catch (error) {
-                console.error("タスク削除エラー:", error);
-                handleError("タスクの削除に失敗しました");
+                console.error("Task delete error:", error);
+                alert("Failed to delete task");
             }
         }
 
-        /**
-         * タスクのステータスを更新
-         */
-        async function updateTaskStatus(taskId, newStatus) {
+        // Update task status
+        async function onUpdateTaskStatus(taskId, newStatus) {
             try {
-                // タスク一覧から対象タスクを検索
                 const taskIndex = sharedTasks.value.findIndex(
                     (t) => t.id === taskId,
                 );
@@ -626,86 +730,58 @@ export default {
                 const task = sharedTasks.value[taskIndex];
                 const originalStatus = task.status;
 
-                // 楽観的更新 - UIを即時更新
+                // Optimistic update
                 sharedTasks.value[taskIndex] = { ...task, status: newStatus };
 
-                // APIリクエスト
                 try {
                     await TodoApi.updateTask(taskId, { status: newStatus });
-                    // バックグラウンドでタスク一覧を更新
                     loadSharedTasks().catch((e) =>
-                        console.error("バックグラウンド更新エラー:", e),
+                        console.error("Background update error:", e),
                     );
                 } catch (error) {
-                    console.error("タスクステータス更新エラー:", error);
+                    console.error("Status update error:", error);
 
-                    // APIエラー時にUIを元に戻す
+                    // Revert on error
                     sharedTasks.value[taskIndex] = {
                         ...task,
                         status: originalStatus,
                     };
 
-                    // エラーメッセージを表示
-                    handleStatusUpdateError(error);
+                    if (error.response && error.response.status === 403) {
+                        alert(
+                            "Permission denied: You cannot update this task.",
+                        );
+                    } else {
+                        alert(
+                            "Failed to update task status: " +
+                                (error.response?.data?.error || error.message),
+                        );
+                    }
                 }
             } catch (error) {
-                console.error("タスクステータス更新処理エラー:", error);
-                handleError("タスクのステータス更新中にエラーが発生しました。");
+                console.error("Status update processing error:", error);
+                alert("An error occurred while updating task status.");
             }
         }
 
-        /**
-         * タスクステータス更新エラーのハンドリング
-         */
-        function handleStatusUpdateError(error) {
-            if (error.response && error.response.status === 403) {
-                handleError(
-                    "権限がありません：このタスクを更新する権限がありません。",
-                );
-            } else {
-                handleError(
-                    "タスクのステータス更新に失敗しました: " +
-                        (error.response?.data?.error || error.message),
-                );
-            }
-        }
-
-        /**
-         * エラーメッセージの表示
-         */
-        function handleError(message) {
-            // 実装に応じてエラー表示方法を変更
-            alert(message);
-        }
-
-        // =============== メソッド - 日付操作 ===============
-        /**
-         * 前日に移動
-         */
+        // Navigation methods
         function previousDay() {
             const date = new Date(currentDate.value);
             date.setDate(date.getDate() - 1);
             currentDate.value = formatDateToString(date);
         }
 
-        /**
-         * 翌日に移動
-         */
         function nextDay() {
             const date = new Date(currentDate.value);
             date.setDate(date.getDate() + 1);
             currentDate.value = formatDateToString(date);
         }
 
-        /**
-         * 今日に移動
-         */
         function goToToday() {
             currentDate.value = formatTodayDate();
         }
 
-        // =============== ライフサイクルフック ===============
-        // 日付変更の監視
+        // Watch for date changes
         watch(
             () => currentDate.value,
             () => {
@@ -713,40 +789,40 @@ export default {
             },
         );
 
-        // 初期化処理
+        // Lifecycle hooks
         onMounted(() => {
-            // 現在のユーザーIDを取得
             if (window.Laravel?.user) {
                 currentUserId.value = window.Laravel.user.id;
             }
 
-            // 今日の日付を設定
             goToToday();
 
-            // 最低限のデータを先に表示（ユーザーエクスペリエンス向上）
+            // Set initial users for better UX
             sharedUsers.value = [
                 {
                     id: currentUserId.value || 0,
-                    name: window.Laravel?.user?.name || "現在のユーザー",
+                    name: window.Laravel?.user?.name || "Current User",
                     email: window.Laravel?.user?.email || "",
                 },
             ];
 
-            // 非同期でデータ読み込み
+            // Start time updates
+            timeUpdateInterval = setInterval(() => {
+                updateCurrentTime();
+            }, 60000); // Update every minute
+
+            // Load data
             Promise.all([
                 loadGlobalShares().catch((e) =>
-                    console.error("グローバル共有読み込みエラー:", e),
+                    console.error("Global share load error:", e),
                 ),
-                loadCategories().catch((e) =>
-                    console.error("カテゴリー読み込みエラー:", e),
-                ),
+                // Add other initialization if needed
             ]).then(() => {
-                // タスクデータを読み込み
                 setTimeout(() => {
                     loadSharedTasks().finally(() => {
                         initialLoading.value = false;
 
-                        // スクロール位置の調整（複数回試行してより確実に）
+                        // Multiple scroll attempts for better reliability
                         scrollToCurrentTime();
                         setTimeout(() => scrollToCurrentTime(), 300);
                         setTimeout(() => scrollToCurrentTime(), 1000);
@@ -755,8 +831,15 @@ export default {
             });
         });
 
+        onBeforeUnmount(() => {
+            // Clear interval
+            if (timeUpdateInterval) {
+                clearInterval(timeUpdateInterval);
+            }
+        });
+
         return {
-            // 状態
+            // State
             currentDate,
             formattedCurrentDate,
             sharedUsers,
@@ -768,31 +851,36 @@ export default {
             selectedTaskData,
             categories,
             globalShares,
-            calendarContainer,
             initialLoading,
             showGlobalShareModal,
             selectedGlobalTask,
             currentUserId,
+            currentMinute,
+            userColumnStyle,
 
-            // メソッド - 明示的に公開する必要のあるもののみ
+            // Methods
             openGlobalShareModal,
-            editTask,
+            onEditTask,
             closeTaskModal,
             submitTask,
             handleTaskDelete,
             handleGlobalShareModalClose,
-            updateTaskStatus,
+            onUpdateTaskStatus,
             scrollToCurrentTime,
             previousDay,
             nextDay,
             goToToday,
+            isCurrentHour,
+            getTasksForHourAndUser,
+            isCurrentUserOwner,
+            getTimeIndicatorStyle,
         };
     },
 };
 </script>
 
 <style scoped>
-/* 現在時刻インジケーターのアニメーション */
+/* Current time indicator animation */
 @keyframes pulse {
     0% {
         box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
@@ -805,11 +893,12 @@ export default {
     }
 }
 
-#current-time-indicator {
-    animation: pulse 2s infinite;
+/* Make sure table cells have consistent width */
+table {
+    table-layout: fixed;
 }
 
-/* 現在時間行のハイライトアニメーション */
+/* Current hour highlight animation */
 @keyframes currentTimeHighlight {
     0% {
         background-color: rgba(59, 130, 246, 0.1);

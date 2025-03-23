@@ -1,10 +1,9 @@
-// HeaderNavigation.vue
 <template>
     <div class="p-2 flex justify-between items-center border-b border-gray-200">
         <div class="flex items-center space-x-2">
             <h2 class="text-lg font-medium text-gray-900">共有タスク</h2>
             <span class="text-sm text-gray-500">{{ formattedDate }}</span>
-            <!-- ユーザー共有ボタン -->
+            <!-- User sharing button -->
             <button
                 @click="$emit('open-global-share')"
                 class="ml-2 px-2 py-1 text-sm bg-green-600 text-white hover:bg-green-700 rounded flex items-center"
