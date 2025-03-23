@@ -33,29 +33,39 @@ Route::get("/auth/google/callback", [
 ]);
 
 # Subscription page (before checkout)
-Route::get("stripe/subscription", [
-    StripSubscriptionController::class,
-    "index",
-])->name("stripe.subscription");
+Route::get("stripe/subscription", [StripSubscriptionController::class, "index"])
+    ->name("stripe.subscription")
+    ->middleware("auth");
 
 # Checkout page
 Route::get("stripe/subscription/checkout", [
     StripSubscriptionController::class,
     "checkout",
-])->name("stripe.subscription.checkout");
+])
+    ->name("stripe.subscription.checkout")
+    ->middleware("auth");
 
-# Payment complete
+# Payment complete - クエリパラメータを保持するために明示的なバインディング
 Route::get("stripe/subscription/comp", [
     StripSubscriptionController::class,
     "comp",
-])->name("stripe.subscription.comp");
+])
+    ->name("stripe.subscription.comp")
+    ->middleware("auth");
 
 # Customer portal
 Route::get("stripe/subscription/customer_portal", [
     StripSubscriptionController::class,
     "customer_portal",
-])->name("stripe.subscription.customer_portal");
+])
+    ->name("stripe.subscription.customer_portal")
+    ->middleware("auth");
 
+# Webhook - CSRFトークン検証を除外するために'web'ミドルウェアを使用せず
+Route::post("api/stripe/subscription/webhook", [
+    StripSubscriptionController::class,
+    "webhook",
+]);
 /**
  * Guest login
  */

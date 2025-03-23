@@ -31,6 +31,23 @@ class TodoApiController extends Controller
             if (!Auth::check()) {
                 return response()->json([]);
             }
+            // Subscription check for calendar view
+            if (
+                ($request->view === "calendar" ||
+                    $request->view === "shared") &&
+                !Auth::user()->subscription_id
+            ) {
+                return response()->json(
+                    [
+                        "error" =>
+                            $request->view === "calendar"
+                                ? "カレンダー機能を利用するにはサブスクリプションが必要です。"
+                                : "共有機能を利用するにはサブスクリプションが必要です。",
+                        "subscription_required" => true,
+                    ],
+                    403
+                );
+            }
 
             // クエリパラメータを取得
             // $request->view に値がある場合、その値を $view に代入。null または undefined の場合、デフォルト値 "today"を。

@@ -34,11 +34,11 @@
                         <th
                             class="w-6 border-b border-r border-gray-200 px-0.5 py-1 text-left"
                         ></th>
-                        <!-- User name headers -->
+                        <!-- User name headers - made smaller -->
                         <th
                             v-for="user in sharedUsers"
                             :key="'header-' + user.id"
-                            class="border-b border-r border-gray-200 px-1 py-1 text-center font-medium text-gray-800"
+                            class="border-b border-r border-gray-200 px-1 py-1 text-center font-medium text-gray-800 text-xs"
                             :style="userColumnStyle"
                         >
                             {{ user.name }}
@@ -48,15 +48,15 @@
                     <tr class="bg-gray-50 sticky top-8 z-10">
                         <!-- Time column header -->
                         <th
-                            class="w-6 border-b border-r border-gray-200 px-0.5 py-1 text-xs font-medium text-gray-500 text-center"
+                            class="w-6 px-1 py-1 text-xs font-medium text-gray-500 text-center flex-shrink-0"
                         >
                             時間
                         </th>
-                        <!-- User email headers -->
+                        <!-- User email headers - made smaller -->
                         <th
                             v-for="user in sharedUsers"
                             :key="'email-' + user.id"
-                            class="border-b border-r border-gray-200 px-1 py-1 text-center text-xs text-gray-500"
+                            class="border-b border-r border-gray-200 px-1 py-1 text-center text-gray-500"
                             :style="userColumnStyle"
                         >
                             <div class="truncate text-xs">{{ user.email }}</div>
@@ -81,7 +81,7 @@
                                     : 'bg-gray-50 text-gray-500',
                             ]"
                         >
-                            <div class="text-xs">{{ hour }}</div>
+                            <div class="text-xs">{{ hour }}:00</div>
 
                             <!-- Current time indicator -->
                             <div

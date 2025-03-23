@@ -12,11 +12,31 @@ use Illuminate\Support\Facades\Log;
 
 class TaskShareController extends Controller
 {
+    private function checkSubscription(): ?JsonResponse
+    {
+        if (!Auth::user()->subscription_id) {
+            return response()->json(
+                [
+                    "error" =>
+                        "共有機能を利用するにはサブスクリプションが必要です。",
+                    "subscription_required" => true,
+                ],
+                403
+            );
+        }
+
+        return null;
+    }
     /**
      * Get users with whom a task is shared.
      */
     public function index(Todo $todo): JsonResponse
     {
+        // Check subscription
+        if ($subscriptionCheck = $this->checkSubscription()) {
+            return $subscriptionCheck;
+        }
+
         // Check if the authenticated user owns this task
         if ($todo->user_id !== Auth::id()) {
             return response()->json(["error" => "Unauthorized"], 403);
@@ -33,6 +53,9 @@ class TaskShareController extends Controller
      */
     public function store(Request $request, Todo $todo): JsonResponse
     {
+        if ($subscriptionCheck = $this->checkSubscription()) {
+            return $subscriptionCheck;
+        }
         // Check if the authenticated user owns this task
         if ($todo->user_id !== Auth::id()) {
             return response()->json(["error" => "Unauthorized"], 403);
@@ -97,6 +120,9 @@ class TaskShareController extends Controller
         Todo $todo,
         User $user
     ): JsonResponse {
+        if ($subscriptionCheck = $this->checkSubscription()) {
+            return $subscriptionCheck;
+        }
         // Check if the authenticated user owns this task
         if ($todo->user_id !== Auth::id()) {
             return response()->json(["error" => "Unauthorized"], 403);
@@ -145,7 +171,11 @@ class TaskShareController extends Controller
      */
     public function destroy(Todo $todo, User $user): JsonResponse
     {
-        // Check if the authenticated user owns this task
+        if ($subscriptionCheck = $this->checkSubscription()) {
+            return $subscriptionCheck;
+        }
+        // Check if the authenticated user own
+        // s this task
         if ($todo->user_id !== Auth::id()) {
             return response()->json(["error" => "Unauthorized"], 403);
         }

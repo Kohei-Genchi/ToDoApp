@@ -13,6 +13,21 @@ use Illuminate\Support\Facades\Log;
 
 class GlobalShareController extends Controller
 {
+    private function checkSubscription(): ?JsonResponse
+    {
+        if (!Auth::user()->subscription_id) {
+            return response()->json(
+                [
+                    "error" =>
+                        "共有機能を利用するにはサブスクリプションが必要です。",
+                    "subscription_required" => true,
+                ],
+                403
+            );
+        }
+
+        return null;
+    }
     //標準的なAPIレスポンスを生成する共通メソッド
     private function successResponse(
         $data,
@@ -67,6 +82,9 @@ class GlobalShareController extends Controller
     // 共有相手一覧を返す
     public function index(): JsonResponse
     {
+        if ($subscriptionCheck = $this->checkSubscription()) {
+            return $subscriptionCheck;
+        }
         try {
             // ユーザーがグローバル共有している相手を取得し、必要な情報にマッピング
             $globalShares = Auth::user()

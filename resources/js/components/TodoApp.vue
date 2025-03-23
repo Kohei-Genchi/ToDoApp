@@ -296,50 +296,46 @@ export default {
         /**
          * Load tasks
          */
+        /**
+         * Load tasks
+         */
         async function loadTasks() {
             try {
                 const response = await TodoApi.getTasks(
                     currentView.value,
                     currentDate.value,
                 );
-                // console.log(response.data[0]);
-                //Check if response data is an array - handle objects and null
-                if (!Array.isArray(response.data)) {
-                    todos.value = [];
+                // Normal task loading logic...
+                todos.value = response.data;
+            } catch (error) {
+                // Check for subscription required error
+                if (
+                    error.response &&
+                    error.response.status === 403 &&
+                    error.response.data &&
+                    error.response.data.subscription_required
+                ) {
+                    notification.value?.show(
+                        error.response.data.error ||
+                            "この機能を利用するにはサブスクリプションが必要です。",
+                        "error",
+                        5000,
+                    );
+
+                    // Redirect to today view if trying to access premium feature
+                    if (
+                        currentView.value === "calendar" ||
+                        currentView.value === "shared"
+                    ) {
+                        currentView.value = "today";
+                    }
+
                     return;
                 }
 
-                // Process response to ensure consistency
-                todos.value = response.data.map((todo) => {
-                    // Create deep copy to avoid reference issues
-                    const processedTodo = { ...todo };
-                    // Ensure ID is a number
-                    if (processedTodo.id !== undefined) {
-                        processedTodo.id = Number(processedTodo.id);
-                    }
-
-                    // Ensure category_id is a number
-                    if (
-                        processedTodo.category_id !== null &&
-                        processedTodo.category_id !== undefined
-                    ) {
-                        processedTodo.category_id = Number(
-                            processedTodo.category_id,
-                        );
-                    }
-
-                    // Add formatted date for comparison
-                    if (processedTodo.due_date) {
-                        processedTodo.formatted_due_date =
-                            formatDateForComparison(processedTodo.due_date);
-                    }
-
-                    return processedTodo;
-                });
-            } catch (error) {
+                // Handle other errors
                 handleError(error, "タスクの読み込みに失敗しました");
             }
-            console.log("Updated task list:", todos.value);
         }
 
         async function loadCategories() {
