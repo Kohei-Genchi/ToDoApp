@@ -20,7 +20,8 @@
                     'id' => Auth::id(),
                     'name' => Auth::user()->name,
                     'email' => Auth::user()->email,
-                ] : null,
+                    'has_subscription' => !empty(Auth::user()->subscription_id),
+                            ] : null,
             ]) !!};
         </script>
     </head>

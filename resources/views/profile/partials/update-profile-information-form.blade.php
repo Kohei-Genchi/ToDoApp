@@ -61,6 +61,11 @@
             @endif
         </div>
 
+
+        {{-- Complete replacement for update-profile-information-form.blade.php reminders section --}}
+
+        {{-- Complete replacement for update-profile-information-form.blade.php reminders section --}}
+
         <div class="mt-6 border-t border-gray-200 pt-4">
             <h3 class="text-lg font-medium text-gray-900 mb-2">
                 {{ __('リマインダー設定') }}

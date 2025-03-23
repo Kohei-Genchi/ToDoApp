@@ -19,25 +19,47 @@
                         今日
                     </button>
                     <button
-                        @click="$emit('show-calendar')"
+                        @click="
+                            hasSubscription
+                                ? $emit('show-calendar')
+                                : showSubscriptionMessage('カレンダー')
+                        "
                         :class="[
                             'px-3 py-1 rounded-md text-sm font-medium',
                             currentView === 'calendar'
                                 ? 'bg-blue-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
+                                : hasSubscription
+                                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed',
                         ]"
+                        :title="
+                            !hasSubscription
+                                ? 'サブスクリプションが必要です'
+                                : ''
+                        "
                     >
                         カレンダー
                     </button>
-                    <!-- New button for shared tasks -->
+                    <!-- Shared tasks button with subscription check -->
                     <button
-                        @click="$emit('show-shared')"
+                        @click="
+                            hasSubscription
+                                ? $emit('show-shared')
+                                : showSubscriptionMessage('共有タスク')
+                        "
                         :class="[
                             'px-3 py-1 rounded-md text-sm font-medium',
                             currentView === 'shared'
                                 ? 'bg-green-600 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
+                                : hasSubscription
+                                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed',
                         ]"
+                        :title="
+                            !hasSubscription
+                                ? 'サブスクリプションが必要です'
+                                : ''
+                        "
                     >
                         <span class="flex items-center">
                             <svg
@@ -84,5 +106,29 @@ export default {
     },
 
     emits: ["set-view", "show-calendar", "show-shared", "add-task"],
+
+    computed: {
+        /**
+         * Check if user has subscription
+         */
+        hasSubscription() {
+            return (
+                window.Laravel &&
+                window.Laravel.user &&
+                window.Laravel.user.has_subscription
+            );
+        },
+    },
+
+    methods: {
+        /**
+         * Show subscription required message
+         */
+        showSubscriptionMessage(feature) {
+            alert(
+                `${feature}機能を使用するにはサブスクリプションが必要です。「設定 > サブスクリプション」からご登録ください。`,
+            );
+        },
+    },
 };
 </script>
