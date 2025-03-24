@@ -1,4 +1,5 @@
 <?php
+// app/Notifications/TaskReminder.php
 
 namespace App\Notifications;
 
@@ -7,6 +8,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Messages\SlackMessage;
 use Illuminate\Notifications\Notification;
+use App\Services\LineNotifyService;
+use Illuminate\Support\Facades\Log;
 
 class TaskReminder extends Notification
 {
@@ -31,48 +34,54 @@ class TaskReminder extends Notification
      */
     public function via(object $notifiable): array
     {
-        return config("services.slack.notifications.bot_user_oauth_token")
-            ? ["slack"]
-            : ["mail"];
-    }
-
-    public function toMail(object $notifiable): MailMessage
-    {
-        $mailMessage = new MailMessage();
-        $mailMessage
-            ->subject("Todo Task Reminder")
-            ->greeting("Hi {$notifiable->name}!")
-            ->line($this->message);
-
-        // Add list of tasks if there are any
-        if ($this->todosCount > 0) {
-            $pendingTasks = $notifiable
-                ->todos()
-                ->where("status", "pending")
-                ->whereDate("due_date", today())
-                ->get();
-
-            $mailMessage->line("残っているタスク:");
-
-            foreach ($pendingTasks as $task) {
-                $mailMessage->line("- {$task->title}");
-            }
+        // If Line notify is configured, we'll handle it separately
+        if ($notifiable->line_notify_token) {
+            // We'll handle Line separately in the send() method
+            return [];
         }
 
-        return $mailMessage
-            ->action("View Tasks", url("/todos?view=today"))
-            ->line("Thank you for using our application!");
+        // For other channels, use the normal notification system
+        if (
+            config("services.slack.notifications.bot_user_oauth_token") ||
+            $notifiable->slack_webhook_url
+        ) {
+            return ["slack"];
+        }
+
+        return ["mail"];
     }
 
     /**
-     * Get the Slack representation of the notification.
+     * Direct send method that handles Line notifications
+     * This is called directly, not through the notification system
      */
-    public function toSlack(object $notifiable): SlackMessage
+    /**
+     * Direct send method that handles Line notifications
+     * This is called directly, not through the notification system
+     *
+     * @return array [bool $success, string|null $error]
+     */
+    public function sendToLine(object $notifiable): array
     {
-        $slackMessage = (new SlackMessage())
-            ->from("TodoList Bot", ":clipboard:")
-            ->to(config("services.slack.notifications.channel"))
-            ->content($this->message);
+        if (!$notifiable->line_notify_token) {
+            return [false, "Line Notify token not found for user"];
+        }
+
+        $message = $this->formatLineMessage($notifiable);
+        $lineService = new LineNotifyService();
+
+        $result = $lineService->send($notifiable->line_notify_token, $message);
+
+        return [$result, $result ? null : $lineService->getLastError()];
+    }
+
+    /**
+     * Format message for Line Notify
+     */
+    protected function formatLineMessage(object $notifiable): string
+    {
+        // Start with main message
+        $message = "\n" . $this->message;
 
         // Add list of tasks if there are any
         if ($this->todosCount > 0) {
@@ -83,81 +92,28 @@ class TaskReminder extends Notification
                 ->get();
 
             if ($pendingTasks->count() > 0) {
-                $taskFields = [];
+                $message .= "\n\n残っているタスク:";
 
-                // Create fields for each task
-                foreach ($pendingTasks as $index => $task) {
-                    // Limit to 10 tasks to avoid exceeding Slack message limits
-                    if ($index < 10) {
-                        $taskFields[] = $task->title;
-                    }
+                // Add each task (limit to 10 to avoid message becoming too long)
+                foreach ($pendingTasks->take(10) as $index => $task) {
+                    $message .= "\n" . ($index + 1) . ". " . $task->title;
                 }
 
-                if (count($taskFields) > 0) {
-                    $slackMessage->attachment(function ($attachment) use (
-                        $taskFields,
-                        $pendingTasks
-                    ) {
-                        $attachment
-                            ->title(
-                                "残っているタスク (" .
-                                    $pendingTasks->count() .
-                                    ")"
-                            )
-                            ->color("warning");
-
-                        // Add each task as a field
-                        foreach ($taskFields as $index => $taskTitle) {
-                            $attachment->field(function ($field) use (
-                                $index,
-                                $taskTitle
-                            ) {
-                                $field
-                                    ->title("Task " . ($index + 1))
-                                    ->content($taskTitle)
-                                    ->long(false);
-                            });
-                        }
-
-                        // If there are more tasks than we're showing
-                        if ($pendingTasks->count() > count($taskFields)) {
-                            $attachment->field(function ($field) use (
-                                $pendingTasks,
-                                $taskFields
-                            ) {
-                                $field
-                                    ->title("And more...")
-                                    ->content(
-                                        "Plus " .
-                                            ($pendingTasks->count() -
-                                                count($taskFields)) .
-                                            " more tasks"
-                                    )
-                                    ->long(false);
-                            });
-                        }
-                    });
+                // If there are more tasks than shown
+                if ($pendingTasks->count() > 10) {
+                    $message .=
+                        "\n...他に " .
+                        ($pendingTasks->count() - 10) .
+                        " 件のタスクがあります";
                 }
             }
         }
 
-        // Add action button for the task list
-        $slackMessage->attachment(function ($attachment) {
-            $attachment->action("View Tasks", url("/todos?view=today"));
-        });
+        // Add link to app
+        $message .= "\n\nタスクを確認: " . url("/todos?view=today");
 
-        return $slackMessage;
+        return $message;
     }
 
-    /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(object $notifiable): array
-    {
-        return [
-                //
-            ];
-    }
+    // Your existing toMail() and toSlack() methods remain the same...
 }

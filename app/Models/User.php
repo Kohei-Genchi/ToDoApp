@@ -24,6 +24,7 @@ class User extends Authenticatable
         "morning_reminder_time",
         "evening_reminder_time",
         "slack_webhook_url",
+        "line_notify_token",
     ];
 
     protected $hidden = ["password", "remember_token"];
@@ -80,6 +81,11 @@ class User extends Authenticatable
         return $this->slack_webhook_url ??
             config("services.slack.notifications.bot_user_oauth_token");
     }
+    public function routeNotificationForLine()
+    {
+        return $this->line_notify_token;
+    }
+
     public function globallySharedWith()
     {
         return $this->hasMany(GlobalShare::class, "user_id");

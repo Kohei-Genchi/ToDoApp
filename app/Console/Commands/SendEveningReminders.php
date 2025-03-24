@@ -89,7 +89,7 @@ class SendEveningReminders extends Command
 
                 // Only send if user has an email and has relevant tasks for today
                 if (
-                    $user->email &&
+                    ($user->email || $user->line_notify_token) &&
                     ($pendingCount > 0 || $completedCount > 0)
                 ) {
                     try {
@@ -104,15 +104,35 @@ class SendEveningReminders extends Command
                                 " tasks today! ";
                         }
 
-                        $user->notify(
-                            new TaskReminder($message, $pendingCount)
+                        $notification = new TaskReminder(
+                            $message,
+                            $pendingCount
                         );
+
+                        // If user has Line token, send via Line directly
+                        if (!empty($user->line_notify_token)) {
+                            $lineResult = $notification->sendToLine($user);
+                            if ($lineResult) {
+                                $count++;
+                                $this->info(
+                                    "Sent Line notification to user {$user->id}"
+                                );
+                            } else {
+                                $this->error(
+                                    "Error sending Line notification to user {$user->id}"
+                                );
+                            }
+                        } else {
+                            // Use the regular notification system for other channels
+                            $user->notify($notification);
+                            $count++;
+                            $this->info(
+                                "Sent notification to user {$user->id}"
+                            );
+                        }
 
                         // Store the time this notification was sent
                         Cache::put($cacheKey, now(), 60); // Store for 60 minutes
-
-                        $count++;
-                        $this->info("Sent notification to user {$user->id}");
                     } catch (\Exception $e) {
                         $this->error(
                             "Error sending notification to user {$user->id}: {$e->getMessage()}"

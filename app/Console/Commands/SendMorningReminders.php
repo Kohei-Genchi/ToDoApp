@@ -97,18 +97,36 @@ class SendMorningReminders extends Command
 
                 if ($user->email && $pendingTasks->count() > 0) {
                     try {
-                        $user->notify(
-                            new TaskReminder(
-                                "今日のタスクのリマインダーです",
-                                $pendingTasks->count()
-                            )
+                        $message = "今日のタスクのリマインダーです";
+                        $notification = new TaskReminder(
+                            $message,
+                            $pendingTasks->count()
                         );
+
+                        // If user has Line token, send via Line directly
+                        if (!empty($user->line_notify_token)) {
+                            $lineResult = $notification->sendToLine($user);
+                            if ($lineResult) {
+                                $count++;
+                                $this->info(
+                                    "Sent Line notification to user {$user->id}"
+                                );
+                            } else {
+                                $this->error(
+                                    "Error sending Line notification to user {$user->id}"
+                                );
+                            }
+                        } else {
+                            // Use the regular notification system for other channels
+                            $user->notify($notification);
+                            $count++;
+                            $this->info(
+                                "Sent notification to user {$user->id}"
+                            );
+                        }
 
                         // Store the time this notification was sent
                         Cache::put($cacheKey, now(), 60); // Store for 60 minutes
-
-                        $count++;
-                        $this->info("Sent notification to user {$user->id}");
                     } catch (\Exception $e) {
                         $this->error(
                             "Error sending notification to user {$user->id}: {$e->getMessage()}"

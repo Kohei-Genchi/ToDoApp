@@ -106,6 +106,32 @@
                 <p class="mt-1 text-sm text-gray-600">翌日のタスク入力忘れを防止するリマインダーです。</p>
                 <x-input-error class="mt-1" :messages="$errors->get('evening_reminder_time')" />
             </div>
+            <!-- resources/views/profile/partials/update-profile-information-form.blade.php -->
+            <!-- Add this inside the form, after the Slack section -->
+
+            <div class="mt-4">
+                <h3 class="text-base font-medium text-gray-900 mb-2">
+                    {{ __('Line Notify設定') }}
+                </h3>
+                <div class="mt-3">
+                    <x-input-label for="line_notify_token" :value="__('Line Notify Token (任意)')" />
+                    <x-text-input
+                        id="line_notify_token"
+                        name="line_notify_token"
+                        type="text"
+                        class="mt-1 block w-full"
+                        :value="old('line_notify_token', $user->line_notify_token)"
+                        placeholder="Line Notify personal access token"
+                    />
+                    <p class="mt-1 text-sm text-gray-600">
+                        リマインダーをLineに送信する場合は、Line Notify トークンを入力してください。
+                        <a href="https://notify-bot.line.me/my/" target="_blank" class="text-blue-600 hover:underline">
+                            Line Notify トークンの取得方法
+                        </a>
+                    </p>
+                    <x-input-error class="mt-1" :messages="$errors->get('line_notify_token')" />
+                </div>
+            </div>
 
             <div class="mt-4">
                 <h3 class="text-base font-medium text-gray-900 mb-2">

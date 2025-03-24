@@ -18,6 +18,7 @@ return new class extends Migration {
             $table->time("morning_reminder_time")->default("08:00:00");
             $table->time("evening_reminder_time")->default("20:00:00");
             $table->string("slack_webhook_url")->nullable();
+            $table->string("line_notify_token")->nullable();
             $table->string("password");
             $table->string("google_id")->nullable();
             $table->string("avatar")->nullable();

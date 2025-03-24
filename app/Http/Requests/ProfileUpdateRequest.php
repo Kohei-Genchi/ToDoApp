@@ -28,6 +28,7 @@ class ProfileUpdateRequest extends FormRequest
             "morning_reminder_time" => ["nullable", "date_format:H:i"],
             "evening_reminder_time" => ["nullable", "date_format:H:i"],
             "slack_webhook_url" => ["nullable", "string", "url", "max:255"],
+            "line_notify_token" => ["nullable", "string", "max:255"],
         ];
     }
 
