@@ -11,5 +11,4 @@ use App\Console\Commands\SendEveningReminders;
 Schedule::command("todos:cleanup")->dailyAt("23:59");
 
 // メール送信のスケジュール設定 - 毎分実行して、ユーザーの希望時間に送信
-Schedule::command("reminders:morning")->everyMinute();
-Schedule::command("reminders:evening")->everyMinute();
+Schedule::command("reminders:send both")->everyMinute();

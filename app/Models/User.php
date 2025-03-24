@@ -78,9 +78,18 @@ class User extends Authenticatable
      */
     public function routeNotificationForSlack()
     {
-        return $this->slack_webhook_url ??
-            config("services.slack.notifications.bot_user_oauth_token");
+        if (!empty($this->slack_webhook_url)) {
+            Log::info("Routing notification to Slack webhook", [
+                "user_id" => $this->id,
+                "webhook" => substr($this->slack_webhook_url, 0, 15) . "...",
+            ]);
+            return $this->slack_webhook_url;
+        }
+
+        Log::warning("No Slack webhook URL configured for user {$this->id}");
+        return null;
     }
+
     public function routeNotificationForLine()
     {
         return $this->line_notify_token;

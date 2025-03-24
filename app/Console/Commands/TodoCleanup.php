@@ -14,29 +14,20 @@ class TodoCleanup extends Command
 
     public function handle()
     {
-        $daysBack = $this->option("days");
-        $targetDate = Carbon::now()->subDays($daysBack)->format("Y-m-d");
-
         try {
-            // 完了したタスクを削除
-            $completedCount = Todo::where("status", "completed")
-                ->where("location", "TODAY")
-                ->whereDate("due_date", $targetDate)
-                ->delete();
+            $daysBack = (int) $this->option("days");
+            $targetDate = Carbon::now()->subDays($daysBack)->format("Y-m-d");
 
+            $this->info("Target date for cleanup: {$targetDate}");
+
+            // Process completed tasks
+            $completedCount = $this->processCompletedTasks($targetDate);
             $this->info("完了タスク {$completedCount} 件を削除しました");
 
-            // 未完了タスクをINBOXに戻す
-            $pendingCount = Todo::where("status", "pending")
-                ->where("location", "TODAY")
-                ->whereDate("due_date", $targetDate)
-                ->update([
-                    "location" => "INBOX",
-                    "due_date" => null,
-                    "due_time" => null,
-                ]);
-
+            // Process pending tasks
+            $pendingCount = $this->processPendingTasks($targetDate);
             $this->info("未完了タスク {$pendingCount} 件をINBOXに戻しました");
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
             Log::error(
@@ -46,5 +37,37 @@ class TodoCleanup extends Command
 
             return Command::FAILURE;
         }
+    }
+
+    /**
+     * Process completed tasks (deletion)
+     *
+     * @param string $targetDate The target date in Y-m-d format
+     * @return int Number of processed tasks
+     */
+    protected function processCompletedTasks(string $targetDate): int
+    {
+        return Todo::where("status", "completed")
+            ->where("location", "TODAY")
+            ->whereDate("due_date", $targetDate)
+            ->delete();
+    }
+
+    /**
+     * Process pending tasks (move to inbox)
+     *
+     * @param string $targetDate The target date in Y-m-d format
+     * @return int Number of processed tasks
+     */
+    protected function processPendingTasks(string $targetDate): int
+    {
+        return Todo::where("status", "pending")
+            ->where("location", "TODAY")
+            ->whereDate("due_date", $targetDate)
+            ->update([
+                "location" => "INBOX",
+                "due_date" => null,
+                "due_time" => null,
+            ]);
     }
 }
