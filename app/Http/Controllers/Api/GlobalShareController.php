@@ -28,6 +28,7 @@ class GlobalShareController extends Controller
 
         return null;
     }
+
     //標準的なAPIレスポンスを生成する共通メソッド
     private function successResponse(
         $data,
@@ -108,60 +109,17 @@ class GlobalShareController extends Controller
     }
 
     // /新規共有を作成（同じ相手との重複や自分自身との共有を防止）
+    // Modified to use ShareRequestsController
     public function store(Request $request): JsonResponse
     {
-        // リクエストの検証
-        $request->validate([
-            "email" => "required|email|exists:users,email",
-            "permission" => "required|in:view,edit",
-        ]);
-
-        try {
-            // メールアドレスからユーザーを検索
-            $user = User::where("email", $request->email)->first();
-
-            // 自分自身との共有は許可しない
-            if ($user->id === Auth::id()) {
-                return response()->json(
-                    ["error" => "自分自身と共有することはできません"],
-                    400
-                );
-            }
-
-            // すでに共有済みかチェック
-            $existingShare = GlobalShare::where("user_id", Auth::id())
-                ->where("shared_with_user_id", $user->id)
-                ->first();
-
-            if ($existingShare) {
-                return response()->json(
-                    ["error" => "すでにこのユーザーとグローバル共有しています"],
-                    400
-                );
-            }
-
-            // グローバル共有を作成
-            $globalShare = GlobalShare::create([
-                "user_id" => Auth::id(),
-                "shared_with_user_id" => $user->id,
-                "permission" => $request->permission,
-            ]);
-
-            return $this->successResponse(
-                [
-                    "user" => [
-                        "id" => $user->id,
-                        "name" => $user->name,
-                        "email" => $user->email,
-                        "permission" => $request->permission,
-                    ],
-                ],
-                "すべてのタスクをユーザーとグローバル共有しました",
-                201
-            );
-        } catch (\Exception $e) {
-            return $this->errorResponse($e, "sharing globally");
+        // Check subscription
+        if ($subscriptionCheck = $this->checkSubscription()) {
+            return $subscriptionCheck;
         }
+
+        // Forward to the ShareRequestController
+        $shareRequestController = app(ShareRequestsController::class);
+        return $shareRequestController->storeGlobalShare($request);
     }
 
     //権限を更新（所有者のみ可能）

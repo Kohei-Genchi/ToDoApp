@@ -31,6 +31,26 @@ Route::get("/auth/google/callback", [
     GoogleController::class,
     "handleGoogleCallback",
 ]);
+Route::middleware(["web"])->group(function () {
+    // Approval and rejection with friendly UI
+    Route::get("/share-requests/{token}/approve", [
+        App\Http\Controllers\ShareNotificationWebController::class,
+        "approveRequest",
+    ])->name("share-requests.web.approve");
+
+    Route::get("/share-requests/{token}/reject", [
+        App\Http\Controllers\ShareNotificationWebController::class,
+        "rejectRequest",
+    ])->name("share-requests.web.reject");
+
+    // Dashboard for share requests (requires authentication)
+    Route::middleware(["auth"])->group(function () {
+        Route::get("/share-requests", [
+            App\Http\Controllers\ShareNotificationWebController::class,
+            "index",
+        ])->name("share-requests.index");
+    });
+});
 
 # Subscription page (before checkout)
 Route::get("stripe/subscription", [StripSubscriptionController::class, "index"])

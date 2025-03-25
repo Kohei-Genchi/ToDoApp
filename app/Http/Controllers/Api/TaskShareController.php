@@ -9,9 +9,18 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Services\ShareNotificationService;
 
 class TaskShareController extends Controller
 {
+    protected $shareNotificationService;
+
+    public function __construct(
+        ShareNotificationService $shareNotificationService
+    ) {
+        $this->shareNotificationService = $shareNotificationService;
+    }
+
     private function checkSubscription(): ?JsonResponse
     {
         if (!Auth::user()->subscription_id) {
@@ -27,6 +36,7 @@ class TaskShareController extends Controller
 
         return null;
     }
+
     /**
      * Get users with whom a task is shared.
      */
@@ -50,66 +60,17 @@ class TaskShareController extends Controller
 
     /**
      * Share a task with a user.
+     * This is now replaced with a request-approval workflow
      */
     public function store(Request $request, Todo $todo): JsonResponse
     {
         if ($subscriptionCheck = $this->checkSubscription()) {
             return $subscriptionCheck;
         }
-        // Check if the authenticated user owns this task
-        if ($todo->user_id !== Auth::id()) {
-            return response()->json(["error" => "Unauthorized"], 403);
-        }
 
-        // Validate request
-        $request->validate([
-            "email" => "required|email|exists:users,email",
-            "permission" => "required|in:view,edit",
-        ]);
-
-        try {
-            // Find the user by email
-            $user = User::where("email", $request->email)->first();
-
-            // Don't allow sharing with oneself
-            if ($user->id === Auth::id()) {
-                return response()->json(
-                    ["error" => "Cannot share with yourself"],
-                    400
-                );
-            }
-
-            // Check if we've reached the maximum number of shares (5)
-            if ($todo->sharedWith->count() >= 5) {
-                return response()->json(
-                    [
-                        "error" =>
-                            "Maximum share limit (5) reached for this task",
-                    ],
-                    400
-                );
-            }
-
-            // Share the task
-            $todo->shareTo($user, $request->permission);
-
-            return response()->json([
-                "success" => true,
-                "message" => "Task shared successfully",
-                "user" => [
-                    "id" => $user->id,
-                    "name" => $user->name,
-                    "email" => $user->email,
-                    "permission" => $request->permission,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error sharing task: " . $e->getMessage());
-            return response()->json(
-                ["error" => "Error sharing task: " . $e->getMessage()],
-                500
-            );
-        }
+        // Forward to the ShareRequestController
+        $shareRequestController = app(ShareRequestsController::class);
+        return $shareRequestController->storeTaskShare($request, $todo);
     }
 
     /**

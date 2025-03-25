@@ -16,6 +16,35 @@ Route::middleware("auth:sanctum")->get("/user", function (Request $request) {
     return $request->user();
 });
 
+Route::middleware(["auth:sanctum"])->group(function () {
+    // Get pending share requests
+    Route::get("/share-requests", [
+        App\Http\Controllers\Api\ShareRequestsController::class,
+        "index",
+    ]);
+
+    // Cancel a share request
+    Route::delete("/share-requests/{shareRequest}", [
+        App\Http\Controllers\Api\ShareRequestsController::class,
+        "cancel",
+    ]);
+});
+
+// Public routes for handling approvals (these will be secured by URL signing)
+Route::get("/share-requests/{token}/approve", [
+    App\Http\Controllers\Api\ShareRequestsController::class,
+    "approve",
+])
+    ->name("share-requests.approve")
+    ->middleware(["signed"]);
+
+Route::get("/share-requests/{token}/reject", [
+    App\Http\Controllers\Api\ShareRequestsController::class,
+    "reject",
+])
+    ->name("share-requests.reject")
+    ->middleware(["signed"]);
+
 // Route::middleware("auth:web")->group(function () {
 //     // 'auth:sanctum' を 'auth:web' に変更
 //     Route::post("/speech-to-tasks", [

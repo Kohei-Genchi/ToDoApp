@@ -45,7 +45,7 @@ export default {
     },
 
     /**
-     * Share a task with a user
+     * Request to share a task with a user
      * @param {number} taskId - The task ID
      * @param {string} email - The email of the user to share with
      * @param {string} permission - The permission level ('view' or 'edit')
@@ -101,6 +101,49 @@ export default {
      */
     getSharedWithMe() {
         return axios.get("/api/shared-with-me", {
+            headers: getCommonHeaders(),
+        });
+    },
+
+    /**
+     * Get pending share requests (sent and received)
+     * @returns {Promise} - API response
+     */
+    getShareRequests() {
+        return axios.get("/api/share-requests", {
+            headers: getCommonHeaders(),
+        });
+    },
+
+    /**
+     * Cancel a pending share request
+     * @param {number} requestId - The share request ID
+     * @returns {Promise} - API response
+     */
+    cancelShareRequest(requestId) {
+        return axios.delete(`/api/share-requests/${requestId}`, {
+            headers: getCsrfHeaders(),
+        });
+    },
+
+    /**
+     * Approve a share request
+     * @param {string} token - The share request token
+     * @returns {Promise} - API response
+     */
+    approveShareRequest(token) {
+        return axios.get(`/api/share-requests/${token}/approve`, {
+            headers: getCommonHeaders(),
+        });
+    },
+
+    /**
+     * Reject a share request
+     * @param {string} token - The share request token
+     * @returns {Promise} - API response
+     */
+    rejectShareRequest(token) {
+        return axios.get(`/api/share-requests/${token}/reject`, {
             headers: getCommonHeaders(),
         });
     },
