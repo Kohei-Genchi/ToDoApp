@@ -16,6 +16,22 @@ Route::middleware("auth:sanctum")->get("/user", function (Request $request) {
     return $request->user();
 });
 
+// Route::middleware("auth:web")->group(function () {
+//     // 'auth:sanctum' を 'auth:web' に変更
+//     Route::post("/speech-to-tasks", [
+//         App\Http\Controllers\Api\SpeechToTextController::class,
+//         "processSpeech",
+//     ]);
+// });
+//
+// // routes/api.php - 認証要件を一時的に外す
+// routes/api.php
+Route::post("/speech-to-tasks", [
+    App\Http\Controllers\Api\SpeechToTextController::class,
+    "processSpeech",
+]);
+// 認証ミドルウェアを外す
+// auth:sanctum や auth:web のミドルウェアを一時的に外します
 /**
  * Stripe Webhook
  */

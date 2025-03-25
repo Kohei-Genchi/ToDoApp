@@ -5,5 +5,5 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as Middleware;
 
 class VerifyCsrfToken extends Middleware
 {
-    protected $except = ["stripe/subscription/webhook"];
+    protected $except = ["/speech-to-tasks", "stripe/subscription/webhook"];
 }
