@@ -2,27 +2,36 @@
 
 namespace App\Jobs;
 
+use App\Models\Todo;
+use App\Models\User;
+use App\Services\OpenAIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use App\Models\Todo;
-use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 class ProcessSpeechToTasks implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * @var string Path to the audio file
+     */
     protected $filePath;
+
+    /**
+     * @var int|null User ID
+     */
     protected $userId;
 
     /**
      * Create a new job instance.
+     *
+     * @param string $filePath Path to stored audio file
+     * @param int|null $userId User ID
      */
     public function __construct($filePath, $userId)
     {
@@ -32,8 +41,11 @@ class ProcessSpeechToTasks implements ShouldQueue
 
     /**
      * Execute the job.
+     *
+     * @param OpenAIService $openAIService
+     * @return void
      */
-    public function handle()
+    public function handle(OpenAIService $openAIService)
     {
         try {
             // Check if file exists
@@ -48,113 +60,72 @@ class ProcessSpeechToTasks implements ShouldQueue
                 $user = User::find($this->userId);
             }
 
-            // Process audio file
-            $result = $this->processAudioFile(
-                Storage::disk("local")->path($this->filePath)
-            );
+            // Get complete file path
+            $fullPath = Storage::disk("local")->path($this->filePath);
+
+            // Process audio file using the service
+            $result = $openAIService->processAudioFile($fullPath);
 
             // Clean up the temporary file
             Storage::disk("local")->delete($this->filePath);
 
-            // Create tasks
-            if (isset($result["tasks"]) && !empty($result["tasks"])) {
-                foreach ($result["tasks"] as $taskTitle) {
-                    Todo::create([
-                        "title" => $taskTitle,
-                        "user_id" => $this->userId,
-                        "status" => "pending",
-                        "location" => "INBOX",
-                    ]);
-                }
-
-                Log::info(
-                    "Created " .
-                        count($result["tasks"]) .
-                        " tasks from speech for user " .
-                        $this->userId
-                );
-            } elseif (isset($result["text"]) && !empty($result["text"])) {
-                // If no tasks were extracted but we have transcription, create a single task
-                Todo::create([
-                    "title" => $result["text"],
-                    "user_id" => $this->userId,
-                    "status" => "pending",
-                    "location" => "INBOX",
-                ]);
-
-                Log::info(
-                    "Created a single task from speech for user " .
-                        $this->userId
-                );
-            }
+            // Create tasks based on processing results
+            $this->createTasksFromResult($result);
         } catch (\Exception $e) {
             Log::error(
-                "Background speech processing error: " . $e->getMessage()
+                "Background speech processing error: " . $e->getMessage(),
+                [
+                    "line" => $e->getLine(),
+                    "file" => $e->getFile(),
+                ]
             );
         }
     }
 
     /**
-     * Process audio file using OpenAI Whisper and GPT
+     * Create tasks from processing result
+     *
+     * @param array $result Processing result containing 'text' and 'tasks'
+     * @return void
      */
-    private function processAudioFile($filePath)
+    private function createTasksFromResult(array $result): void
     {
-        // Step 1: Convert speech to text using Whisper API
-        $whisperResponse = Http::withHeaders([
-            "Authorization" => "Bearer " . config("services.openai.api_key"),
-        ])
-            ->attach("file", file_get_contents($filePath), "audio.webm")
-            ->post("https://api.openai.com/v1/audio/transcriptions", [
-                "model" => "whisper-1",
-                "language" => "ja", // Japanese language
-            ]);
+        // Create tasks from extracted tasks
+        if (isset($result["tasks"]) && !empty($result["tasks"])) {
+            foreach ($result["tasks"] as $taskTitle) {
+                $this->createTask($taskTitle);
+            }
 
-        if (!$whisperResponse->successful()) {
-            Log::error("Whisper API error: " . $whisperResponse->body());
-            throw new \Exception("Speech-to-text processing failed");
+            Log::info(
+                "Created " .
+                    count($result["tasks"]) .
+                    " tasks from speech for user " .
+                    $this->userId
+            );
         }
+        // Fall back to creating a single task from transcription if no tasks were extracted
+        elseif (isset($result["text"]) && !empty($result["text"])) {
+            $this->createTask($result["text"]);
 
-        $transcription = $whisperResponse->json()["text"] ?? "";
-
-        if (empty($transcription)) {
-            return ["text" => ""];
+            Log::info(
+                "Created a single task from speech for user " . $this->userId
+            );
         }
+    }
 
-        // Step 2: Extract tasks using ChatGPT API
-        $chatResponse = Http::withHeaders([
-            "Authorization" => "Bearer " . config("services.openai.api_key"),
-            "Content-Type" => "application/json",
-        ])->post("https://api.openai.com/v1/chat/completions", [
-            "model" => "gpt-3.5-turbo",
-            "messages" => [
-                [
-                    "role" => "system",
-                    "content" =>
-                        "あなたはタスク管理アシスタントです。ユーザーの発言からタスクを抽出し、個別のタスクとして返してください。タスクは簡潔にして、各タスクを1行ずつ、「<task>タスク内容</task>」のフォーマットでリストしてください。発言内容をそのまま返すのではなく、実行すべきタスクだけを抽出してください。",
-                ],
-                [
-                    "role" => "user",
-                    "content" => $transcription,
-                ],
-            ],
-            "temperature" => 0.7,
+    /**
+     * Create a single task
+     *
+     * @param string $title Task title
+     * @return void
+     */
+    private function createTask(string $title): void
+    {
+        Todo::create([
+            "title" => $title,
+            "user_id" => $this->userId,
+            "status" => "pending",
+            "location" => "INBOX",
         ]);
-
-        if (!$chatResponse->successful()) {
-            Log::error("ChatGPT API error: " . $chatResponse->body());
-            return ["text" => $transcription]; // Return just the transcription if task extraction fails
-        }
-
-        $content =
-            $chatResponse->json()["choices"][0]["message"]["content"] ?? "";
-
-        // Extract tasks using regex
-        preg_match_all("/<task>(.*?)<\/task>/", $content, $matches);
-        $tasks = $matches[1] ?? [];
-
-        return [
-            "text" => $transcription,
-            "tasks" => $tasks,
-        ];
     }
 }

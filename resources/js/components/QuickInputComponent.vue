@@ -84,6 +84,7 @@ import axios from "axios";
 
 export default {
     name: "QuickInputComponent",
+
     data() {
         return {
             taskTitle: "",
@@ -95,63 +96,82 @@ export default {
             mediaRecorder: null,
             audioChunks: [],
             errorMessage: "",
-            // QuickInputComponent.vue のdata関数内
             csrfToken:
                 document
                     .querySelector('meta[name="csrf-token"]')
                     ?.getAttribute("content") || "",
         };
     },
+
     mounted() {
         // Focus the input field when component mounts
         this.$refs.inputField.focus();
     },
+
     beforeUnmount() {
         // Clean up recording if component is unmounted while recording
         this.stopRecording();
-        clearInterval(this.recordingInterval);
+        this.clearRecordingInterval();
     },
+
     methods: {
+        /**
+         * Submit a text task
+         */
         async submitTask() {
             if (!this.taskTitle.trim() || this.isSubmitting) {
                 return;
             }
 
             this.isSubmitting = true;
+            this.clearError();
 
             try {
-                // Send POST request to create a new memo task
-                const response = await axios.post(
-                    "/api/memos",
-                    { title: this.taskTitle },
-                    {
-                        headers: {
-                            "X-CSRF-TOKEN": this.csrfToken,
-                            "Content-Type": "application/json",
-                            Accept: "application/json",
-                            "X-Requested-With": "XMLHttpRequest",
-                        },
-                    },
-                );
+                const response = await this.createMemo(this.taskTitle);
 
                 // If successful, emit an event to notify parent component
                 if (response.data && response.data.memo) {
                     this.$emit("task-added", response.data.memo);
-                    this.taskTitle = ""; // Clear the input field
-                    this.$refs.inputField.focus(); // Focus back on input
+                    this.resetForm();
                 }
             } catch (error) {
-                console.error("Error submitting task:", error);
-                this.errorMessage = "タスクの追加に失敗しました";
-                setTimeout(() => {
-                    this.errorMessage = "";
-                }, 3000);
+                this.handleError("タスクの追加に失敗しました", error);
             } finally {
                 this.isSubmitting = false;
             }
         },
 
-        // Toggle recording state
+        /**
+         * Create a memo via API
+         * @param {string} title - The task title
+         * @returns {Promise} - API response
+         */
+        async createMemo(title) {
+            return axios.post(
+                "/api/memos",
+                { title },
+                {
+                    headers: this.getHeaders(),
+                },
+            );
+        },
+
+        /**
+         * Get common request headers
+         * @returns {Object} - Headers object
+         */
+        getHeaders() {
+            return {
+                "X-CSRF-TOKEN": this.csrfToken,
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            };
+        },
+
+        /**
+         * Toggle recording state
+         */
         async toggleRecording() {
             if (this.isRecording) {
                 await this.stopRecording();
@@ -160,9 +180,11 @@ export default {
             }
         },
 
-        // Start recording audio
+        /**
+         * Start recording audio
+         */
         async startRecording() {
-            this.errorMessage = "";
+            this.clearError();
 
             try {
                 // Request microphone access
@@ -171,42 +193,60 @@ export default {
                 });
 
                 // Set up media recorder
-                this.audioChunks = [];
-                this.mediaRecorder = new MediaRecorder(stream);
-
-                // Event handlers
-                this.mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        this.audioChunks.push(event.data);
-                    }
-                };
-
-                this.mediaRecorder.onstop = async () => {
-                    await this.processAudio();
-                };
-
-                // Start recording
-                this.mediaRecorder.start();
-                this.isRecording = true;
-                this.recordingTime = 0;
+                this.setupMediaRecorder(stream);
 
                 // Start recording timer
-                this.recordingInterval = setInterval(() => {
-                    this.recordingTime++;
-
-                    // Auto-stop after 30 seconds to prevent very large files
-                    if (this.recordingTime >= 30) {
-                        this.stopRecording();
-                    }
-                }, 1000);
+                this.startRecordingTimer();
             } catch (error) {
-                console.error("Error starting recording:", error);
-                this.errorMessage =
-                    "マイクへのアクセスができませんでした。ブラウザの設定を確認してください。";
+                this.handleError(
+                    "マイクへのアクセスができませんでした。ブラウザの設定を確認してください。",
+                    error,
+                );
             }
         },
 
-        // Stop recording audio
+        /**
+         * Set up the media recorder with event handlers
+         * @param {MediaStream} stream - The audio stream
+         */
+        setupMediaRecorder(stream) {
+            this.audioChunks = [];
+            this.mediaRecorder = new MediaRecorder(stream);
+
+            // Event handlers
+            this.mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    this.audioChunks.push(event.data);
+                }
+            };
+
+            this.mediaRecorder.onstop = async () => {
+                await this.processAudio();
+            };
+
+            // Start recording
+            this.mediaRecorder.start();
+            this.isRecording = true;
+        },
+
+        /**
+         * Start recording timer
+         */
+        startRecordingTimer() {
+            this.recordingTime = 0;
+            this.recordingInterval = setInterval(() => {
+                this.recordingTime++;
+
+                // Auto-stop after 30 seconds to prevent very large files
+                if (this.recordingTime >= 30) {
+                    this.stopRecording();
+                }
+            }, 1000);
+        },
+
+        /**
+         * Stop recording audio
+         */
         async stopRecording() {
             if (
                 !this.mediaRecorder ||
@@ -217,190 +257,153 @@ export default {
 
             // Stop the media recorder
             this.mediaRecorder.stop();
-            clearInterval(this.recordingInterval);
+            this.clearRecordingInterval();
 
             // Stop all audio tracks
-            this.mediaRecorder.stream
-                .getTracks()
-                .forEach((track) => track.stop());
+            if (this.mediaRecorder.stream) {
+                this.mediaRecorder.stream
+                    .getTracks()
+                    .forEach((track) => track.stop());
+            }
 
             this.isRecording = false;
         },
 
-        // Process the recorded audio
+        /**
+         * Clear recording interval timer
+         */
+        clearRecordingInterval() {
+            if (this.recordingInterval) {
+                clearInterval(this.recordingInterval);
+                this.recordingInterval = null;
+            }
+        },
+
+        /**
+         * Process the recorded audio
+         */
         async processAudio() {
             if (this.audioChunks.length === 0) {
                 return;
             }
 
             this.isProcessingAudio = true;
+            this.clearError();
 
             try {
-                // Create audio blob
+                // Create audio blob and form data
                 const audioBlob = new Blob(this.audioChunks, {
                     type: "audio/webm",
                 });
 
-                // Create form data
-                const formData = new FormData();
-                formData.append("audio", audioBlob, "recording.webm");
+                const formData = this.createAudioFormData(audioBlob);
 
-                // Add CSRF token to form data as well
-                formData.append("_token", this.csrfToken);
-
-                console.log("Sending audio data, token:", this.csrfToken);
-
-                // Send to server for processing with explicit CSRF and credentials
-                const response = await axios.post(
-                    "/api/speech-to-tasks",
-                    formData,
-                    {
-                        headers: {
-                            "X-CSRF-TOKEN": this.csrfToken,
-                            "Content-Type": "multipart/form-data",
-                            "X-Requested-With": "XMLHttpRequest",
-                        },
-                        withCredentials: true,
-                    },
-                );
+                // Send to server for processing
+                const response = await this.sendAudioForProcessing(formData);
 
                 // Handle response
-                if (response.data && response.data.success) {
-                    // If tasks were created
-                    if (response.data.tasks && response.data.tasks.length > 0) {
-                        this.$emit("multiple-tasks-added", response.data.tasks);
-                        this.taskTitle = ""; // Clear input field
-                    }
-                    // If only text was returned
-                    else if (response.data.text) {
-                        this.taskTitle = response.data.text;
-                    }
-                } else {
-                    throw new Error(
-                        response.data.message || "音声処理に失敗しました",
-                    );
-                }
+                this.handleAudioProcessingResponse(response);
             } catch (error) {
-                console.error("Error processing audio:", error);
-                this.errorMessage =
-                    error.response?.data?.message ||
-                    "音声処理中にエラーが発生しました";
-                setTimeout(() => {
-                    this.errorMessage = "";
-                }, 5000);
+                this.handleError("音声処理中にエラーが発生しました", error);
             } finally {
                 this.isProcessingAudio = false;
                 this.audioChunks = [];
             }
         },
 
-        // Compress audio using Web Audio API
-        async compressAudio(audioBlob) {
-            return new Promise(async (resolve, reject) => {
-                try {
-                    // Convert blob to array buffer
-                    const arrayBuffer = await audioBlob.arrayBuffer();
-                    const audioContext = new (window.AudioContext ||
-                        window.webkitAudioContext)();
+        /**
+         * Create form data for audio upload
+         * @param {Blob} audioBlob - The audio blob
+         * @returns {FormData} - The form data
+         */
+        createAudioFormData(audioBlob) {
+            const formData = new FormData();
+            formData.append("audio", audioBlob, "recording.webm");
+            formData.append("_token", this.csrfToken);
+            return formData;
+        },
 
-                    // Decode audio
-                    const audioBuffer =
-                        await audioContext.decodeAudioData(arrayBuffer);
-
-                    // Create offline context for processing
-                    const offlineContext = new OfflineAudioContext(
-                        1, // mono
-                        audioBuffer.length,
-                        22050, // Lower sample rate for compression
-                    );
-
-                    // Create buffer source
-                    const source = offlineContext.createBufferSource();
-                    source.buffer = audioBuffer;
-
-                    // Add compression node
-                    const compressor =
-                        offlineContext.createDynamicsCompressor();
-                    compressor.threshold.value = -50;
-                    compressor.knee.value = 40;
-                    compressor.ratio.value = 12;
-                    compressor.attack.value = 0;
-                    compressor.release.value = 0.25;
-
-                    // Connect nodes
-                    source.connect(compressor);
-                    compressor.connect(offlineContext.destination);
-
-                    // Start source and render
-                    source.start(0);
-                    const renderedBuffer =
-                        await offlineContext.startRendering();
-
-                    // Convert buffer to wav
-                    const wavBlob = this.bufferToWav(renderedBuffer);
-                    resolve(wavBlob);
-                } catch (error) {
-                    console.error("Audio compression error:", error);
-                    // If compression fails, return original blob
-                    resolve(audioBlob);
-                }
+        /**
+         * Send audio to server for processing
+         * @param {FormData} formData - The form data
+         * @returns {Promise} - API response
+         */
+        async sendAudioForProcessing(formData) {
+            return axios.post("/api/speech-to-tasks", formData, {
+                headers: {
+                    "X-CSRF-TOKEN": this.csrfToken,
+                    "Content-Type": "multipart/form-data",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                withCredentials: true,
             });
         },
 
-        // Convert audio buffer to WAV format
-        bufferToWav(buffer) {
-            const numOfChannels = buffer.numberOfChannels;
-            const length = buffer.length * numOfChannels * 2;
-            const sampleRate = buffer.sampleRate;
-
-            // Create buffer with WAV header
-            const arrayBuffer = new ArrayBuffer(44 + length);
-            const view = new DataView(arrayBuffer);
-
-            // WAV header - 44 bytes
-            // "RIFF" chunk descriptor
-            this.writeString(view, 0, "RIFF");
-            view.setUint32(4, 36 + length, true);
-            this.writeString(view, 8, "WAVE");
-
-            // "fmt " sub-chunk
-            this.writeString(view, 12, "fmt ");
-            view.setUint32(16, 16, true); // subchunk1size
-            view.setUint16(20, 1, true); // audio format (PCM)
-            view.setUint16(22, numOfChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * numOfChannels * 2, true); // byte rate
-            view.setUint16(32, numOfChannels * 2, true); // block align
-            view.setUint16(34, 16, true); // bits per sample
-
-            // "data" sub-chunk
-            this.writeString(view, 36, "data");
-            view.setUint32(40, length, true);
-
-            // Write the PCM samples
-            const dataOffset = 44;
-            let offset = 0;
-
-            for (let i = 0; i < buffer.length; i++) {
-                for (let channel = 0; channel < numOfChannels; channel++) {
-                    const sample = Math.max(
-                        -1,
-                        Math.min(1, buffer.getChannelData(channel)[i]),
-                    );
-                    const val = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
-                    view.setInt16(dataOffset + offset, val, true);
-                    offset += 2;
-                }
+        /**
+         * Handle audio processing response
+         * @param {Object} response - API response
+         */
+        handleAudioProcessingResponse(response) {
+            if (!response.data || !response.data.success) {
+                throw new Error(
+                    response.data?.message || "音声処理に失敗しました",
+                );
             }
 
-            return new Blob([view], { type: "audio/wav" });
+            // If tasks were created in background
+            if (response.data.background) {
+                this.showTemporaryMessage(
+                    "音声を処理中です。タスクは自動的に追加されます。",
+                );
+                return;
+            }
+
+            // If tasks were created
+            if (response.data.tasks && response.data.tasks.length > 0) {
+                this.$emit("multiple-tasks-added", response.data.tasks);
+                this.resetForm();
+            }
+            // If only text was returned
+            else if (response.data.text) {
+                this.taskTitle = response.data.text;
+            }
         },
 
-        // Helper for writing strings to DataView
-        writeString(view, offset, string) {
-            for (let i = 0; i < string.length; i++) {
-                view.setUint8(offset + i, string.charCodeAt(i));
-            }
+        /**
+         * Reset form after successful submission
+         */
+        resetForm() {
+            this.taskTitle = "";
+            this.$refs.inputField.focus();
+        },
+
+        /**
+         * Show error message to user
+         * @param {string} message - Error message
+         * @param {Error} error - Error object for logging
+         */
+        handleError(message, error = null) {
+            if (error) console.error(message, error);
+            this.showTemporaryMessage(message, 5000);
+        },
+
+        /**
+         * Show a temporary message and clear it after a delay
+         * @param {string} message - Message to display
+         * @param {number} duration - Duration in milliseconds
+         */
+        showTemporaryMessage(message, duration = 3000) {
+            this.errorMessage = message;
+            setTimeout(() => {
+                this.clearError();
+            }, duration);
+        },
+
+        /**
+         * Clear error message
+         */
+        clearError() {
+            this.errorMessage = "";
         },
     },
 };
