@@ -24,7 +24,6 @@ class User extends Authenticatable
         "subscription_id",
         "morning_reminder_time",
         "evening_reminder_time",
-        "slack_webhook_url",
         "line_notify_token",
     ];
 
@@ -75,22 +74,8 @@ class User extends Authenticatable
     }
 
     /**
-     * Route notifications for the Slack channel.
+     * Route notifications for the Line channel.
      */
-    public function routeNotificationForSlack()
-    {
-        if (!empty($this->slack_webhook_url)) {
-            Log::info("Routing notification to Slack webhook", [
-                "user_id" => $this->id,
-                "webhook" => substr($this->slack_webhook_url, 0, 15) . "...",
-            ]);
-            return $this->slack_webhook_url;
-        }
-
-        Log::warning("No Slack webhook URL configured for user {$this->id}");
-        return null;
-    }
-
     public function routeNotificationForLine()
     {
         return $this->line_notify_token;

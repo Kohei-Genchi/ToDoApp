@@ -62,9 +62,7 @@
         </div>
 
 
-        {{-- Complete replacement for update-profile-information-form.blade.php reminders section --}}
-
-        {{-- Complete replacement for update-profile-information-form.blade.php reminders section --}}
+        {{-- リマインダー設定セクション --}}
 
         <div class="mt-6 border-t border-gray-200 pt-4">
             <h3 class="text-lg font-medium text-gray-900 mb-2">
@@ -106,15 +104,13 @@
                 <p class="mt-1 text-sm text-gray-600">翌日のタスク入力忘れを防止するリマインダーです。</p>
                 <x-input-error class="mt-1" :messages="$errors->get('evening_reminder_time')" />
             </div>
-            <!-- resources/views/profile/partials/update-profile-information-form.blade.php -->
-            <!-- Add this inside the form, after the Slack section -->
 
             <div class="mt-4">
                 <h3 class="text-base font-medium text-gray-900 mb-2">
                     {{ __('Line Notify設定') }}
                 </h3>
                 <div class="mt-3">
-                    <x-input-label for="line_notify_token" :value="__('Line Notify Token (任意)')" />
+                    <x-input-label for="line_notify_token" :value="__('Line Notify Token')" />
                     <x-text-input
                         id="line_notify_token"
                         name="line_notify_token"
@@ -124,36 +120,12 @@
                         placeholder="Line Notify personal access token"
                     />
                     <p class="mt-1 text-sm text-gray-600">
-                        リマインダーをLineに送信する場合は、Line Notify トークンを入力してください。
+                        リマインダーや承認通知をLineに送信するには、Line Notify トークンを入力してください。
                         <a href="https://notify-bot.line.me/my/" target="_blank" class="text-blue-600 hover:underline">
                             Line Notify トークンの取得方法
                         </a>
                     </p>
                     <x-input-error class="mt-1" :messages="$errors->get('line_notify_token')" />
-                </div>
-            </div>
-
-            <div class="mt-4">
-                <h3 class="text-base font-medium text-gray-900 mb-2">
-                    {{ __('Slack通知設定') }}
-                </h3>
-                <div class="mt-3">
-                    <x-input-label for="slack_webhook_url" :value="__('Slack Webhook URL (任意)')" />
-                    <x-text-input
-                        id="slack_webhook_url"
-                        name="slack_webhook_url"
-                        type="text"
-                        class="mt-1 block w-full"
-                        :value="old('slack_webhook_url', $user->slack_webhook_url)"
-                        placeholder="https://hooks.slack.com/services/..."
-                    />
-                    <p class="mt-1 text-sm text-gray-600">
-                        リマインダーをSlackに送信する場合は、Incoming Webhook URLを入力してください。
-                        <a href="https://api.slack.com/messaging/webhooks" target="_blank" class="text-blue-600 hover:underline">
-                            Slack Incoming Webhooksについて
-                        </a>
-                    </p>
-                    <x-input-error class="mt-1" :messages="$errors->get('slack_webhook_url')" />
                 </div>
             </div>
         </div>

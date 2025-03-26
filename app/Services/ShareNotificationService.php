@@ -49,7 +49,7 @@ class ShareNotificationService
             $rejectUrl
         );
 
-        // Try Line notification first if the user has a Line token
+        // Send notification via Line if the user has a Line token
         if ($recipient->line_notify_token) {
             $success = $this->sendLineNotification($recipient, $message);
             if ($success) {
@@ -57,15 +57,7 @@ class ShareNotificationService
             }
         }
 
-        // Fall back to Slack if Line fails or isn't configured
-        if ($recipient->slack_webhook_url) {
-            $success = $this->sendSlackNotification($recipient, $message);
-            if ($success) {
-                return true;
-            }
-        }
-
-        // Both Line and Slack failed or weren't configured
+        // No valid notification channels configured
         Log::warning(
             "Failed to send category share request notification to {$recipient->email}. No valid notification channels configured."
         );
@@ -112,26 +104,6 @@ class ShareNotificationService
             );
         } catch (\Exception $e) {
             Log::error("Line notification error: " . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Send a notification through Slack webhook
-     */
-    protected function sendSlackNotification(User $user, string $message): bool
-    {
-        try {
-            $client = new \GuzzleHttp\Client();
-            $response = $client->post($user->slack_webhook_url, [
-                "json" => [
-                    "text" => $message,
-                ],
-            ]);
-
-            return $response->getStatusCode() === 200;
-        } catch (\Exception $e) {
-            Log::error("Slack notification error: " . $e->getMessage());
             return false;
         }
     }

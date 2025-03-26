@@ -7,21 +7,24 @@ use App\Models\ShareRequest;
 use App\Models\Todo;
 use App\Models\User;
 use App\Models\Category;
-use App\Services\ShareNotificationService;
+use App\Notifications\ShareNotification;
+use App\Services\LineNotifyService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\URL;
 
 class ShareRequestsController extends Controller
 {
-    protected $notificationService;
+    protected $lineNotifyService;
 
-    public function __construct(ShareNotificationService $notificationService)
+    public function __construct(LineNotifyService $lineNotifyService)
     {
-        $this->notificationService = $notificationService;
+        $this->lineNotifyService = $lineNotifyService;
     }
 
     /**
@@ -212,13 +215,32 @@ class ShareRequestsController extends Controller
 
             $shareRequest->save();
 
-            // Send notification
-            $notificationSent = $this->notificationService->sendCategoryShareRequestNotification(
-                $recipientUser,
-                Auth::user(),
-                $shareRequest,
-                $category
-            );
+            // Send notification through Line Notify if available
+            $notificationSent = false;
+
+            if ($recipientUser->line_notify_token) {
+                // Use the notification system
+                $recipientUser->notify(
+                    new ShareNotification(
+                        $shareRequest,
+                        Auth::user()->name,
+                        $category->name,
+                        "カテゴリー"
+                    )
+                );
+                $notificationSent = true;
+            } elseif ($recipientUser->email) {
+                // Fallback to email notification
+                $recipientUser->notify(
+                    new ShareNotification(
+                        $shareRequest,
+                        Auth::user()->name,
+                        $category->name,
+                        "カテゴリー"
+                    )
+                );
+                $notificationSent = true;
+            }
 
             if (!$notificationSent) {
                 Log::warning(

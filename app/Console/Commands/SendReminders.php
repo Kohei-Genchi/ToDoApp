@@ -7,6 +7,7 @@ use App\Notifications\TaskReminder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Notification;
 
 class SendReminders extends Command
 {
@@ -137,10 +138,12 @@ class SendReminders extends Command
                 }
             }
 
-            // Only send if user has an email and has relevant tasks
+            // Only send if user has an email or Line token and has relevant tasks
             $shouldSend = false;
             if ($type === "morning") {
-                $shouldSend = $user->email && $pendingTasks->count() > 0;
+                $shouldSend =
+                    ($user->email || $user->line_notify_token) &&
+                    $pendingTasks->count() > 0;
             } else {
                 // evening
                 $shouldSend =
@@ -159,45 +162,21 @@ class SendReminders extends Command
 
                     $notification = new TaskReminder($message, $pendingCount);
 
-                    $notificationSent = false;
+                    // Send notification (will use Line if token is available, otherwise email)
+                    $user->notify($notification);
 
-                    // Send Line notification if configured
-                    if (!empty($user->line_notify_token)) {
-                        $lineResult = $notification->sendToLine($user);
-                        if ($lineResult[0]) {
-                            $notificationSent = true;
-                            $this->info(
-                                "Sent Line notification to user {$user->id}"
-                            );
-                        } else {
-                            $this->error(
-                                "Error sending Line notification to user {$user->id}"
-                            );
-                        }
+                    // Log the notification
+                    if ($user->line_notify_token) {
+                        $this->info(
+                            "Sent Line notification to user {$user->id}"
+                        );
+                    } else {
+                        $this->info(
+                            "Sent email notification to user {$user->id}"
+                        );
                     }
 
-                    // Send Slack notification if configured
-                    if (!empty($user->slack_webhook_url)) {
-                        $slackResult = $notification->sendToSlack($user);
-                        if ($slackResult[0]) {
-                            $notificationSent = true;
-                            $this->info("Sent Slack notification to user {$user->id}");
-                        } else {
-                            $this->error("Error sending Slack notification to user {$user->id}");
-                        }
-                    }
-
-                    // Use the regular notification system if no direct notifications were sent
-                    if (!$notificationSent && $user->email) {
-                        $user->notify($notification);
-                        $notificationSent = true;
-                        $this->info("Sent email notification to user {$user->id}");
-                    }
-
-                    // Increment count if any notification was sent
-                    if ($notificationSent) {
-                        $count++;
-                    }
+                    $count++;
 
                     // Store the time this notification was sent
                     Cache::put($cacheKey, now(), 60); // Store for 60 minutes
