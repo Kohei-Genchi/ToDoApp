@@ -85,15 +85,24 @@
                 </div>
                 <div class="mt-2">
                     <div class="flex items-center mb-2">
-                        <input
-                            type="checkbox"
-                            id="line-auth-required"
-                            v-model="lineAuthRequired"
-                            class="mr-2"
-                        />
-                        <label for="line-auth-required" class="text-sm">
-                            LINE認証を必須にする
-                        </label>
+                        <div class="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="line-auth-required"
+                                v-model="lineAuthRequired"
+                                class="mr-2"
+                                disabled
+                                checked
+                            />
+                            <label for="line-auth-required" class="text-sm">
+                                LINE認証を必須にする（必須）
+                            </label>
+                        </div>
+                        <div class="ml-2 text-xs text-gray-500">
+                            <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                カテゴリー共有にはLINE認証が必要です
+                            </span>
+                        </div>
                     </div>
                     <button
                         @click="shareCategory"
@@ -146,7 +155,7 @@ export default {
         const sharedUsers = ref([]);
         const shareEmail = ref("");
         const sharePermission = ref("view");
-        const lineAuthRequired = ref(true); // LINE認証をデフォルトで必須に
+        const lineAuthRequired = ref(true); // LINE認証は常に必須
         const isSubmitting = ref(false);
         const errorMessage = ref("");
 
@@ -194,7 +203,7 @@ export default {
                     {
                         email: shareEmail.value,
                         permission: sharePermission.value,
-                        line_auth_required: lineAuthRequired.value,
+                        line_auth_required: true, // LINE認証は常に必須
                     },
                     {
                         headers: {
@@ -208,11 +217,7 @@ export default {
                     // フォームをリセット
                     shareEmail.value = "";
                     // 成功メッセージを表示
-                    alert(
-                        lineAuthRequired.value
-                            ? "カテゴリー共有リクエストが送信されました。相手はLINEで承認する必要があります。"
-                            : "カテゴリーが共有されました",
-                    );
+                    alert("カテゴリー共有リクエストが送信されました。相手はLINEで承認する必要があります。");
                     // 共有ユーザー一覧を再読み込み
                     loadSharedUsers();
                 } else {

@@ -14,15 +14,9 @@
             @previous-day="previousDay"
             @next-day="nextDay"
             @go-to-today="goToToday"
-            @open-global-share="openGlobalShareModal"
         />
 
-        <!-- Global share modal -->
-        <task-share-modal
-            v-if="showGlobalShareModal"
-            :task="selectedGlobalTask"
-            @close="handleGlobalShareModalClose"
-        />
+        <!-- Category sharing is now handled through the dedicated SharedCategoriesView component -->
 
         <!-- Calendar as a table -->
         <div class="w-full overflow-y-auto max-h-[85vh]">
@@ -146,8 +140,7 @@ import TaskCell from "./calendar/TaskCell.vue";
 import HeaderNavigation from "./calendar/HeaderNavigation.vue";
 import LoadingIndicator from "./common/LoadingIndicator.vue";
 import TodoApi from "../api/todo";
-import TaskShareApi from "../api/taskShare";
-import GlobalShareApi from "../api/globalShare";
+import axios from "axios";
 
 // Constants
 const HOURS_IN_DAY = 24;
@@ -174,7 +167,7 @@ export default {
         // Tasks and categories
         const sharedTasks = ref([]);
         const categories = ref([]);
-        const globalShares = ref([]);
+        const sharedCategories = ref([]);
 
         // UI state
         const isLoading = ref(true);
@@ -185,8 +178,8 @@ export default {
         const taskModalMode = ref("edit");
         const selectedTaskId = ref(null);
         const selectedTaskData = ref(null);
-        const showGlobalShareModal = ref(false);
-        const selectedGlobalTask = ref(null);
+        const showCategoryShareModal = ref(false);
+        const selectedCategory = ref(null);
 
         // Time tracking for indicator
         const currentMinute = ref(new Date().getMinutes());
@@ -357,7 +350,8 @@ export default {
 
             try {
                 await initializeCurrentUser();
-                await loadGlobalShares();
+                // We don't need to explicitly call loadSharedCategories here
+                // as it's called inside buildSharedUsersList
                 await buildSharedUsersList();
                 await loadAllTasksData();
             } catch (error) {
@@ -381,16 +375,24 @@ export default {
             }
         }
 
-        // Load global shares
-        async function loadGlobalShares() {
+        // Load shared categories
+        async function loadSharedCategories() {
             try {
-                const response = await GlobalShareApi.getGlobalShares();
-                globalShares.value = Array.isArray(response.data)
-                    ? response.data
-                    : [];
+                const response = await axios.get("/api/shared-categories", {
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                });
+
+                // Store the shared categories
+                const categories = Array.isArray(response.data) ? response.data : [];
+
+                // We'll use this to build the list of users who share categories with us
+                return categories;
             } catch (error) {
-                console.error("Global share loading error:", error);
-                globalShares.value = [];
+                console.error("Shared categories loading error:", error);
+                return [];
             }
         }
 
@@ -408,58 +410,34 @@ export default {
                 });
             }
 
-            // Add individually shared users
-            await addIndividuallySharedUsers(allSharedUsers);
-
-            // Add globally shared users
-            addGlobalSharedUsers(allSharedUsers);
+            // Add users from shared categories
+            await addSharedCategoryUsers(allSharedUsers);
 
             // Update the shared users state
             sharedUsers.value = Array.from(allSharedUsers.values());
         }
 
-        // Add individually shared users
-        async function addIndividuallySharedUsers(userMap) {
+        // Add users from shared categories
+        async function addSharedCategoryUsers(userMap) {
             try {
-                const response = await TaskShareApi.getSharedWithMe();
-                if (response && Array.isArray(response.data)) {
-                    response.data.forEach((task) => {
-                        if (task.user && !userMap.has(task.user.id)) {
-                            userMap.set(task.user.id, {
-                                id: task.user.id,
-                                name: task.user.name,
-                                email: task.user.email,
-                                individuallyShared: true,
-                            });
-                        }
-                    });
-                }
+                // Get shared categories
+                const sharedCategories = await loadSharedCategories();
+
+                // Add users who own the shared categories
+                sharedCategories.forEach((category) => {
+                    if (category.user && !userMap.has(category.user.id)) {
+                        userMap.set(category.user.id, {
+                            id: category.user.id,
+                            name: category.user.name,
+                            email: category.user.email,
+                            categoryShared: true,
+                            categoryPermission: category.pivot?.permission || "view",
+                        });
+                    }
+                });
             } catch (error) {
-                console.error("Individual share loading error:", error);
+                console.error("Shared category users loading error:", error);
             }
-        }
-
-        // Add globally shared users
-        function addGlobalSharedUsers(userMap) {
-            if (!globalShares.value || globalShares.value.length === 0) return;
-
-            globalShares.value.forEach((share) => {
-                const userId = Number(share.user_id);
-                if (!userMap.has(userId)) {
-                    userMap.set(userId, {
-                        id: userId,
-                        name: share.name || "User " + userId,
-                        email: share.email || "",
-                        isGlobalShare: true,
-                        globalSharePermission: share.permission || "view",
-                    });
-                } else {
-                    const user = userMap.get(userId);
-                    user.isGlobalShare = true;
-                    user.globalSharePermission = share.permission || "view";
-                    userMap.set(userId, user);
-                }
-            });
         }
 
         // Load all task data
@@ -484,33 +462,24 @@ export default {
         async function fetchAllTasks() {
             let allTasks = [];
 
-            // 1. Get individually shared tasks
+            // 1. Get tasks from shared categories
             try {
-                const response = await TaskShareApi.getSharedWithMe();
+                const response = await axios.get("/api/shared-categories/tasks", {
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                });
                 if (response && Array.isArray(response.data)) {
-                    allTasks = [...response.data];
-                }
-            } catch (error) {
-                console.error("Individual shared task loading error:", error);
-            }
-
-            // 2. Get globally shared tasks
-            try {
-                const response = await GlobalShareApi.getGloballySharedWithMe();
-                if (response && Array.isArray(response.data)) {
-                    const globalTasks = response.data.map((task) => ({
+                    const categoryTasks = response.data.map((task) => ({
                         ...task,
-                        isGloballyShared: true,
+                        isSharedCategory: true,
                     }));
-                    allTasks = [...allTasks, ...globalTasks];
+                    allTasks = [...allTasks, ...categoryTasks];
                 }
             } catch (error) {
-                console.error("Global shared task loading error:", error);
+                console.error("Shared category tasks loading error:", error);
             }
-
-            // 3. Get globally shared user tasks
-            const globalUserTasks = await fetchGlobalUserTasks();
-            allTasks = [...allTasks, ...globalUserTasks];
 
             // 4. Get current user's tasks
             if (currentUserId.value) {
@@ -531,46 +500,7 @@ export default {
             return allTasks;
         }
 
-        // Fetch tasks from globally shared users
-        async function fetchGlobalUserTasks() {
-            let tasks = [];
-
-            if (!globalShares.value.length) return tasks;
-
-            const userIds = globalShares.value.map((share) =>
-                typeof share.user_id === "string"
-                    ? parseInt(share.user_id, 10)
-                    : share.user_id,
-            );
-
-            for (const userId of userIds) {
-                try {
-                    const response = await TodoApi.getTasks({
-                        view: "date",
-                        date: currentDate.value,
-                        user_id: userId,
-                    });
-
-                    if (response && Array.isArray(response.data)) {
-                        const userTasks = response.data.map((task) => ({
-                            ...task,
-                            isGloballyShared: true,
-                            ownerInfo: `Shared by ${
-                                globalShares.value.find(
-                                    (share) =>
-                                        parseInt(share.user_id, 10) === userId,
-                                )?.name || "User " + userId
-                            }`,
-                        }));
-                        tasks = [...tasks, ...userTasks];
-                    }
-                } catch (error) {
-                    console.error(`User ${userId} task loading error:`, error);
-                }
-            }
-
-            return tasks;
-        }
+        // Global sharing has been deprecated in favor of category sharing
 
         // Scroll to current time
         function scrollToCurrentTime() {
@@ -612,27 +542,7 @@ export default {
             }
         }
 
-        // Open global share modal
-        function openGlobalShareModal() {
-            selectedGlobalTask.value = {
-                id: "global-share",
-                title: "全てのタスク",
-                isGlobalShare: true,
-            };
-            showGlobalShareModal.value = true;
-        }
-
-        // Handle global share modal close
-        function handleGlobalShareModalClose(data) {
-            showGlobalShareModal.value = false;
-
-            if (data?.sharedUsers && Array.isArray(data.sharedUsers)) {
-                updateSharedUsersList(data.sharedUsers);
-            }
-
-            loadSharedTasks();
-            loadGlobalShares();
-        }
+        // Global sharing has been deprecated in favor of category sharing
 
         // Update shared users list
         function updateSharedUsersList(newUsers) {
@@ -811,24 +721,17 @@ export default {
                 updateCurrentTime();
             }, 60000); // Update every minute
 
-            // Load data
-            Promise.all([
-                loadGlobalShares().catch((e) =>
-                    console.error("Global share load error:", e),
-                ),
-                // Add other initialization if needed
-            ]).then(() => {
-                setTimeout(() => {
-                    loadSharedTasks().finally(() => {
-                        initialLoading.value = false;
+            // Load data directly
+            setTimeout(() => {
+                loadSharedTasks().finally(() => {
+                    initialLoading.value = false;
 
-                        // Multiple scroll attempts for better reliability
-                        scrollToCurrentTime();
-                        setTimeout(() => scrollToCurrentTime(), 300);
-                        setTimeout(() => scrollToCurrentTime(), 1000);
-                    });
-                }, 100);
-            });
+                    // Multiple scroll attempts for better reliability
+                    scrollToCurrentTime();
+                    setTimeout(() => scrollToCurrentTime(), 300);
+                    setTimeout(() => scrollToCurrentTime(), 1000);
+                });
+            }, 100);
         });
 
         onBeforeUnmount(() => {
@@ -850,21 +753,19 @@ export default {
             selectedTaskId,
             selectedTaskData,
             categories,
-            globalShares,
+            sharedCategories,
             initialLoading,
-            showGlobalShareModal,
-            selectedGlobalTask,
+            showCategoryShareModal,
+            selectedCategory,
             currentUserId,
             currentMinute,
             userColumnStyle,
 
             // Methods
-            openGlobalShareModal,
             onEditTask,
             closeTaskModal,
             submitTask,
             handleTaskDelete,
-            handleGlobalShareModalClose,
             onUpdateTaskStatus,
             scrollToCurrentTime,
             previousDay,

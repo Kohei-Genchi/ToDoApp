@@ -73,12 +73,31 @@ class ShareNotificationService
     }
 
     /**
-     * Send a notification about a global share request
+     * Send a notification about a global share request - Deprecated in favor of category sharing
      */
     public function sendGlobalShareRequestNotification(
         User $recipient,
         User $requester,
         ShareRequest $shareRequest
+    ): bool {
+        Log::warning("Global share request notification is deprecated. Using category sharing instead.");
+        return false;
+    }
+
+    /**
+     * Send a notification about a category share request
+     *
+     * @param User $recipient The user receiving the share request
+     * @param User $requester The user making the share request
+     * @param ShareRequest $shareRequest The share request object
+     * @param Category $category The category being shared
+     * @return bool Whether the notification was sent successfully
+     */
+    public function sendCategoryShareRequestNotification(
+        User $recipient,
+        User $requester,
+        ShareRequest $shareRequest,
+        $category
     ): bool {
         // Generate approve and reject URLs
         $approveUrl = URL::signedRoute("share-requests.approve", [
@@ -89,8 +108,9 @@ class ShareNotificationService
         ]);
 
         // Create the message
-        $message = $this->buildGlobalShareRequestMessage(
+        $message = $this->buildCategoryShareRequestMessage(
             $requester,
+            $category,
             $shareRequest,
             $approveUrl,
             $rejectUrl
@@ -114,7 +134,7 @@ class ShareNotificationService
 
         // Both Line and Slack failed or weren't configured
         Log::warning(
-            "Failed to send global share request notification to {$recipient->email}. No valid notification channels configured."
+            "Failed to send category share request notification to {$recipient->email}. No valid notification channels configured."
         );
         return false;
     }
@@ -148,7 +168,7 @@ class ShareNotificationService
     }
 
     /**
-     * Build the message for a global share request
+     * Build the message for a global share request - Deprecated
      */
     protected function buildGlobalShareRequestMessage(
         User $requester,
@@ -156,11 +176,25 @@ class ShareNotificationService
         string $approveUrl,
         string $rejectUrl
     ): string {
+        return "Global sharing is deprecated. Please use category sharing instead.";
+    }
+
+    /**
+     * Build the message for a category share request
+     */
+    protected function buildCategoryShareRequestMessage(
+        User $requester,
+        $category,
+        ShareRequest $shareRequest,
+        string $approveUrl,
+        string $rejectUrl
+    ): string {
         $permissionText =
             $shareRequest->permission === "edit" ? "編集可能" : "閲覧のみ";
 
-        $message = "\n【全てのタスク共有リクエスト】\n\n";
-        $message .= "{$requester->name}さんが全てのタスクを共有しようとしています。\n\n";
+        $message = "\n【カテゴリー共有リクエスト】\n\n";
+        $message .= "{$requester->name}さんがカテゴリー「{$category->name}」を共有しようとしています。\n\n";
+        $message .= "このカテゴリーに属するすべてのタスクが共有されます。\n";
         $message .= "権限: {$permissionText}\n";
         $message .= "有効期限: {$shareRequest->expires_at->format(
             "Y-m-d H:i"

@@ -120,112 +120,15 @@ class ShareRequestsController extends Controller
     }
 
     /**
-     * Create a new task share request
+     * Create a new task share request - Deprecated in favor of category sharing
      */
     public function storeTaskShare(Request $request, Todo $todo): JsonResponse
     {
-        // Validate request
-        $validator = Validator::make($request->all(), [
-            "email" => "required|email|exists:users,email",
-            "permission" => "required|in:view,edit",
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(["errors" => $validator->errors()], 422);
-        }
-
-        // Check if the authenticated user owns this task
-        if ($todo->user_id !== Auth::id()) {
-            return response()->json(["error" => "Unauthorized"], 403);
-        }
-
-        $recipientEmail = $request->input("email");
-        $permission = $request->input("permission");
-
-        // Don't allow sharing with oneself
-        if ($recipientEmail === Auth::user()->email) {
-            return response()->json(
-                ["error" => "Cannot share with yourself"],
-                400
-            );
-        }
-
-        // Create share request
-        try {
-            // Check for existing pending request
-            $existingRequest = ShareRequest::where("user_id", Auth::id())
-                ->where("todo_id", $todo->id)
-                ->where("recipient_email", $recipientEmail)
-                ->where("status", "pending")
-                ->where("expires_at", ">", now())
-                ->first();
-
-            if ($existingRequest) {
-                return response()->json(
-                    [
-                        "message" =>
-                            "A share request has already been sent to this email",
-                        "request_id" => $existingRequest->id,
-                    ],
-                    200
-                );
-            }
-
-            // Get recipient user
-            $recipientUser = User::where("email", $recipientEmail)->first();
-            if (!$recipientUser) {
-                return response()->json(
-                    ["error" => "Recipient user not found"],
-                    404
-                );
-            }
-
-            // Create the share request
-            $shareRequest = new ShareRequest([
-                "user_id" => Auth::id(),
-                "todo_id" => $todo->id,
-                "recipient_email" => $recipientEmail,
-                "token" => ShareRequest::generateToken(),
-                "share_type" => "task",
-                "permission" => $permission,
-                "expires_at" => Carbon::now()->addDays(7),
-            ]);
-
-            $shareRequest->save();
-
-            // Send notification
-            $notificationSent = $this->notificationService->sendShareRequestNotification(
-                $recipientUser,
-                Auth::user(),
-                $shareRequest,
-                $todo
-            );
-
-            if (!$notificationSent) {
-                Log::warning(
-                    "Failed to send notification for share request: " .
-                        $shareRequest->id
-                );
-            }
-
-            return response()->json(
-                [
-                    "success" => true,
-                    "message" => "Task share request has been sent",
-                    "request_id" => $shareRequest->id,
-                ],
-                201
-            );
-        } catch (\Exception $e) {
-            Log::error("Error creating share request: " . $e->getMessage());
-            return response()->json(
-                [
-                    "error" =>
-                        "Failed to create share request: " . $e->getMessage(),
-                ],
-                500
-            );
-        }
+        // Return a message indicating that individual task sharing is deprecated
+        return response()->json([
+            "error" => "個別タスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
     }
 
     /**
@@ -344,112 +247,15 @@ class ShareRequestsController extends Controller
     }
 
     /**
-     * Create a new global share request
+     * Create a new global share request - Deprecated in favor of category sharing
      */
     public function storeGlobalShare(Request $request): JsonResponse
     {
-        // Validate request
-        $validator = Validator::make($request->all(), [
-            "email" => "required|email|exists:users,email",
-            "permission" => "required|in:view,edit",
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(["errors" => $validator->errors()], 422);
-        }
-
-        $recipientEmail = $request->input("email");
-        $permission = $request->input("permission");
-
-        // Don't allow sharing with oneself
-        if ($recipientEmail === Auth::user()->email) {
-            return response()->json(
-                ["error" => "Cannot share with yourself"],
-                400
-            );
-        }
-
-        // Create share request
-        try {
-            // Check for existing pending request
-            $existingRequest = ShareRequest::where("user_id", Auth::id())
-                ->whereNull("todo_id")
-                ->whereNull("category_id")
-                ->where("share_type", "global")
-                ->where("recipient_email", $recipientEmail)
-                ->where("status", "pending")
-                ->where("expires_at", ">", now())
-                ->first();
-
-            if ($existingRequest) {
-                return response()->json(
-                    [
-                        "message" =>
-                            "A global share request has already been sent to this email",
-                        "request_id" => $existingRequest->id,
-                    ],
-                    200
-                );
-            }
-
-            // Get recipient user
-            $recipientUser = User::where("email", $recipientEmail)->first();
-            if (!$recipientUser) {
-                return response()->json(
-                    ["error" => "Recipient user not found"],
-                    404
-                );
-            }
-
-            // Create the share request
-            $shareRequest = new ShareRequest([
-                "user_id" => Auth::id(),
-                "todo_id" => null,
-                "category_id" => null,
-                "recipient_email" => $recipientEmail,
-                "token" => ShareRequest::generateToken(),
-                "share_type" => "global",
-                "permission" => $permission,
-                "expires_at" => Carbon::now()->addDays(7),
-            ]);
-
-            $shareRequest->save();
-
-            // Send notification
-            $notificationSent = $this->notificationService->sendGlobalShareRequestNotification(
-                $recipientUser,
-                Auth::user(),
-                $shareRequest
-            );
-
-            if (!$notificationSent) {
-                Log::warning(
-                    "Failed to send notification for global share request: " .
-                        $shareRequest->id
-                );
-            }
-
-            return response()->json(
-                [
-                    "success" => true,
-                    "message" => "Global share request has been sent",
-                    "request_id" => $shareRequest->id,
-                ],
-                201
-            );
-        } catch (\Exception $e) {
-            Log::error(
-                "Error creating global share request: " . $e->getMessage()
-            );
-            return response()->json(
-                [
-                    "error" =>
-                        "Failed to create global share request: " .
-                        $e->getMessage(),
-                ],
-                500
-            );
-        }
+        // Return a message indicating that global task sharing is deprecated
+        return response()->json([
+            "error" => "グローバルタスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
     }
 
     /**

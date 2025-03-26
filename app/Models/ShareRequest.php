@@ -102,59 +102,21 @@ class ShareRequest extends Model
     }
 
     /**
-     * Process the task sharing after approval
+     * Process the task sharing after approval - Deprecated in favor of category sharing
      */
     protected function processTaskSharing(): bool
     {
-        try {
-            // Find the recipient user
-            $recipientUser = User::where(
-                "email",
-                $this->recipient_email
-            )->first();
-
-            if (!$recipientUser) {
-                return false;
-            }
-
-            // Share the task with the user
-            $this->todo->shareTo($recipientUser, $this->permission);
-
-            return true;
-        } catch (\Exception $e) {
-            \Log::error("Error processing task sharing: " . $e->getMessage());
-            return false;
-        }
+        \Log::warning("Task sharing is deprecated. Using category sharing instead.");
+        return false;
     }
 
     /**
-     * Process the global sharing after approval
+     * Process the global sharing after approval - Deprecated in favor of category sharing
      */
     protected function processGlobalSharing(): bool
     {
-        try {
-            // Find the recipient user
-            $recipientUser = User::where(
-                "email",
-                $this->recipient_email
-            )->first();
-
-            if (!$recipientUser) {
-                return false;
-            }
-
-            // Create a global share
-            GlobalShare::create([
-                "user_id" => $this->user_id,
-                "shared_with_user_id" => $recipientUser->id,
-                "permission" => $this->permission,
-            ]);
-
-            return true;
-        } catch (\Exception $e) {
-            \Log::error("Error processing global sharing: " . $e->getMessage());
-            return false;
-        }
+        \Log::warning("Global sharing is deprecated. Using category sharing instead.");
+        return false;
     }
 
     /**

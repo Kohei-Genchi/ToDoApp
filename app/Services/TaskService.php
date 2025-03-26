@@ -155,6 +155,18 @@ class TaskService
                 ->with(["category", "user"]);
         }
 
+        // Check category sharing
+        $sharedCategoryIds = $user
+            ->sharedCategories()
+            ->where("user_id", $userId)
+            ->pluck("categories.id");
+
+        if ($sharedCategoryIds->isNotEmpty()) {
+            return Todo::where("user_id", $userId)
+                ->whereIn("category_id", $sharedCategoryIds)
+                ->with(["category", "user"]);
+        }
+
         // Default to current user's tasks if no access to requested user
         Log::warning(
             "User {$currentUserId} attempted to access tasks of user {$userId} without permission"

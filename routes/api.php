@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\TaskShareController;
 use App\Http\Controllers\Api\MemoApiController;
 use App\Http\Controllers\Api\GlobalShareController;
+use App\Http\Controllers\Api\CategoryShareController;
 use App\Http\Controllers\StripSubscriptionController;
 
 /**
@@ -23,10 +24,9 @@ Route::middleware(["auth:sanctum"])->group(function () {
         "index",
     ]);
 
-    // routes/api.php に追加するコード
-
     /**
      * カテゴリー共有 API ルート
+     * カテゴリー単位でのタスク共有を実装し、グローバルタスク共有と個別タスク共有を廃止
      */
     Route::middleware(["web"])->group(function () {
         // カテゴリー共有ユーザー一覧の取得
@@ -35,7 +35,7 @@ Route::middleware(["auth:sanctum"])->group(function () {
             "index",
         ]);
 
-        // カテゴリーを特定のユーザーと共有
+        // カテゴリーを特定のユーザーと共有 (LINE認証必須)
         Route::post("/categories/{category}/shares", [
             CategoryShareController::class,
             "store",
@@ -153,23 +153,41 @@ Route::prefix("todos")
 /**
  * Task sharing API routes - Fixed to match the client's expected URLs
  */
+// 個別タスク共有は廃止され、カテゴリー共有に置き換えられました
 Route::middleware(["web"])->group(function () {
-    // Get users with whom a task is shared
-    Route::get("/tasks/{todo}/shares", [TaskShareController::class, "index"]);
-    // Share a task with a user
-    Route::post("/tasks/{todo}/shares", [TaskShareController::class, "store"]);
-    // Update sharing permission for a user
-    Route::put("/tasks/{todo}/shares/{user}", [
-        TaskShareController::class,
-        "update",
-    ]);
-    // Stop sharing a task with a user
-    Route::delete("/tasks/{todo}/shares/{user}", [
-        TaskShareController::class,
-        "destroy",
-    ]);
-    // Get tasks shared with me
-    Route::get("/shared-with-me", [TaskShareController::class, "sharedWithMe"]);
+    // 廃止されたエンドポイントへのアクセスを処理
+    Route::get("/tasks/{todo}/shares", function() {
+        return response()->json([
+            "error" => "個別タスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
+    });
+
+    Route::post("/tasks/{todo}/shares", function() {
+        return response()->json([
+            "error" => "個別タスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
+    });
+
+    Route::put("/tasks/{todo}/shares/{user}", function() {
+        return response()->json([
+            "error" => "個別タスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
+    });
+
+    Route::delete("/tasks/{todo}/shares/{user}", function() {
+        return response()->json([
+            "error" => "個別タスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
+    });
+
+    // 共有タスク一覧は共有カテゴリーのタスク一覧にリダイレクト
+    Route::get("/shared-with-me", function() {
+        return redirect("/api/shared-categories/tasks");
+    });
 });
 
 /**
@@ -188,30 +206,41 @@ Route::prefix("categories")
         Route::delete("/{category}", [CategoryApiController::class, "destroy"]);
     });
 
+// グローバルタスク共有は廃止され、カテゴリー共有に置き換えられました
 Route::middleware(["web"])->group(function () {
-    // Get users with whom the authenticated user has globally shared tasks
-    Route::get("/global-shares", [GlobalShareController::class, "index"]);
+    // 廃止されたエンドポイントへのアクセスを処理
+    Route::get("/global-shares", function() {
+        return response()->json([
+            "error" => "グローバルタスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
+    });
 
-    // Share all tasks globally with a user
-    Route::post("/global-shares", [GlobalShareController::class, "store"]);
+    Route::post("/global-shares", function() {
+        return response()->json([
+            "error" => "グローバルタスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
+    });
 
-    // Update global sharing permission for a user
-    Route::put("/global-shares/{globalShare}", [
-        GlobalShareController::class,
-        "update",
-    ]);
+    Route::put("/global-shares/{globalShare}", function() {
+        return response()->json([
+            "error" => "グローバルタスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
+    });
 
-    // Stop sharing globally with a user
-    Route::delete("/global-shares/{globalShare}", [
-        GlobalShareController::class,
-        "destroy",
-    ]);
+    Route::delete("/global-shares/{globalShare}", function() {
+        return response()->json([
+            "error" => "グローバルタスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+            "use_category_sharing" => true
+        ], 400);
+    });
 
-    // Get all tasks shared with the authenticated user via global sharing
-    Route::get("/global-shared-with-me", [
-        GlobalShareController::class,
-        "sharedWithMe",
-    ]);
+    // グローバル共有タスク一覧は共有カテゴリーのタスク一覧にリダイレクト
+    Route::get("/global-shared-with-me", function() {
+        return redirect("/api/shared-categories/tasks");
+    });
 });
 
 /**

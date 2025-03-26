@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\GuestLoginController;
 use App\Http\Controllers\TodoController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SharedTaskController;
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\TaskShareController;
 use App\Models\Todo;
@@ -93,6 +94,11 @@ Route::get("/guest-login", [GuestLoginController::class, "login"])
     ->middleware("guest")
     ->name("guest.login");
 
+// Add this to the authenticated routes group in routes/web.php
+Route::get("/categories/shared", [
+    App\Http\Controllers\Api\CategoryShareController::class,
+    "sharedWithMePage",
+])->name("categories.shared");
 /**
  * Category API
  */

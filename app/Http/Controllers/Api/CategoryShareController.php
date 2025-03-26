@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Services\LineNotifyService;
 use App\Services\ShareNotificationService;
+use App\Http\Controllers\Api\ShareRequestsController;
 
 class CategoryShareController extends Controller
 {
@@ -73,66 +74,13 @@ class CategoryShareController extends Controller
             return $subscriptionCheck;
         }
 
-        // Check if the authenticated user owns this category
-        if ($category->user_id !== Auth::id()) {
-            return response()->json(["error" => "Unauthorized"], 403);
-        }
-
-        // Validate request
-        $request->validate([
-            "email" => "required|email|exists:users,email",
-            "permission" => "required|in:view,edit",
-        ]);
-
-        try {
-            // Find the user by email
-            $user = User::where("email", $request->email)->first();
-
-            // Don't allow sharing with oneself
-            if ($user->id === Auth::id()) {
-                return response()->json(
-                    ["error" => "Cannot share with yourself"],
-                    400
-                );
-            }
-
-            // Share the category
-            $category->shareTo($user, $request->permission);
-
-            // Send LINE notification if the user has a LINE token
-            if ($user->line_notify_token) {
-                $message = "\n【カテゴリー共有】\n\n";
-                $message .=
-                    Auth::user()->name .
-                    "さんがカテゴリー「" .
-                    $category->name .
-                    "」をあなたと共有しました。\n";
-                $message .=
-                    "権限: " .
-                    ($request->permission === "edit"
-                        ? "編集可能"
-                        : "閲覧のみ") .
-                    "\n\n";
-                $message .=
-                    "このカテゴリーに属するタスクがあなたと共有されます。\n";
-
-                $this->lineNotifyService->send(
-                    $user->line_notify_token,
-                    $message
-                );
-            }
-
-            return response()->json([
-                "success" => true,
-                "message" => "Category shared successfully",
-            ]);
-        } catch (\Exception $e) {
-            Log::error("Error sharing category: " . $e->getMessage());
-            return response()->json(
-                ["error" => "Error sharing category: " . $e->getMessage()],
-                500
-            );
-        }
+        // LINE認証は必須になりました
+        // Always use the ShareRequestController for LINE authentication
+        $shareRequestController = app(ShareRequestsController::class);
+        return $shareRequestController->storeCategoryShare(
+            $request,
+            $category
+        );
     }
 
     /**
