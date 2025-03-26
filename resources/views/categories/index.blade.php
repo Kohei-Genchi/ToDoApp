@@ -1,8 +1,7 @@
-{{-- resources/views/categories/index.blade.php の修正版 --}}
+{{-- resources/views/categories/index.blade.php --}}
 <x-app-layout>
     <div class="max-w-6xl mx-auto p-4">
-
-        @include('todos.partials.nav-tabs')
+        {{-- Header is removed as requested --}}
 
         <div class="mb-6 bg-white p-6 rounded-lg shadow-sm">
             <h2 class="text-lg font-medium mb-4">新しいカテゴリー</h2>
