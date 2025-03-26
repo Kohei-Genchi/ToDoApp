@@ -12,35 +12,25 @@
                     :todo="todo"
                     :category="getCategoryById(todo.category_id)"
                     :current-user-id="currentUserId"
-                    @toggle="toggleTask"
-                    @edit="editTask"
+                    @toggle="$emit('toggle-task', todo)"
+                    @edit="$emit('edit-task', todo)"
                     @delete="$emit('delete-task', todo)"
-                    @share="shareTask(todo)"
                 />
             </ul>
         </div>
-
-        <!-- Task Share Modal -->
-        <task-share-modal
-            v-if="showShareModal"
-            :task="selectedShareTask"
-            @close="showShareModal = false"
-        />
     </div>
 </template>
 
 <script>
-import { computed, ref, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import EmptyState from "./EmptyState.vue";
 import TaskItem from "./TaskItem.vue";
-import TaskShareModal from "./TaskShareModal.vue";
 
 export default {
     name: "TodoList",
     components: {
         EmptyState,
         TaskItem,
-        TaskShareModal,
     },
 
     props: {
@@ -56,31 +46,9 @@ export default {
 
     emits: ["toggle-task", "edit-task", "delete-task"],
 
-    setup(props, { emit }) {
+    setup(props) {
         // Get current user ID from Laravel global variable
         const currentUserId = ref(null);
-
-        // State for share modal
-        const showShareModal = ref(false);
-        const selectedShareTask = ref(null);
-
-        /**
-         * Number of completed tasks
-         */
-        const completedCount = computed(
-            () =>
-                props.todos.filter((todo) => todo.status === "completed")
-                    .length,
-        );
-
-        /**
-         * Number of pending tasks
-         */
-        const pendingCount = computed(
-            () =>
-                props.todos.filter((todo) => todo.status !== "completed")
-                    .length,
-        );
 
         /**
          * Get category by ID
@@ -94,32 +62,6 @@ export default {
             );
         };
 
-        /**
-         * Task status toggle handler
-         * @param {Object} todo Task object
-         */
-        const toggleTask = (todo) => {
-            emit("toggle-task", todo);
-        };
-
-        /**
-         * Task edit handler
-         * @param {Object} todo Task object
-         */
-        const editTask = (todo) => {
-            emit("edit-task", todo);
-            console.log("TodoList received edit event:", todo);
-        };
-
-        /**
-         * Task share handler
-         * @param {Object} todo Task object
-         */
-        const shareTask = (todo) => {
-            selectedShareTask.value = todo;
-            showShareModal.value = true;
-        };
-
         // Initialize
         onMounted(() => {
             // Get current user ID from Laravel global variable
@@ -129,15 +71,8 @@ export default {
         });
 
         return {
-            completedCount,
-            pendingCount,
-            getCategoryById,
-            toggleTask,
-            editTask,
-            shareTask,
             currentUserId,
-            showShareModal,
-            selectedShareTask,
+            getCategoryById,
         };
     },
 };
