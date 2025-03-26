@@ -23,6 +23,64 @@ Route::middleware(["auth:sanctum"])->group(function () {
         "index",
     ]);
 
+    // routes/api.php に追加するコード
+
+    /**
+     * カテゴリー共有 API ルート
+     */
+    Route::middleware(["web"])->group(function () {
+        // カテゴリー共有ユーザー一覧の取得
+        Route::get("/categories/{category}/shares", [
+            CategoryShareController::class,
+            "index",
+        ]);
+
+        // カテゴリーを特定のユーザーと共有
+        Route::post("/categories/{category}/shares", [
+            CategoryShareController::class,
+            "store",
+        ]);
+
+        // 共有権限の更新
+        Route::put("/categories/{category}/shares/{user}", [
+            CategoryShareController::class,
+            "update",
+        ]);
+
+        // 共有の解除
+        Route::delete("/categories/{category}/shares/{user}", [
+            CategoryShareController::class,
+            "destroy",
+        ]);
+
+        // 自分と共有されているカテゴリー一覧の取得
+        Route::get("/shared-categories", [
+            CategoryShareController::class,
+            "sharedWithMe",
+        ]);
+
+        // 共有カテゴリーからのタスク一覧の取得
+        Route::get("/shared-categories/tasks", [
+            CategoryShareController::class,
+            "tasksFromSharedCategories",
+        ]);
+    });
+
+    // LINEで承認/拒否するためのWebルート（署名付き）
+    Route::get("/category-share/{token}/approve", [
+        CategoryShareController::class,
+        "approveShareRequest",
+    ])
+        ->name("category-share.approve")
+        ->middleware(["signed"]);
+
+    Route::get("/category-share/{token}/reject", [
+        CategoryShareController::class,
+        "rejectShareRequest",
+    ])
+        ->name("category-share.reject")
+        ->middleware(["signed"]);
+
     // Cancel a share request
     Route::delete("/share-requests/{shareRequest}", [
         App\Http\Controllers\Api\ShareRequestsController::class,

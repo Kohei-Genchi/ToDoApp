@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Cashier\Billable;
+use Illuminate\Support\Facades\Log;
 
 class User extends Authenticatable
 {
@@ -61,6 +62,16 @@ class User extends Authenticatable
     public function sharedTasks(): BelongsToMany
     {
         return $this->belongsToMany(Todo::class, "task_shares")
+            ->withPivot("permission")
+            ->withTimestamps();
+    }
+
+    /**
+     * Get categories shared with this user.
+     */
+    public function sharedCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, "category_shares")
             ->withPivot("permission")
             ->withTimestamps();
     }

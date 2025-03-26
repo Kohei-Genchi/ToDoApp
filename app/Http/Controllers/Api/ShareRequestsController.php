@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ShareRequest;
 use App\Models\Todo;
 use App\Models\User;
+use App\Models\Category;
 use App\Services\ShareNotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -33,17 +34,28 @@ class ShareRequestsController extends Controller
             $outgoingRequests = ShareRequest::where("user_id", Auth::id())
                 ->where("status", "pending")
                 ->where("expires_at", ">", now())
-                ->with(["todo"])
+                ->with(["todo", "category"])
                 ->get()
                 ->map(function ($request) {
+                    $itemName = "";
+
+                    if ($request->share_type === "task" && $request->todo) {
+                        $itemName = $request->todo->title;
+                    } elseif (
+                        $request->share_type === "category" &&
+                        $request->category
+                    ) {
+                        $itemName = $request->category->name;
+                    } else {
+                        $itemName = "All Tasks";
+                    }
+
                     return [
                         "id" => $request->id,
                         "recipient_email" => $request->recipient_email,
                         "permission" => $request->permission,
                         "share_type" => $request->share_type,
-                        "task_title" => $request->todo
-                            ? $request->todo->title
-                            : "All Tasks",
+                        "item_name" => $itemName,
                         "created_at" => $request->created_at->format(
                             "Y-m-d H:i"
                         ),
@@ -61,18 +73,29 @@ class ShareRequestsController extends Controller
             )
                 ->where("status", "pending")
                 ->where("expires_at", ">", now())
-                ->with(["todo", "requester"])
+                ->with(["todo", "category", "requester"])
                 ->get()
                 ->map(function ($request) {
+                    $itemName = "";
+
+                    if ($request->share_type === "task" && $request->todo) {
+                        $itemName = $request->todo->title;
+                    } elseif (
+                        $request->share_type === "category" &&
+                        $request->category
+                    ) {
+                        $itemName = $request->category->name;
+                    } else {
+                        $itemName = "All Tasks";
+                    }
+
                     return [
                         "id" => $request->id,
                         "requester_name" => $request->requester->name,
                         "requester_email" => $request->requester->email,
                         "permission" => $request->permission,
                         "share_type" => $request->share_type,
-                        "task_title" => $request->todo
-                            ? $request->todo->title
-                            : "All Tasks",
+                        "item_name" => $itemName,
                         "created_at" => $request->created_at->format(
                             "Y-m-d H:i"
                         ),
@@ -206,6 +229,121 @@ class ShareRequestsController extends Controller
     }
 
     /**
+     * Create a new category share request
+     */
+    public function storeCategoryShare(
+        Request $request,
+        Category $category
+    ): JsonResponse {
+        // Validate request
+        $validator = Validator::make($request->all(), [
+            "email" => "required|email|exists:users,email",
+            "permission" => "required|in:view,edit",
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(["errors" => $validator->errors()], 422);
+        }
+
+        // Check if the authenticated user owns this category
+        if ($category->user_id !== Auth::id()) {
+            return response()->json(["error" => "Unauthorized"], 403);
+        }
+
+        $recipientEmail = $request->input("email");
+        $permission = $request->input("permission");
+
+        // Don't allow sharing with oneself
+        if ($recipientEmail === Auth::user()->email) {
+            return response()->json(
+                ["error" => "Cannot share with yourself"],
+                400
+            );
+        }
+
+        // Create share request
+        try {
+            // Check for existing pending request
+            $existingRequest = ShareRequest::where("user_id", Auth::id())
+                ->where("category_id", $category->id)
+                ->where("recipient_email", $recipientEmail)
+                ->where("status", "pending")
+                ->where("expires_at", ">", now())
+                ->first();
+
+            if ($existingRequest) {
+                return response()->json(
+                    [
+                        "message" =>
+                            "A category share request has already been sent to this email",
+                        "request_id" => $existingRequest->id,
+                    ],
+                    200
+                );
+            }
+
+            // Get recipient user
+            $recipientUser = User::where("email", $recipientEmail)->first();
+            if (!$recipientUser) {
+                return response()->json(
+                    ["error" => "Recipient user not found"],
+                    404
+                );
+            }
+
+            // Create the share request
+            $shareRequest = new ShareRequest([
+                "user_id" => Auth::id(),
+                "category_id" => $category->id,
+                "todo_id" => null,
+                "recipient_email" => $recipientEmail,
+                "token" => ShareRequest::generateToken(),
+                "share_type" => "category",
+                "permission" => $permission,
+                "expires_at" => Carbon::now()->addDays(7),
+            ]);
+
+            $shareRequest->save();
+
+            // Send notification
+            $notificationSent = $this->notificationService->sendCategoryShareRequestNotification(
+                $recipientUser,
+                Auth::user(),
+                $shareRequest,
+                $category
+            );
+
+            if (!$notificationSent) {
+                Log::warning(
+                    "Failed to send notification for category share request: " .
+                        $shareRequest->id
+                );
+            }
+
+            return response()->json(
+                [
+                    "success" => true,
+                    "message" => "Category share request has been sent",
+                    "request_id" => $shareRequest->id,
+                ],
+                201
+            );
+        } catch (\Exception $e) {
+            Log::error(
+                "Error creating category share request: " . $e->getMessage()
+            );
+            return response()->json(
+                [
+                    "error" =>
+                        "Failed to create category share request: " .
+                        $e->getMessage(),
+                ],
+                500
+            );
+        }
+    }
+
+    /**
      * Create a new global share request
      */
     public function storeGlobalShare(Request $request): JsonResponse
@@ -236,6 +374,7 @@ class ShareRequestsController extends Controller
             // Check for existing pending request
             $existingRequest = ShareRequest::where("user_id", Auth::id())
                 ->whereNull("todo_id")
+                ->whereNull("category_id")
                 ->where("share_type", "global")
                 ->where("recipient_email", $recipientEmail)
                 ->where("status", "pending")
@@ -266,6 +405,7 @@ class ShareRequestsController extends Controller
             $shareRequest = new ShareRequest([
                 "user_id" => Auth::id(),
                 "todo_id" => null,
+                "category_id" => null,
                 "recipient_email" => $recipientEmail,
                 "token" => ShareRequest::generateToken(),
                 "share_type" => "global",
@@ -346,12 +486,22 @@ class ShareRequestsController extends Controller
                 );
             }
 
+            $shareTypeMessage = "";
+            switch ($shareRequest->share_type) {
+                case "global":
+                    $shareTypeMessage = "Global sharing approved successfully";
+                    break;
+                case "category":
+                    $shareTypeMessage =
+                        "Category sharing approved successfully";
+                    break;
+                default:
+                    $shareTypeMessage = "Task sharing approved successfully";
+            }
+
             return response()->json([
                 "success" => true,
-                "message" =>
-                    $shareRequest->share_type === "global"
-                        ? "Global sharing approved successfully"
-                        : "Task sharing approved successfully",
+                "message" => $shareTypeMessage,
             ]);
         } catch (\Exception $e) {
             Log::error("Error approving share request: " . $e->getMessage());

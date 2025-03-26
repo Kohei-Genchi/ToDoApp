@@ -14,9 +14,10 @@ class ShareRequest extends Model
     protected $fillable = [
         "user_id",
         "todo_id",
+        "category_id",
         "recipient_email",
         "token",
-        "share_type",
+        "share_type", // Now supports 'task', 'global', or 'category'
         "permission",
         "status",
         "expires_at",
@@ -45,6 +46,14 @@ class ShareRequest extends Model
     }
 
     /**
+     * Get the category related to this share request
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
      * Check if the request is still valid and pending
      */
     public function isValid(): bool
@@ -70,6 +79,8 @@ class ShareRequest extends Model
             return $this->processTaskSharing();
         } elseif ($this->share_type === "global") {
             return $this->processGlobalSharing();
+        } elseif ($this->share_type === "category" && $this->category) {
+            return $this->processCategorySharing();
         }
 
         return false;
@@ -142,6 +153,34 @@ class ShareRequest extends Model
             return true;
         } catch (\Exception $e) {
             \Log::error("Error processing global sharing: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Process the category sharing after approval
+     */
+    protected function processCategorySharing(): bool
+    {
+        try {
+            // Find the recipient user
+            $recipientUser = User::where(
+                "email",
+                $this->recipient_email
+            )->first();
+
+            if (!$recipientUser) {
+                return false;
+            }
+
+            // Share the category with the user
+            $this->category->shareTo($recipientUser, $this->permission);
+
+            return true;
+        } catch (\Exception $e) {
+            \Log::error(
+                "Error processing category sharing: " . $e->getMessage()
+            );
             return false;
         }
     }

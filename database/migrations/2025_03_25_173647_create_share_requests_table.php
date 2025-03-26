@@ -22,6 +22,7 @@ return new class extends Migration {
                 ->nullable()
                 ->constrained()
                 ->onDelete("cascade");
+            $table->foreignId("category_id")->nullable();
             $table->string("recipient_email");
             $table->string("token")->unique();
             $table->enum("share_type", ["task", "global"])->default("task");
