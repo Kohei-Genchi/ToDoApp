@@ -57,16 +57,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Get tasks shared with this user.
-     */
-    public function sharedTasks(): BelongsToMany
-    {
-        return $this->belongsToMany(Todo::class, "task_shares")
-            ->withPivot("permission")
-            ->withTimestamps();
-    }
-
-    /**
      * Get categories shared with this user.
      */
     public function sharedCategories(): BelongsToMany
@@ -104,18 +94,5 @@ class User extends Authenticatable
     public function routeNotificationForLine()
     {
         return $this->line_notify_token;
-    }
-
-    public function globallySharedWith()
-    {
-        return $this->hasMany(GlobalShare::class, "user_id");
-    }
-
-    /**
-     * Get the users who have shared all tasks globally with this user.
-     */
-    public function globallySharedBy()
-    {
-        return $this->hasMany(GlobalShare::class, "shared_with_user_id");
     }
 }

@@ -1,3 +1,5 @@
+// Updated TaskItem.vue without individual task sharing UI
+
 <template>
     <li
         class="cosmic-task-item hover:bg-gray-800/50 transition-all duration-300"
@@ -31,15 +33,15 @@
                         {{ todo.title }}
                     </p>
 
-                    <!-- Shared indicator -->
+                    <!-- Category based shared status indicator -->
                     <span
-                        v-if="isShared"
+                        v-if="isSharedViaCategory"
                         class="ml-2 p-0.5 rounded text-xs border flex items-center"
                         :class="{
                             'text-orange-400 border-orange-500/30 bg-orange-900/20':
-                                todo.user_id === myUserId,
+                                todo.user_id === currentUserId,
                             'text-blue-400 border-blue-500/30 bg-blue-900/20':
-                                todo.user_id !== myUserId,
+                                todo.user_id !== currentUserId,
                         }"
                         :title="sharedTooltip"
                     >
@@ -57,7 +59,7 @@
                                 d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
                             />
                         </svg>
-                        <span>{{ sharedLabel }}</span>
+                        <span>{{ sharedViaCategory ? "共有中" : "" }}</span>
                     </span>
 
                     <!-- Category label -->
@@ -98,7 +100,7 @@
 
                 <!-- Time display -->
                 <div
-                    v-if="formattedTime || isShared"
+                    v-if="formattedTime || isSharedViaCategory"
                     class="text-sm text-gray-400 mt-0.5 flex space-x-2"
                 >
                     <span v-if="formattedTime" class="inline-flex items-center">
@@ -119,48 +121,12 @@
                         {{ formattedTime }}
                     </span>
 
-                    <!-- Shared with names (limited to first 2) -->
+                    <!-- Owner info when viewing a task from a shared category -->
                     <span
                         v-if="
-                            isShared &&
-                            sharedWith &&
-                            sharedWith.length > 0 &&
-                            todo.user_id === myUserId
-                        "
-                        class="inline-flex items-center"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3.5 w-3.5 mr-0.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                            />
-                        </svg>
-                        <span v-if="sharedWith.length <= 2">
-                            {{ sharedWith.map((user) => user.name).join(", ") }}
-                        </span>
-                        <span v-else>
-                            {{
-                                sharedWith
-                                    .slice(0, 2)
-                                    .map((user) => user.name)
-                                    .join(", ")
-                            }}
-                            +{{ sharedWith.length - 2 }}
-                        </span>
-                    </span>
-
-                    <!-- Owner info when viewing a shared task -->
-                    <span
-                        v-if="
-                            isShared && todo.user_id !== myUserId && todo.user
+                            isSharedViaCategory &&
+                            todo.user_id !== currentUserId &&
+                            todo.user
                         "
                         class="inline-flex items-center"
                     >
@@ -185,28 +151,6 @@
 
             <!-- Action buttons -->
             <div class="flex-shrink-0 ml-3 flex space-x-1">
-                <!-- Share button (if owned by current user) -->
-                <button
-                    v-if="todo.user_id === myUserId"
-                    @click.stop="$emit('share', todo)"
-                    class="text-gray-400 hover:text-orange-400 transition-colors"
-                    title="共有"
-                >
-                    <svg
-                        class="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                        />
-                    </svg>
-                </button>
-
                 <!-- Delete button -->
                 <button
                     @click.stop="$emit('delete')"
@@ -246,17 +190,13 @@ export default {
             type: Object,
             default: null,
         },
-        myUserId: {
+        currentUserId: {
             type: Number,
             default: null,
         },
-        sharedWith: {
-            type: Array,
-            default: () => [],
-        },
     },
 
-    emits: ["toggle", "edit", "delete", "share"],
+    emits: ["toggle", "edit", "delete"],
 
     setup(props, { emit }) {
         /**
@@ -300,61 +240,40 @@ export default {
         });
 
         /**
-         * Convert HEX color code to RGBA format
-         */
-        const categoryColor = computed(() => {
-            if (!props.category?.color) return "rgba(155, 155, 155, 0.15)";
-
-            const hex = props.category.color;
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            return `rgba(${r}, ${g}, ${b}, 0.15)`;
-        });
-
-        /**
          * Task edit handler
          */
         const handleEdit = () => {
             emit("edit", props.todo);
-            console.log("Edit button clicked:", props.todo);
-            // (emit) Send event to parent component (TodoList)
-            // handleEdit -> edit event with current todo (task data) passed to parent
         };
 
         /**
-         * Is this task shared?
+         * Check if task is from a shared category
          */
-        const isShared = computed(() => {
-            // Task is shared if:
-            // 1. It has sharedWith property with users
-            // 2. Or it has a user_id different from the current user (meaning it's shared with current user)
+        const isSharedViaCategory = computed(() => {
+            // A task is considered shared via category if:
+            // 1. It has a user_id different from the current user (shared with current user)
+            // 2. Or it belongs to the current user and has a category that might be shared
             return (
-                (props.sharedWith && props.sharedWith.length > 0) ||
-                (props.todo.user_id !== props.myUserId &&
-                    props.todo.user_id !== undefined)
+                props.todo.user_id !== props.currentUserId ||
+                props.category != null
             );
         });
 
         /**
-         * Get label for shared indicator
+         * Check if the category of this task is shared
          */
-        const sharedLabel = computed(() => {
-            if (props.todo.user_id === props.myUserId) {
-                return "共有中";
-            } else {
-                // return "共有された";
-            }
+        const sharedViaCategory = computed(() => {
+            return props.category != null;
         });
 
         /**
          * Get tooltip text for shared indicator
          */
         const sharedTooltip = computed(() => {
-            if (props.todo.user_id === props.myUserId) {
-                return `このタスクは${props.sharedWith?.length || 0}人のユーザーと共有されています`;
+            if (props.todo.user_id === props.currentUserId) {
+                return `このタスクはカテゴリー「${props.category?.name || ""}」を通して共有されています`;
             } else {
-                return "このタスクは他のユーザーから共有されています";
+                return "このタスクは共有カテゴリーから共有されています";
             }
         });
 
@@ -362,10 +281,9 @@ export default {
             isRecurring,
             recurrenceLabel,
             formattedTime,
-            categoryColor,
             handleEdit,
-            isShared,
-            sharedLabel,
+            isSharedViaCategory,
+            sharedViaCategory,
             sharedTooltip,
         };
     },

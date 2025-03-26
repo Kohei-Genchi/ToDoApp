@@ -1,3 +1,5 @@
+// Update for SharedTasksCalendarView.vue to remove TaskShareModal
+
 <template>
     <div
         class="shared-tasks-calendar bg-white rounded-lg shadow-sm overflow-hidden w-full max-w-full"
@@ -135,7 +137,6 @@ import {
     watch,
 } from "vue";
 import TaskModal from "./TaskModal.vue";
-import TaskShareModal from "./TaskShareModal.vue";
 import TaskCell from "./calendar/TaskCell.vue";
 import HeaderNavigation from "./calendar/HeaderNavigation.vue";
 import LoadingIndicator from "./common/LoadingIndicator.vue";
@@ -150,7 +151,6 @@ export default {
 
     components: {
         TaskModal,
-        TaskShareModal,
         HeaderNavigation,
         LoadingIndicator,
         TaskCell,
@@ -178,8 +178,6 @@ export default {
         const taskModalMode = ref("edit");
         const selectedTaskId = ref(null);
         const selectedTaskData = ref(null);
-        const showCategoryShareModal = ref(false);
-        const selectedCategory = ref(null);
 
         // Time tracking for indicator
         const currentMinute = ref(new Date().getMinutes());
@@ -386,7 +384,9 @@ export default {
                 });
 
                 // Store the shared categories
-                const categories = Array.isArray(response.data) ? response.data : [];
+                const categories = Array.isArray(response.data)
+                    ? response.data
+                    : [];
 
                 // We'll use this to build the list of users who share categories with us
                 return categories;
@@ -431,7 +431,8 @@ export default {
                             name: category.user.name,
                             email: category.user.email,
                             categoryShared: true,
-                            categoryPermission: category.pivot?.permission || "view",
+                            categoryPermission:
+                                category.pivot?.permission || "view",
                         });
                     }
                 });
@@ -448,9 +449,6 @@ export default {
             const taskMap = new Map();
             allTasks.forEach((task) => {
                 if (!taskMap.has(task.id)) {
-                    if (!task.shared_with) {
-                        task.shared_with = [];
-                    }
                     taskMap.set(task.id, task);
                 }
             });
@@ -464,12 +462,15 @@ export default {
 
             // 1. Get tasks from shared categories
             try {
-                const response = await axios.get("/api/shared-categories/tasks", {
-                    headers: {
-                        Accept: "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
+                const response = await axios.get(
+                    "/api/shared-categories/tasks",
+                    {
+                        headers: {
+                            Accept: "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
                     },
-                });
+                );
                 if (response && Array.isArray(response.data)) {
                     const categoryTasks = response.data.map((task) => ({
                         ...task,
@@ -481,7 +482,7 @@ export default {
                 console.error("Shared category tasks loading error:", error);
             }
 
-            // 4. Get current user's tasks
+            // Get current user's tasks
             if (currentUserId.value) {
                 try {
                     const response = await TodoApi.getTasks({
@@ -499,8 +500,6 @@ export default {
 
             return allTasks;
         }
-
-        // Global sharing has been deprecated in favor of category sharing
 
         // Scroll to current time
         function scrollToCurrentTime() {
@@ -539,32 +538,6 @@ export default {
                 }
             } catch (error) {
                 console.error("Scroll error:", error);
-            }
-        }
-
-        // Global sharing has been deprecated in favor of category sharing
-
-        // Update shared users list
-        function updateSharedUsersList(newUsers) {
-            const existingUserIds = new Set(
-                sharedUsers.value.map((user) => user.id),
-            );
-
-            newUsers.forEach((user) => {
-                if (!existingUserIds.has(user.id)) {
-                    sharedUsers.value.push(user);
-                }
-            });
-
-            if (currentUserId.value) {
-                try {
-                    localStorage.setItem(
-                        `sharedUsers_${currentUserId.value}`,
-                        JSON.stringify(newUsers),
-                    );
-                } catch (e) {
-                    console.error("Shared user save error:", e);
-                }
             }
         }
 
@@ -755,8 +728,6 @@ export default {
             categories,
             sharedCategories,
             initialLoading,
-            showCategoryShareModal,
-            selectedCategory,
             currentUserId,
             currentMinute,
             userColumnStyle,

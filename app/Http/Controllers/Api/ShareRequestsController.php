@@ -125,10 +125,14 @@ class ShareRequestsController extends Controller
     public function storeTaskShare(Request $request, Todo $todo): JsonResponse
     {
         // Return a message indicating that individual task sharing is deprecated
-        return response()->json([
-            "error" => "個別タスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
-            "use_category_sharing" => true
-        ], 400);
+        return response()->json(
+            [
+                "error" =>
+                    "個別タスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+                "use_category_sharing" => true,
+            ],
+            400
+        );
     }
 
     /**
@@ -252,10 +256,14 @@ class ShareRequestsController extends Controller
     public function storeGlobalShare(Request $request): JsonResponse
     {
         // Return a message indicating that global task sharing is deprecated
-        return response()->json([
-            "error" => "グローバルタスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
-            "use_category_sharing" => true
-        ], 400);
+        return response()->json(
+            [
+                "error" =>
+                    "グローバルタスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
+                "use_category_sharing" => true,
+            ],
+            400
+        );
     }
 
     /**
@@ -292,18 +300,11 @@ class ShareRequestsController extends Controller
                 );
             }
 
-            $shareTypeMessage = "";
-            switch ($shareRequest->share_type) {
-                case "global":
-                    $shareTypeMessage = "Global sharing approved successfully";
-                    break;
-                case "category":
-                    $shareTypeMessage =
-                        "Category sharing approved successfully";
-                    break;
-                default:
-                    $shareTypeMessage = "Task sharing approved successfully";
-            }
+            $shareType = $shareRequest->share_type;
+            $shareTypeMessage =
+                $shareType === "category"
+                    ? "Category sharing approved successfully"
+                    : "Share request approved successfully";
 
             return response()->json([
                 "success" => true,

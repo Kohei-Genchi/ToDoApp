@@ -17,7 +17,7 @@ class ShareRequest extends Model
         "category_id",
         "recipient_email",
         "token",
-        "share_type", // Now supports 'task', 'global', or 'category'
+        "share_type", // Now supports only 'category'
         "permission",
         "status",
         "expires_at",
@@ -74,12 +74,8 @@ class ShareRequest extends Model
         $this->responded_at = now();
         $this->save();
 
-        // Process the actual sharing
-        if ($this->share_type === "task" && $this->todo) {
-            return $this->processTaskSharing();
-        } elseif ($this->share_type === "global") {
-            return $this->processGlobalSharing();
-        } elseif ($this->share_type === "category" && $this->category) {
+        // Process category sharing (the only supported type now)
+        if ($this->share_type === "category" && $this->category) {
             return $this->processCategorySharing();
         }
 
@@ -99,24 +95,6 @@ class ShareRequest extends Model
         $this->responded_at = now();
 
         return $this->save();
-    }
-
-    /**
-     * Process the task sharing after approval - Deprecated in favor of category sharing
-     */
-    protected function processTaskSharing(): bool
-    {
-        \Log::warning("Task sharing is deprecated. Using category sharing instead.");
-        return false;
-    }
-
-    /**
-     * Process the global sharing after approval - Deprecated in favor of category sharing
-     */
-    protected function processGlobalSharing(): bool
-    {
-        \Log::warning("Global sharing is deprecated. Using category sharing instead.");
-        return false;
     }
 
     /**

@@ -21,38 +21,19 @@ class TodoPolicy
             return true;
         }
 
-        // Allow if task is individually shared with user
-        if ($todo->isSharedWith($user)) {
-            Log::info(
-                "Task {$todo->id} is individually shared with user {$user->id}"
-            );
-            return true;
-        }
+        // Check for shared categories
+        if ($todo->category_id) {
+            $sharedCategories = $user
+                ->sharedCategories()
+                ->where("categories.id", $todo->category_id)
+                ->first();
 
-        // Check for global sharing
-        $globalShare = $user
-            ->globallySharedBy()
-            ->where("user_id", $todo->user_id)
-            ->first();
-
-        if ($globalShare) {
-            Log::info(
-                "Task {$todo->id} is globally shared with user {$user->id}"
-            );
-            return true;
-        }
-
-        // Also check if the current user is globally sharing with the task owner
-        $reverseGlobalShare = $user
-            ->globallySharedWith()
-            ->where("shared_with_user_id", $todo->user_id)
-            ->first();
-
-        if ($reverseGlobalShare) {
-            Log::info(
-                "User {$user->id} is globally sharing with task owner {$todo->user_id}"
-            );
-            return true;
+            if ($sharedCategories) {
+                Log::info(
+                    "Task {$todo->id} is viewable through shared category {$todo->category_id} for user {$user->id}"
+                );
+                return true;
+            }
         }
 
         Log::info("User {$user->id} denied view access to task {$todo->id}");
@@ -76,49 +57,22 @@ class TodoPolicy
             return true;
         }
 
-        // Allow if task is individually shared with user and they have edit permission
-        if ($todo->isSharedWith($user)) {
-            $taskShare = $todo
-                ->sharedWith()
-                ->where("user_id", $user->id)
+        // Check for shared categories with edit permission
+        if ($todo->category_id) {
+            $sharedCategory = $user
+                ->sharedCategories()
+                ->where("categories.id", $todo->category_id)
                 ->first();
 
-            if ($taskShare && $taskShare->pivot->permission === "edit") {
+            if (
+                $sharedCategory &&
+                $sharedCategory->pivot->permission === "edit"
+            ) {
                 Log::info(
-                    "User {$user->id} has edit permission for shared task {$todo->id}"
+                    "User {$user->id} has edit permission for task {$todo->id} through category {$todo->category_id}"
                 );
                 return true;
             }
-
-            Log::info(
-                "User {$user->id} has view-only permission for shared task {$todo->id}"
-            );
-        }
-
-        // Check for global sharing from task owner to current user
-        $globalShare = $user
-            ->globallySharedBy()
-            ->where("user_id", $todo->user_id)
-            ->first();
-
-        if ($globalShare && $globalShare->permission === "edit") {
-            Log::info(
-                "User {$user->id} has edit permission via global sharing from task owner {$todo->user_id}"
-            );
-            return true;
-        }
-
-        // Also check if current user is sharing globally with the task owner
-        $reverseGlobalShare = $user
-            ->globallySharedWith()
-            ->where("shared_with_user_id", $todo->user_id)
-            ->first();
-
-        if ($reverseGlobalShare && $reverseGlobalShare->permission === "edit") {
-            Log::info(
-                "User {$user->id} has edit permission via reverse global sharing with task owner {$todo->user_id}"
-            );
-            return true;
         }
 
         Log::info(
