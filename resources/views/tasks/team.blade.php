@@ -35,30 +35,50 @@
         <div class="flex-1 bg-gray-50 p-6 overflow-auto">
             <div class="max-w-7xl mx-auto">
                 <div class="bg-white rounded-lg shadow p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-lg font-medium text-gray-900">Team Collaboration</h2>
-                        <button id="inviteButton" class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
-                            Invite Team Member
-                        </button>
-                    </div>
+                                    <!-- Usage Guide -->
+                                    <div class="bg-blue-50 p-4 mb-6 rounded-lg border border-blue-200">
+                                        <h3 class="text-lg font-semibold mb-2 text-blue-800">チームコラボレーションの使い方</h3>
+                                        <ul class="list-disc ml-5 space-y-1 text-blue-700">
+                                            <li>チームメンバーを招待してタスクを共有できます</li>
+                                            <li>メンバーとはカテゴリーを共有することでタスクを共同管理できます</li>
+                                            <li>まずはカテゴリーページで共有したいカテゴリーを作成してください</li>
+                                            <li>次に下部の「共有カテゴリー」セクションを使用して共有を設定できます</li>
+                                        </ul>
+                                    </div>
 
-                    <div class="space-y-4">
-                        <!-- Team Members Table -->
-                        <div class="overflow-x-auto">
-                            <div id="team-members-app">
-                                <!-- Team Members Vue Component will mount here -->
-                                <!-- This is a placeholder until we build the Vue component -->
-                                <div class="text-center py-12">
-                                    <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                    <h3 class="text-gray-500 text-lg font-medium">Team members will appear here</h3>
-                                    <p class="mt-2 text-gray-500">You can invite team members to collaborate on tasks</p>
+                                    <div class="flex justify-between items-center mb-6">
+                                        <h2 class="text-lg font-medium text-gray-900">Team Collaboration</h2>
+                                        <a href="{{ route('categories.index') }}" class="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
+                                            カテゴリーを管理する
+                                        </a>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <!-- Team Members Description -->
+                                        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                            <div class="flex items-start">
+                                                <svg class="w-6 h-6 text-yellow-500 mr-2 mt-1 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <div>
+                                                    <h4 class="font-medium text-yellow-800">チームメンバー招待について</h4>
+                                                    <p class="text-yellow-700 mt-1">メンバー招待は「カテゴリー」ページから行います。カテゴリーページでカテゴリーを選択し、「共有」ボタンをクリックしてユーザーを招待してください。</p>
+                                                    <a href="{{ route('categories.index') }}" class="inline-block mt-2 text-sm text-blue-600 hover:text-blue-800">カテゴリーページへ移動</a>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Team Members List -->
+                                        <div class="overflow-x-auto">
+                                            <div id="team-members-app">
+                                                <div class="bg-white border rounded-lg p-4">
+                                                    <h3 class="font-medium text-gray-700 mb-2">現在のチームメンバー</h3>
+                                                    <p class="text-gray-500">カテゴリーを共有したユーザーがここに表示されます。まずはカテゴリーを共有してみましょう。</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Category Sharing Section -->
                 <div class="mt-8 bg-white rounded-lg shadow p-6">

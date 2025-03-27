@@ -29,46 +29,46 @@
         </div>
 
         <div class="bg-white p-6 rounded-lg shadow-sm">
-            <h2 class="text-lg font-medium mb-4">カテゴリー一覧</h2>
-            @if($categories->isEmpty())
-                <p class="text-gray-500 text-center py-4">カテゴリーはありません</p>
-            @else
-                <ul class="divide-y divide-gray-100">
-                    @foreach($categories as $category)
-                        <li class="py-3">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center">
-                                    <span class="w-4 h-4 rounded-full mr-3" style="background-color: {{ $category->color }}"></span>
-                                    <span class="font-medium">{{ $category->name }}</span>
-                                </div>
-                                <div class="flex space-x-2">
-                                    {{-- 共有ボタンを追加 --}}
-                                    <button onclick="openShareModal({{ $category->id }}, '{{ $category->name }}', '{{ $category->color }}')"
-                                            class="text-sm text-blue-500 hover:text-blue-700">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                                        </svg>
-                                        共有
-                                    </button>
-                                    <button onclick="openEditModal({{ $category->id }}, '{{ $category->name }}', '{{ $category->color }}')"
-                                            class="text-sm text-blue-500 hover:text-blue-700">
-                                        編集
-                                    </button>
-                                    <form action="{{ route('categories.destroy', $category) }}" method="POST"
-                                          onsubmit="return confirm('このカテゴリーを削除しますか？関連するタスクのカテゴリーも削除されます。')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-sm text-red-500 hover:text-red-700">
-                                            削除
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-        </div>
+                    <h2 class="text-lg font-medium mb-4">カテゴリー一覧</h2>
+                    @if($categories->isEmpty())
+                        <p class="text-gray-500 text-center py-4">カテゴリーはありません</p>
+                    @else
+                        <ul class="divide-y divide-gray-100">
+                            @foreach($categories as $category)
+                                <li class="py-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center">
+                                            <span class="w-4 h-4 rounded-full mr-3" style="background-color: {{ $category->color }}"></span>
+                                            <span class="font-medium">{{ $category->name }}</span>
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            {{-- 共有ボタン --}}
+                                            <button onclick="openShareModal({{ $category->id }}, '{{ $category->name }}', '{{ $category->color }}')"
+                                                    class="flex items-center px-2 py-1 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                                </svg>
+                                                共有
+                                            </button>
+                                            <button onclick="openEditModal({{ $category->id }}, '{{ $category->name }}', '{{ $category->color }}')"
+                                                    class="px-2 py-1 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded">
+                                                編集
+                                            </button>
+                                            <form action="{{ route('categories.destroy', $category) }}" method="POST"
+                                                  onsubmit="return confirm('このカテゴリーを削除しますか？関連するタスクのカテゴリーも削除されます。')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="px-2 py-1 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded">
+                                                    削除
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
 
         <!-- カテゴリー編集モーダル -->
         <div id="edit-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">

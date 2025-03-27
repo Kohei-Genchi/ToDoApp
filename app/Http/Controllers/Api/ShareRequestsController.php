@@ -141,13 +141,16 @@ class ShareRequestsController extends Controller
     /**
      * Create a new category share request
      */
+    /**
+     * Create a new category share request
+     */
     public function storeCategoryShare(
         Request $request,
         Category $category
     ): JsonResponse {
         // Validate request
         $validator = Validator::make($request->all(), [
-            "email" => "required|email|exists:users,email",
+            "email" => "required|email",
             "permission" => "required|in:view,edit",
         ]);
 
@@ -192,14 +195,8 @@ class ShareRequestsController extends Controller
                 );
             }
 
-            // Get recipient user
+            // Get recipient user if exists
             $recipientUser = User::where("email", $recipientEmail)->first();
-            if (!$recipientUser) {
-                return response()->json(
-                    ["error" => "Recipient user not found"],
-                    404
-                );
-            }
 
             // Create the share request
             $shareRequest = new ShareRequest([
@@ -218,7 +215,7 @@ class ShareRequestsController extends Controller
             // Send notification through Line Notify if available
             $notificationSent = false;
 
-            if ($recipientUser->line_notify_token) {
+            if ($recipientUser && $recipientUser->line_notify_token) {
                 // Use the notification system
                 $recipientUser->notify(
                     new ShareNotification(
@@ -229,7 +226,7 @@ class ShareRequestsController extends Controller
                     )
                 );
                 $notificationSent = true;
-            } elseif ($recipientUser->email) {
+            } elseif ($recipientUser && $recipientUser->email) {
                 // Fallback to email notification
                 $recipientUser->notify(
                     new ShareNotification(
@@ -242,7 +239,13 @@ class ShareRequestsController extends Controller
                 $notificationSent = true;
             }
 
-            if (!$notificationSent) {
+            $message = "Category share request has been sent";
+            if (!$recipientUser) {
+                $message .=
+                    ". Note: This user is not registered yet. They will need to create an account first.";
+            }
+
+            if (!$notificationSent && $recipientUser) {
                 Log::warning(
                     "Failed to send notification for category share request: " .
                         $shareRequest->id
@@ -252,7 +255,7 @@ class ShareRequestsController extends Controller
             return response()->json(
                 [
                     "success" => true,
-                    "message" => "Category share request has been sent",
+                    "message" => $message,
                     "request_id" => $shareRequest->id,
                 ],
                 201
@@ -271,7 +274,6 @@ class ShareRequestsController extends Controller
             );
         }
     }
-
     /**
      * Create a new global share request - Deprecated in favor of category sharing
      */

@@ -31,11 +31,23 @@
             </div>
         </div>
 
+
         <!-- Main Content -->
-        <div class="flex-1 overflow-hidden">
-            <div id="kanban-app" class="h-full"></div>
-        </div>
-    </div>
+                <div class="flex-1 overflow-hidden">
+                    <!-- Usage Guide -->
+                    <div class="bg-blue-50 p-4 m-4 rounded-lg border border-blue-200">
+                        <h3 class="text-lg font-semibold mb-2 text-blue-800">カンバンボードの使い方</h3>
+                        <ul class="list-disc ml-5 space-y-1 text-blue-700">
+                            <li>「To Do」「In Progress」「Review」「Completed」の4つの列でタスクを管理できます</li>
+                            <li>タスクをドラッグ＆ドロップして進捗状況を更新できます</li>
+                            <li>各列の「＋」ボタンをクリックして新しいタスクを追加できます</li>
+                            <li>タスクをクリックすると詳細を確認・編集できます</li>
+                            <li>画面上部のフィルターを使ってタスクを絞り込めます</li>
+                        </ul>
+                    </div>
+
+                    <div id="kanban-app" class="h-full"></div>
+                </div>
 
     @push('scripts')
     <script>

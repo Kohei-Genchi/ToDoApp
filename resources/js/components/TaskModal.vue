@@ -19,7 +19,7 @@
                 class="px-4 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center"
             >
                 <h3 id="modal-title" class="text-lg font-medium text-gray-800">
-                    {{ mode === "add" ? "Add New Task" : "Edit Task" }}
+                    {{ mode === "add" ? "新しいタスク" : "タスクを編集" }}
                 </h3>
                 <button
                     @click="$emit('close')"
@@ -43,7 +43,7 @@
 
             <!-- Body -->
             <div class="p-4 overflow-y-auto">
-                <!-- Shared view edit notification -->
+                <!-- 共有ビューからの編集時の制約説明テキスト -->
                 <div
                     v-if="isSharedViewEdit"
                     class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800"
@@ -64,10 +64,11 @@
                             />
                         </svg>
                         <div>
-                            <p class="font-medium mb-1">Shared Task Editing</p>
+                            <p class="font-medium mb-1">
+                                共有タスク編集時の制限
+                            </p>
                             <p>
-                                You are editing a shared task. Some options may
-                                be limited based on your permissions.
+                                共有タスクビューからの編集では、カテゴリーと繰り返し設定はできません。
                             </p>
                         </div>
                     </div>
@@ -80,7 +81,7 @@
                             for="title"
                             class="block text-sm font-medium text-gray-700"
                         >
-                            Title<span class="text-red-500">*</span>
+                            タイトル<span class="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
@@ -91,35 +92,12 @@
                         />
                     </div>
 
-                    <!-- Status - New dropdown for kanban -->
-                    <div>
-                        <label
-                            for="status"
-                            class="block text-sm font-medium text-gray-700"
-                        >
-                            Status
-                        </label>
-                        <select
-                            id="status"
-                            v-model="form.status"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            <option
-                                v-for="status in statuses"
-                                :key="status.id"
-                                :value="status.id"
-                            >
-                                {{ status.name }}
-                            </option>
-                        </select>
-                    </div>
-
                     <!-- Date -->
                     <div>
                         <label
                             for="due_date"
                             class="block text-sm font-medium text-gray-700"
-                            >Due Date</label
+                            >期限日</label
                         >
                         <input
                             type="date"
@@ -194,7 +172,7 @@
                                         : 'bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200'
                                 "
                             >
-                                15 min
+                                15分
                             </button>
                             <button
                                 type="button"
@@ -206,7 +184,7 @@
                                         : 'bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200'
                                 "
                             >
-                                30 min
+                                30分
                             </button>
                             <button
                                 type="button"
@@ -218,7 +196,7 @@
                                         : 'bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200'
                                 "
                             >
-                                1 hour
+                                1時間
                             </button>
                             <button
                                 type="button"
@@ -230,18 +208,18 @@
                                         : 'bg-gray-100 border-gray-200 text-gray-800 hover:bg-gray-200'
                                 "
                             >
-                                2 hours
+                                2時間
                             </button>
                         </div>
                     </div>
 
-                    <!-- Category Selection -->
+                    <!-- Category Selection - 共有ビューからの編集時には非表示 -->
                     <div v-if="!isSharedViewEdit">
                         <div class="flex justify-between items-center">
                             <label
                                 for="category_id"
                                 class="block text-sm font-medium text-gray-700"
-                                >Category</label
+                                >カテゴリー</label
                             >
                             <button
                                 type="button"
@@ -249,13 +227,15 @@
                                 class="text-xs text-blue-600 hover:text-blue-800"
                             >
                                 {{
-                                    showCategoryInput ? "Back" : "New Category"
+                                    showCategoryInput
+                                        ? "戻る"
+                                        : "新規カテゴリー"
                                 }}
                             </button>
                         </div>
                     </div>
 
-                    <!-- Category Select -->
+                    <!-- Category Select - 共有ビューからの編集時には非表示 -->
                     <div
                         v-if="!showCategoryInput && !isSharedViewEdit"
                         class="mt-1"
@@ -265,7 +245,7 @@
                             v-model="form.category_id"
                             class="block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         >
-                            <option value="">No Category</option>
+                            <option value="">カテゴリーなし</option>
                             <option
                                 v-for="category in categoriesArray"
                                 :key="category.id"
@@ -290,7 +270,7 @@
                         </div>
                     </div>
 
-                    <!-- New Category Form -->
+                    <!-- New Category Form - 共有ビューからの編集時には非表示 -->
                     <div
                         v-if="showCategoryInput && !isSharedViewEdit"
                         class="mt-3 overflow-hidden transition-all duration-300 transform"
@@ -321,7 +301,7 @@
                                     <input
                                         type="text"
                                         v-model="newCategory.name"
-                                        placeholder="Category name"
+                                        placeholder="カテゴリー名"
                                         class="flex-grow px-3 py-2 bg-gray-50 rounded-lg focus:outline-none"
                                     />
                                     <div
@@ -344,7 +324,7 @@
                                     @click="showCategoryInput = false"
                                     class="px-4 py-2 text-sm text-gray-500 rounded-lg hover:bg-gray-100 transition-all duration-200"
                                 >
-                                    Cancel
+                                    キャンセル
                                 </button>
                                 <button
                                     type="button"
@@ -356,36 +336,35 @@
                                             newCategory.color || '#4F46E5',
                                     }"
                                 >
-                                    Add
+                                    追加
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Recurrence Type -->
-                    <div v-if="!isSharedViewEdit && !isSimpleMode">
+                    <!-- Recurrence Type - 共有ビューからの編集時には非表示 -->
+                    <div v-if="!isSharedViewEdit">
                         <label
                             for="recurrence_type"
                             class="block text-sm font-medium text-gray-700"
-                            >Recurrence</label
+                            >繰り返し</label
                         >
                         <select
                             id="recurrence_type"
                             v-model="form.recurrence_type"
                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         >
-                            <option value="none">No Recurrence</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
+                            <option value="none">繰り返しなし</option>
+                            <option value="daily">毎日</option>
+                            <option value="weekly">毎週</option>
+                            <option value="monthly">毎月</option>
                         </select>
                     </div>
 
-                    <!-- Recurrence End Date -->
+                    <!-- Recurrence End Date - 共有ビューからの編集時には非表示 -->
                     <div
                         v-if="
                             !isSharedViewEdit &&
-                            !isSimpleMode &&
                             form.recurrence_type &&
                             form.recurrence_type !== 'none'
                         "
@@ -394,7 +373,7 @@
                         <label
                             for="recurrence_end_date"
                             class="block text-sm font-medium text-gray-700"
-                            >Recurrence End Date</label
+                            >繰り返し終了日</label
                         >
                         <input
                             type="date"
@@ -403,25 +382,8 @@
                             class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                         />
                         <p class="mt-0.5 text-xs text-gray-500">
-                            Leave empty to repeat for 1 month
+                            ※指定しない場合は1ヶ月間繰り返されます
                         </p>
-                    </div>
-
-                    <!-- Description / Notes field -->
-                    <div>
-                        <label
-                            for="description"
-                            class="block text-sm font-medium text-gray-700"
-                        >
-                            Description
-                        </label>
-                        <textarea
-                            id="description"
-                            v-model="form.description"
-                            rows="3"
-                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Add notes or details about this task..."
-                        ></textarea>
                     </div>
                 </form>
             </div>
@@ -429,14 +391,14 @@
             <!-- Footer -->
             <div class="bg-gray-50 px-4 py-2 border-t border-gray-200 mt-auto">
                 <div class="flex justify-between items-center">
-                    <!-- Delete Button (edit mode only) -->
+                    <!-- Delete/Share Buttons (edit mode only) -->
                     <div v-if="mode === 'edit'">
                         <button
                             type="button"
                             @click="deleteTask"
                             class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded border border-red-300 text-red-700 bg-white hover:bg-red-50"
                         >
-                            Delete
+                            削除
                         </button>
                     </div>
 
@@ -447,14 +409,14 @@
                             @click="$emit('close')"
                             class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
                         >
-                            Cancel
+                            キャンセル
                         </button>
                         <button
                             type="button"
                             @click="submitForm"
                             class="inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded border border-transparent text-white bg-blue-600 hover:bg-blue-700"
                         >
-                            {{ mode === "add" ? "Add" : "Save" }}
+                            {{ mode === "add" ? "追加" : "保存" }}
                         </button>
                     </div>
                 </div>
@@ -465,10 +427,11 @@
 
 <script>
 import { ref, reactive, watch, onMounted, nextTick, computed } from "vue";
-import axios from "axios";
 
 export default {
     name: "TaskModal",
+
+    components: {},
 
     props: {
         mode: {
@@ -490,7 +453,6 @@ export default {
                 category_id: "",
                 recurrence_type: "none",
                 recurrence_end_date: "",
-                status: "pending",
             }),
         },
         categories: {
@@ -505,26 +467,14 @@ export default {
             type: String,
             default: "today",
         },
-        // New prop for kanban statuses
-        statuses: {
-            type: Array,
-            default: () => [
-                { id: "pending", name: "To Do" },
-                { id: "in_progress", name: "In Progress" },
-                { id: "review", name: "Review" },
-                { id: "completed", name: "Completed" },
-            ],
-        },
-        // New prop for simplified mode
-        isSimpleMode: {
-            type: Boolean,
-            default: false,
-        },
     },
 
     emits: ["close", "submit", "delete", "category-created"],
 
     setup(props, { emit }) {
+        // ===============================
+        // State
+        // ===============================
         // Track active duration button
         const activeDuration = ref(null);
 
@@ -538,7 +488,6 @@ export default {
             category_id: "",
             recurrence_type: "none",
             recurrence_end_date: "",
-            status: "pending",
         });
 
         // New category form
@@ -548,10 +497,14 @@ export default {
             color: "#3b82f6",
         });
 
-        // Shared view editing detection
+        // 共有ビューからの編集かどうかを判定
         const isSharedViewEdit = computed(() => {
             return props.todoData && props.todoData._isSharedViewEdit === true;
         });
+
+        // ===============================
+        // Computed Properties
+        // ===============================
 
         // Format categories for select dropdown
         const categoriesArray = computed(() => {
@@ -577,6 +530,10 @@ export default {
                 ) || null
             );
         });
+
+        // ===============================
+        // Methods
+        // ===============================
 
         // Format date string to YYYY-MM-DD
         function formatDateString(dateStr) {
@@ -687,7 +644,6 @@ export default {
                     form.category_id = "";
                     form.recurrence_type = "none";
                     form.recurrence_end_date = "";
-                    form.status = "pending";
                     activeDuration.value = null;
                 }
                 return;
@@ -696,9 +652,6 @@ export default {
             // Set the title and description
             form.title = props.todoData.title || "";
             form.description = props.todoData.description || "";
-
-            // Set status (for kanban)
-            form.status = props.todoData.status || "pending";
 
             // Format dates properly for form inputs
             form.due_date = props.todoData.due_date
@@ -752,11 +705,11 @@ export default {
         // Submit form
         function submitForm() {
             if (!form.title.trim()) {
-                alert("Please enter a title");
+                alert("タイトルを入力してください");
                 return;
             }
 
-            // Prepare form data
+            // データ準備
             const formData = { ...form };
 
             // Set due_time from start_time for compatibility
@@ -797,7 +750,7 @@ export default {
 
         async function createCategory() {
             if (!newCategory.name.trim()) {
-                alert("Please enter a category name");
+                alert("カテゴリー名を入力してください");
                 return;
             }
 
@@ -807,29 +760,29 @@ export default {
                     color: newCategory.color,
                 });
 
-                // Access response data directly
+                // レスポンスデータに直接アクセス可能
                 const data = response.data;
 
-                // Select the new category
+                // 新しいカテゴリを選択
                 form.category_id = String(data.id);
 
-                // Hide category form
+                // カテゴリフォームを非表示
                 showCategoryInput.value = false;
 
-                // Update category list
+                // カテゴリリストを更新
                 emit("category-created");
 
-                // Reset form
+                // フォームをリセット
                 newCategory.name = "";
                 newCategory.color = "#3b82f6";
 
-                // Success message
-                alert("Category created successfully");
+                // 成功メッセージ
+                alert("カテゴリーが作成されました");
             } catch (error) {
-                // Simple error handling
-                console.error("Category creation error:", error);
+                // エラーハンドリングも簡潔に
+                console.error("カテゴリー作成エラー:", error);
                 alert(
-                    "Failed to create category: " +
+                    "カテゴリーの作成に失敗しました: " +
                         (error.response?.data?.message || error.message),
                 );
             }
@@ -847,6 +800,10 @@ export default {
 
             emit("delete", props.todoId, shouldDeleteAllRecurring);
         }
+
+        // ===============================
+        // Watchers & Lifecycle Hooks
+        // ===============================
 
         // Watch for prop changes and initialize form
         watch(
@@ -871,7 +828,7 @@ export default {
             () => isSharedViewEdit.value,
             (isSharedView) => {
                 if (isSharedView) {
-                    // Reset category and recurrence settings when editing from shared view
+                    // 共有ビューからの編集時はカテゴリーと繰り返し設定をリセット
                     form.category_id = "";
                     form.recurrence_type = "none";
                     form.recurrence_end_date = "";

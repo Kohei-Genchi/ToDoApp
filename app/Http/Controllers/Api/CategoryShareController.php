@@ -27,18 +27,19 @@ class CategoryShareController extends Controller
         $this->shareNotificationService = $shareNotificationService;
     }
 
+    // @Todo
     private function checkSubscription(): ?JsonResponse
     {
-        if (!Auth::user()->subscription_id) {
-            return response()->json(
-                [
-                    "error" =>
-                        "共有機能を利用するにはサブスクリプションが必要です。",
-                    "subscription_required" => true,
-                ],
-                403
-            );
-        }
+        // if (!Auth::user()->subscription_id) {
+        //     return response()->json(
+        //         [
+        //             "error" =>
+        //                 "共有機能を利用するにはサブスクリプションが必要です。",
+        //             "subscription_required" => true,
+        //         ],
+        //         403
+        //     );
+        // }
 
         return null;
     }
@@ -77,10 +78,7 @@ class CategoryShareController extends Controller
         // LINE認証は必須になりました
         // Always use the ShareRequestController for LINE authentication
         $shareRequestController = app(ShareRequestsController::class);
-        return $shareRequestController->storeCategoryShare(
-            $request,
-            $category
-        );
+        return $shareRequestController->storeCategoryShare($request, $category);
     }
 
     /**

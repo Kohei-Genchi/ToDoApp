@@ -24,7 +24,7 @@ class User extends Authenticatable
         "subscription_id",
         "morning_reminder_time",
         "evening_reminder_time",
-        "line_notify_token",
+        "slack_webhook_url",
     ];
 
     protected $hidden = ["password", "remember_token"];
