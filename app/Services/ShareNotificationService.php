@@ -23,14 +23,16 @@ class ShareNotificationService
      * @param User $recipient The user receiving the share request
      * @param User $requester The user making the share request
      * @param ShareRequest $shareRequest The share request object
-     * @param Category $category The category being shared
+     * @param Category|string $itemName The category or item name being shared
+     * @param string $itemType Type of item being shared ('category', 'task', etc.)
      * @return bool Whether the notification was sent successfully
      */
-    public function sendCategoryShareRequestNotification(
+    public function sendShareRequestNotification(
         User $recipient,
         User $requester,
         ShareRequest $shareRequest,
-        $category
+        $itemName,
+        string $itemType = "カテゴリー"
     ): bool {
         // Generate approve and reject URLs
         $approveUrl = URL::signedRoute("share-requests.approve", [
@@ -40,13 +42,21 @@ class ShareNotificationService
             "token" => $shareRequest->token,
         ]);
 
+        // Extract item name if it's a category object
+        $itemNameStr = is_string($itemName)
+            ? $itemName
+            : (is_object($itemName) && method_exists($itemName, "getAttribute")
+                ? $itemName->getAttribute("name")
+                : "Shared Item");
+
         // Create the message
-        $message = $this->buildCategoryShareRequestMessage(
+        $message = $this->buildShareRequestMessage(
             $requester,
-            $category,
+            $itemNameStr,
             $shareRequest,
             $approveUrl,
-            $rejectUrl
+            $rejectUrl,
+            $itemType
         );
 
         // Send notification via Slack if the user has a webhook URL
@@ -59,27 +69,33 @@ class ShareNotificationService
 
         // No valid notification channels configured
         Log::warning(
-            "Failed to send category share request notification to {$recipient->email}. No valid notification channels configured."
+            "Failed to send share request notification to {$recipient->email}. No valid notification channels configured."
         );
         return false;
     }
 
     /**
-     * Build the message for a category share request
+     * Build the message for a share request
      */
-    protected function buildCategoryShareRequestMessage(
+    protected function buildShareRequestMessage(
         User $requester,
-        $category,
+        string $itemName,
         ShareRequest $shareRequest,
         string $approveUrl,
-        string $rejectUrl
+        string $rejectUrl,
+        string $itemType = "カテゴリー"
     ): string {
         $permissionText =
             $shareRequest->permission === "edit" ? "編集可能" : "閲覧のみ";
 
-        $message = "\n*【カテゴリー共有リクエスト】*\n\n";
-        $message .= "{$requester->name}さんがカテゴリー「{$category->name}」を共有しようとしています。\n\n";
-        $message .= "このカテゴリーに属するすべてのタスクが共有されます。\n";
+        $message = "\n*【{$itemType}共有リクエスト】*\n\n";
+        $message .= "{$requester->name}さんが{$itemType}「{$itemName}」を共有しようとしています。\n\n";
+
+        if ($itemType === "カテゴリー") {
+            $message .=
+                "このカテゴリーに属するすべてのタスクが共有されます。\n";
+        }
+
         $message .= "権限: {$permissionText}\n";
         $message .= "有効期限: {$shareRequest->expires_at->format(
             "Y-m-d H:i"

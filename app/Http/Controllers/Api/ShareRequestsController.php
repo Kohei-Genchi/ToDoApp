@@ -140,6 +140,10 @@ class ShareRequestsController extends Controller
 
     /**
      * Create a new category share request
+     *
+     * @param Request $request The request object
+     * @param Category $category The category to share
+     * @return JsonResponse The JSON response
      */
     public function storeCategoryShare(
         Request $request,

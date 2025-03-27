@@ -7,16 +7,17 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 
 class ShareNotificationWebController extends Controller
 {
     /**
-     * Handle incoming request approval
+     * Handle incoming request approval - web UI
      *
      * This controller handles the web route for approving
      * share requests via Line/Slack URLs
      */
-    public function approveRequest(string $token)
+    public function approveRequest(string $token): View
     {
         try {
             $shareRequest = ShareRequest::where("token", $token)
@@ -61,13 +62,18 @@ class ShareNotificationWebController extends Controller
             $requester = User::find($shareRequest->user_id);
             $requesterName = $requester ? $requester->name : "不明なユーザー";
 
+            // Determine share type for UI
+            $shareTypeName = "全タスク"; // Default
+            if ($shareRequest->share_type === "task") {
+                $shareTypeName = "タスク";
+            } elseif ($shareRequest->share_type === "category") {
+                $shareTypeName = "カテゴリー";
+            }
+
             return view("share-requests.approved", [
                 "shareRequest" => $shareRequest,
                 "requesterName" => $requesterName,
-                "shareType" =>
-                    $shareRequest->share_type === "task"
-                        ? "タスク"
-                        : "全タスク",
+                "shareType" => $shareTypeName,
             ]);
         } catch (\Exception $e) {
             Log::error("Error in share request approval: " . $e->getMessage());
@@ -81,9 +87,9 @@ class ShareNotificationWebController extends Controller
     }
 
     /**
-     * Handle incoming request rejection
+     * Handle incoming request rejection - web UI
      */
-    public function rejectRequest(string $token)
+    public function rejectRequest(string $token): View
     {
         try {
             $shareRequest = ShareRequest::where("token", $token)
@@ -128,13 +134,18 @@ class ShareNotificationWebController extends Controller
             $requester = User::find($shareRequest->user_id);
             $requesterName = $requester ? $requester->name : "不明なユーザー";
 
+            // Determine share type for UI
+            $shareTypeName = "全タスク"; // Default
+            if ($shareRequest->share_type === "task") {
+                $shareTypeName = "タスク";
+            } elseif ($shareRequest->share_type === "category") {
+                $shareTypeName = "カテゴリー";
+            }
+
             return view("share-requests.rejected", [
                 "shareRequest" => $shareRequest,
                 "requesterName" => $requesterName,
-                "shareType" =>
-                    $shareRequest->share_type === "task"
-                        ? "タスク"
-                        : "全タスク",
+                "shareType" => $shareTypeName,
             ]);
         } catch (\Exception $e) {
             Log::error("Error in share request rejection: " . $e->getMessage());
@@ -148,14 +159,14 @@ class ShareNotificationWebController extends Controller
     }
 
     /**
-     * Show a list of pending share requests for the authenticated user
+     * Show a list of pending share requests for the authenticated user - web UI
      */
-    public function index()
+    public function index(): View
     {
         $outgoingRequests = ShareRequest::where("user_id", Auth::id())
             ->where("status", "pending")
             ->where("expires_at", ">", now())
-            ->with(["todo"])
+            ->with(["todo", "category"])
             ->get();
 
         $incomingRequests = ShareRequest::where(
@@ -164,7 +175,7 @@ class ShareNotificationWebController extends Controller
         )
             ->where("status", "pending")
             ->where("expires_at", ">", now())
-            ->with(["todo", "requester"])
+            ->with(["todo", "category", "requester"])
             ->get();
 
         return view("share-requests.index", [

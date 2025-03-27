@@ -13,18 +13,22 @@ use Illuminate\Support\Facades\Log;
 use App\Services\SlackNotifyService;
 use App\Services\ShareNotificationService;
 use App\Http\Controllers\Api\ShareRequestsController;
+use Illuminate\View\View;
 
 class CategoryShareController extends Controller
 {
     protected $slackNotifyService;
     protected $shareNotificationService;
+    protected $shareRequestsController;
 
     public function __construct(
         SlackNotifyService $slackNotifyService,
-        ShareNotificationService $shareNotificationService
+        ShareNotificationService $shareNotificationService,
+        ShareRequestsController $shareRequestsController
     ) {
         $this->slackNotifyService = $slackNotifyService;
         $this->shareNotificationService = $shareNotificationService;
+        $this->shareRequestsController = $shareRequestsController;
     }
 
     // @Todo
@@ -67,6 +71,7 @@ class CategoryShareController extends Controller
 
     /**
      * Share a category with a user.
+     * This method now delegates to ShareRequestsController.
      */
     public function store(Request $request, Category $category): JsonResponse
     {
@@ -75,9 +80,11 @@ class CategoryShareController extends Controller
             return $subscriptionCheck;
         }
 
-        // Always use the ShareRequestController for Slack authentication
-        $shareRequestController = app(ShareRequestsController::class);
-        return $shareRequestController->storeCategoryShare($request, $category);
+        // Delegate to ShareRequestsController
+        return $this->shareRequestsController->storeCategoryShare(
+            $request,
+            $category
+        );
     }
 
     /**
@@ -215,7 +222,7 @@ class CategoryShareController extends Controller
     /**
      * Display the categories shared with the authenticated user (web view)
      */
-    public function sharedWithMePage()
+    public function sharedWithMePage(): View
     {
         return view("categories.shared");
     }
