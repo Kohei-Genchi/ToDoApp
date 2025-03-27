@@ -135,6 +135,19 @@ Route::middleware(["auth"])->group(function () {
         "todos.destroy"
     );
 
+    Route::get("/tasks/kanban", [
+        App\Http\Controllers\SharedTasksController::class,
+        "index",
+    ])->name("tasks.kanban");
+    Route::get("/tasks/team", [
+        App\Http\Controllers\SharedTasksController::class,
+        "teamMembers",
+    ])->name("tasks.team");
+    Route::get("/tasks/analytics", [
+        App\Http\Controllers\SharedTasksController::class,
+        "analytics",
+    ])->name("tasks.analytics");
+
     /**
      * Category routes
      */

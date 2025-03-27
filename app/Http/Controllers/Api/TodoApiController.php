@@ -39,20 +39,21 @@ class TodoApiController extends Controller
                 return response()->json([]);
             }
 
-            // Subscription check for calendar and shared views
-            if (
-                ($request->view === "shared" || $request->view === "kanban") &&
-                !Auth::user()->subscription_id
-            ) {
-                return response()->json(
-                    [
-                        "error" =>
-                            "共有機能を利用するにはサブスクリプションが必要です。",
-                        "subscription_required" => true,
-                    ],
-                    403
-                );
-            }
+            // Temporarily disabled subscription check for development
+            // @Todo
+            // if (
+            //     ($request->view === "shared" || $request->view === "kanban") &&
+            //     !Auth::user()->subscription_id
+            // ) {
+            //     return response()->json(
+            //         [
+            //             "error" =>
+            //                 "共有機能を利用するにはサブスクリプションが必要です。",
+            //             "subscription_required" => true,
+            //         ],
+            //         403
+            //     );
+            // }
 
             // Get tasks using the service
             $view = $request->view ?? "today";

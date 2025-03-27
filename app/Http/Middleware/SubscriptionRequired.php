@@ -13,21 +13,24 @@ class SubscriptionRequired
      */
     public function handle(Request $request, Closure $next)
     {
-        $user = Auth::user();
+        // @Todo
+        // Temporarily disabled subscription check for development
+        // $user = Auth::user();
 
-        // Check if user exists and has a subscription_id
-        if (!$user || !$user->subscription_id) {
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'このサービスを利用するにはサブスクリプションが必要です。'
-                ], 403);
-            }
+        // // Check if user exists and has a subscription_id
+        // if (!$user || !$user->subscription_id) {
+        //     if ($request->expectsJson()) {
+        //         return response()->json([
+        //             'success' => false,
+        //             'message' => 'このサービスを利用するにはサブスクリプションが必要です。'
+        //         ], 403);
+        //     }
 
-            return redirect()->route('stripe.subscription')
-                ->with('error', 'このサービスを利用するにはサブスクリプションが必要です。');
-        }
+        //     return redirect()->route('stripe.subscription')
+        //         ->with('error', 'このサービスを利用するにはサブスクリプションが必要です。');
+        // }
 
+        // Allow all requests to proceed during development
         return $next($request);
     }
 }
