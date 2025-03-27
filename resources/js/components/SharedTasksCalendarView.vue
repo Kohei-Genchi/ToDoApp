@@ -1,5 +1,3 @@
-// Update for SharedTasksCalendarView.vue to remove TaskShareModal
-
 <template>
     <div
         class="shared-tasks-calendar bg-white rounded-lg shadow-sm overflow-hidden w-full max-w-full"
@@ -136,12 +134,12 @@ import {
     nextTick,
     watch,
 } from "vue";
-import TaskModal from "./TaskModal.vue";
-import TaskCell from "./calendar/TaskCell.vue";
 import HeaderNavigation from "./calendar/HeaderNavigation.vue";
+import TaskModal from "./TaskModal.vue";
 import LoadingIndicator from "./common/LoadingIndicator.vue";
 import TodoApi from "../api/todo";
 import axios from "axios";
+import TaskCell from "./calendar/TaskCell.vue";
 
 // Constants
 const HOURS_IN_DAY = 24;
