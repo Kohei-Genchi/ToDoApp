@@ -107,25 +107,25 @@
 
             <div class="mt-4">
                 <h3 class="text-base font-medium text-gray-900 mb-2">
-                    {{ __('Line Notify設定') }}
+                    {{ __('Slack 通知設定') }}
                 </h3>
                 <div class="mt-3">
-                    <x-input-label for="line_notify_token" :value="__('Line Notify Token')" />
+                    <x-input-label for="slack_webhook_url" :value="__('Slack Webhook URL')" />
                     <x-text-input
-                        id="line_notify_token"
-                        name="line_notify_token"
+                        id="slack_webhook_url"
+                        name="slack_webhook_url"
                         type="text"
                         class="mt-1 block w-full"
-                        :value="old('line_notify_token', $user->line_notify_token)"
-                        placeholder="Line Notify personal access token"
+                        :value="old('slack_webhook_url', $user->slack_webhook_url)"
+                        placeholder="https://hooks.slack.com/services/TXXXXXXXX/BXXXXXXXX/XXXXXXXXXXXXXXXXXXXXXXXX"
                     />
                     <p class="mt-1 text-sm text-gray-600">
-                        リマインダーや承認通知をLineに送信するには、Line Notify トークンを入力してください。
-                        <a href="https://notify-bot.line.me/my/" target="_blank" class="text-blue-600 hover:underline">
-                            Line Notify トークンの取得方法
+                        リマインダーや承認通知をSlackに送信するには、Slack Webhook URLを入力してください。
+                        <a href="https://api.slack.com/messaging/webhooks" target="_blank" class="text-blue-600 hover:underline">
+                            Slack Webhook URLの取得方法
                         </a>
                     </p>
-                    <x-input-error class="mt-1" :messages="$errors->get('line_notify_token')" />
+                    <x-input-error class="mt-1" :messages="$errors->get('slack_webhook_url')" />
                 </div>
             </div>
         </div>

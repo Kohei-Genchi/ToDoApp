@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\URL;
 
 class CategoryShareNotificationService
 {
-    protected $lineNotifyService;
+    protected $slackNotifyService;
 
-    public function __construct(LineNotifyService $lineNotifyService)
+    public function __construct(SlackNotifyService $slackNotifyService)
     {
-        $this->lineNotifyService = $lineNotifyService;
+        $this->slackNotifyService = $slackNotifyService;
     }
 
     /**
@@ -32,10 +32,10 @@ class CategoryShareNotificationService
         ShareRequest $shareRequest,
         Category $category
     ): bool {
-        // LINE認証が必要なため、LINE通知トークンが設定されているかチェック
-        if (!$recipient->line_notify_token) {
+        // Slack認証が必要なため、Slack webhook URLが設定されているかチェック
+        if (!$recipient->slack_webhook_url) {
             Log::warning(
-                "Recipient has no Line Notify token: {$recipient->email}"
+                "Recipient has no Slack webhook URL: {$recipient->email}"
             );
             return false;
         }
@@ -58,18 +58,18 @@ class CategoryShareNotificationService
             $rejectUrl
         );
 
-        // LINE Notifyを使用して通知を送信
+        // Slack Notifyを使用して通知を送信
         try {
-            $success = $this->lineNotifyService->send(
-                $recipient->line_notify_token,
+            $success = $this->slackNotifyService->send(
+                $recipient->slack_webhook_url,
                 $message
             );
 
             if (!$success) {
                 Log::error(
-                    "Failed to send Line notification for category share request",
+                    "Failed to send Slack notification for category share request",
                     [
-                        "error" => $this->lineNotifyService->getLastError(),
+                        "error" => $this->slackNotifyService->getLastError(),
                         "recipient" => $recipient->email,
                         "category" => $category->name,
                     ]
@@ -79,7 +79,7 @@ class CategoryShareNotificationService
             return $success;
         } catch (\Exception $e) {
             Log::error(
-                "Exception sending Line notification: " . $e->getMessage()
+                "Exception sending Slack notification: " . $e->getMessage()
             );
             return false;
         }
@@ -98,7 +98,7 @@ class CategoryShareNotificationService
         $permissionText =
             $shareRequest->permission === "edit" ? "編集可能" : "閲覧のみ";
 
-        $message = "\n【カテゴリー共有リクエスト】\n\n";
+        $message = "\n*【カテゴリー共有リクエスト】*\n\n";
         $message .= "{$requester->name}さんがカテゴリー「{$category->name}」を共有しようとしています。\n\n";
         $message .= "このカテゴリーに属するすべてのタスクが共有されます。\n";
         $message .= "権限: {$permissionText}\n";

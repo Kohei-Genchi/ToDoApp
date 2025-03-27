@@ -8,7 +8,7 @@ use App\Models\Todo;
 use App\Models\User;
 use App\Models\Category;
 use App\Notifications\ShareNotification;
-use App\Services\LineNotifyService;
+use App\Services\SlackNotifyService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,11 +20,11 @@ use Illuminate\Support\Facades\URL;
 
 class ShareRequestsController extends Controller
 {
-    protected $lineNotifyService;
+    protected $slackNotifyService;
 
-    public function __construct(LineNotifyService $lineNotifyService)
+    public function __construct(SlackNotifyService $slackNotifyService)
     {
-        $this->lineNotifyService = $lineNotifyService;
+        $this->slackNotifyService = $slackNotifyService;
     }
 
     /**
@@ -141,9 +141,6 @@ class ShareRequestsController extends Controller
     /**
      * Create a new category share request
      */
-    /**
-     * Create a new category share request
-     */
     public function storeCategoryShare(
         Request $request,
         Category $category
@@ -212,10 +209,10 @@ class ShareRequestsController extends Controller
 
             $shareRequest->save();
 
-            // Send notification through Line Notify if available
+            // Send notification through Slack if available
             $notificationSent = false;
 
-            if ($recipientUser && $recipientUser->line_notify_token) {
+            if ($recipientUser && $recipientUser->slack_webhook_url) {
                 // Use the notification system
                 $recipientUser->notify(
                     new ShareNotification(
@@ -274,6 +271,7 @@ class ShareRequestsController extends Controller
             );
         }
     }
+
     /**
      * Create a new global share request - Deprecated in favor of category sharing
      */

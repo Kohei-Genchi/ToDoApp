@@ -10,20 +10,20 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Services\LineNotifyService;
+use App\Services\SlackNotifyService;
 use App\Services\ShareNotificationService;
 use App\Http\Controllers\Api\ShareRequestsController;
 
 class CategoryShareController extends Controller
 {
-    protected $lineNotifyService;
+    protected $slackNotifyService;
     protected $shareNotificationService;
 
     public function __construct(
-        LineNotifyService $lineNotifyService,
+        SlackNotifyService $slackNotifyService,
         ShareNotificationService $shareNotificationService
     ) {
-        $this->lineNotifyService = $lineNotifyService;
+        $this->slackNotifyService = $slackNotifyService;
         $this->shareNotificationService = $shareNotificationService;
     }
 
@@ -75,8 +75,7 @@ class CategoryShareController extends Controller
             return $subscriptionCheck;
         }
 
-        // LINE認証は必須になりました
-        // Always use the ShareRequestController for LINE authentication
+        // Always use the ShareRequestController for Slack authentication
         $shareRequestController = app(ShareRequestsController::class);
         return $shareRequestController->storeCategoryShare($request, $category);
     }

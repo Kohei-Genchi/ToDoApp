@@ -74,10 +74,10 @@ class User extends Authenticatable
     }
 
     /**
-     * Route notifications for the Line channel.
+     * Route notifications for the Slack channel.
      */
-    public function routeNotificationForLine()
+    public function routeNotificationForSlack()
     {
-        return $this->line_notify_token;
+        return $this->slack_webhook_url;
     }
 }

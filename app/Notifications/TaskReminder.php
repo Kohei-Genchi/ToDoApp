@@ -6,7 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use App\Services\LineNotifyService;
+use App\Services\SlackNotifyService;
 use Illuminate\Support\Facades\Log;
 
 class TaskReminder extends Notification
@@ -34,9 +34,9 @@ class TaskReminder extends Notification
     {
         $channels = [];
 
-        // Use Line channel if token is set
-        if (!empty($notifiable->line_notify_token)) {
-            $channels[] = "line";
+        // Use Slack channel if webhook URL is set
+        if (!empty($notifiable->slack_webhook_url)) {
+            $channels[] = "slack";
         } else {
             // Use email as fallback
             $channels[] = "mail";
@@ -85,36 +85,17 @@ class TaskReminder extends Notification
     }
 
     /**
-     * Get the Line representation of the notification.
+     * Get the Slack representation of the notification.
      */
-    public function toLine(object $notifiable): string
+    public function toSlack(object $notifiable): string
     {
-        // Use the same formatting function as before
-        return $this->formatLineMessage($notifiable);
+        return $this->formatSlackMessage($notifiable);
     }
 
     /**
-     * Legacy direct send method for Line Notify
-     * @return array [bool $success, string|null $error]
+     * Format message for Slack
      */
-    public function sendToLine(object $notifiable): array
-    {
-        if (!$notifiable->line_notify_token) {
-            return [false, "Line Notify token not found for user"];
-        }
-
-        $message = $this->formatLineMessage($notifiable);
-        $lineService = new LineNotifyService();
-
-        $result = $lineService->send($notifiable->line_notify_token, $message);
-
-        return [$result, $result ? null : $lineService->getLastError()];
-    }
-
-    /**
-     * Format message for Line Notify
-     */
-    protected function formatLineMessage(object $notifiable): string
+    protected function formatSlackMessage(object $notifiable): string
     {
         // Start with main message
         $message = "\n" . $this->message;
@@ -128,7 +109,7 @@ class TaskReminder extends Notification
                 ->get();
 
             if ($pendingTasks->count() > 0) {
-                $message .= "\n\n残っているタスク:";
+                $message .= "\n\n*残っているタスク:*";
 
                 // Add each task (limit to 10 to avoid message becoming too long)
                 foreach ($pendingTasks->take(10) as $index => $task) {

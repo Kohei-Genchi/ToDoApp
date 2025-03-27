@@ -138,16 +138,16 @@ class SendReminders extends Command
                 }
             }
 
-            // Only send if user has an email or Line token and has relevant tasks
+            // Only send if user has an email or Slack webhook URL and has relevant tasks
             $shouldSend = false;
             if ($type === "morning") {
                 $shouldSend =
-                    ($user->email || $user->line_notify_token) &&
+                    ($user->email || $user->slack_webhook_url) &&
                     $pendingTasks->count() > 0;
             } else {
                 // evening
                 $shouldSend =
-                    ($user->email || $user->line_notify_token) &&
+                    ($user->email || $user->slack_webhook_url) &&
                     ($pendingCount > 0 || $completedCount > 0);
             }
 
@@ -162,13 +162,13 @@ class SendReminders extends Command
 
                     $notification = new TaskReminder($message, $pendingCount);
 
-                    // Send notification (will use Line if token is available, otherwise email)
+                    // Send notification (will use Slack if webhook URL is available, otherwise email)
                     $user->notify($notification);
 
                     // Log the notification
-                    if ($user->line_notify_token) {
+                    if ($user->slack_webhook_url) {
                         $this->info(
-                            "Sent Line notification to user {$user->id}"
+                            "Sent Slack notification to user {$user->id}"
                         );
                     } else {
                         $this->info(

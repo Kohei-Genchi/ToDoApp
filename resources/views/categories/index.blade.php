@@ -106,6 +106,7 @@
         </div>
 
         <!-- カテゴリー共有モーダル -->
+        <!-- categories/index.blade.php のモーダル部分 -->
         <div id="share-modal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
             <div class="absolute inset-0 bg-black bg-opacity-30" onclick="closeShareModal()"></div>
             <div class="bg-white rounded-lg shadow-md w-full max-w-md relative z-10 p-6">
@@ -132,9 +133,9 @@
                     </div>
 
                     <div class="flex items-center">
-                        <input type="checkbox" id="line-auth-required" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" checked>
-                        <label for="line-auth-required" class="ml-2 block text-sm text-gray-900">
-                            LINE認証を必須にする
+                        <input type="checkbox" id="slack-auth-required" class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" checked>
+                        <label for="slack-auth-required" class="ml-2 block text-sm text-gray-900">
+                            Slack認証を必須にする
                         </label>
                     </div>
 
@@ -157,18 +158,6 @@
         <script>
             let currentCategoryId = null;
 
-            // 編集モーダル関連の関数
-            function openEditModal(id, name, color) {
-                document.getElementById('edit-form').action = `/categories/${id}`;
-                document.getElementById('edit-name').value = name;
-                document.getElementById('edit-color').value = color;
-                document.getElementById('edit-modal').classList.remove('hidden');
-            }
-
-            function closeEditModal() {
-                document.getElementById('edit-modal').classList.add('hidden');
-            }
-
             // 共有モーダル関連の関数
             function openShareModal(id, name, color) {
                 currentCategoryId = id;
@@ -186,7 +175,8 @@
             function shareCategory() {
                 const email = document.getElementById('share-email').value;
                 const permission = document.getElementById('share-permission').value;
-                const lineAuthRequired = document.getElementById('line-auth-required').checked;
+                // パラメータ名を変更
+                const slackAuthRequired = document.getElementById('slack-auth-required').checked;
 
                 if (!email) {
                     showShareError('メールアドレスを入力してください');
@@ -207,14 +197,15 @@
                     body: JSON.stringify({
                         email: email,
                         permission: permission,
-                        line_auth_required: lineAuthRequired
+                        // パラメータ名を修正
+                        slack_auth_required: slackAuthRequired
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(lineAuthRequired
-                            ? 'カテゴリー共有リクエストが送信されました。相手はLINEで承認する必要があります。'
+                        alert(slackAuthRequired
+                            ? 'カテゴリー共有リクエストが送信されました。相手はSlackで承認する必要があります。'
                             : 'カテゴリーが共有されました');
                         closeShareModal();
                     } else {
@@ -236,7 +227,6 @@
             // ESCキーでモーダルを閉じる
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
-                    closeEditModal();
                     closeShareModal();
                 }
             });

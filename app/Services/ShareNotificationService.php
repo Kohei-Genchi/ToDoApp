@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\URL;
 
 class ShareNotificationService
 {
-    protected $lineNotifyService;
+    protected $slackNotifyService;
 
-    public function __construct(LineNotifyService $lineNotifyService)
+    public function __construct(SlackNotifyService $slackNotifyService)
     {
-        $this->lineNotifyService = $lineNotifyService;
+        $this->slackNotifyService = $slackNotifyService;
     }
 
     /**
@@ -49,9 +49,9 @@ class ShareNotificationService
             $rejectUrl
         );
 
-        // Send notification via Line if the user has a Line token
-        if ($recipient->line_notify_token) {
-            $success = $this->sendLineNotification($recipient, $message);
+        // Send notification via Slack if the user has a webhook URL
+        if ($recipient->slack_webhook_url) {
+            $success = $this->sendSlackNotification($recipient, $message);
             if ($success) {
                 return true;
             }
@@ -77,7 +77,7 @@ class ShareNotificationService
         $permissionText =
             $shareRequest->permission === "edit" ? "編集可能" : "閲覧のみ";
 
-        $message = "\n【カテゴリー共有リクエスト】\n\n";
+        $message = "\n*【カテゴリー共有リクエスト】*\n\n";
         $message .= "{$requester->name}さんがカテゴリー「{$category->name}」を共有しようとしています。\n\n";
         $message .= "このカテゴリーに属するすべてのタスクが共有されます。\n";
         $message .= "権限: {$permissionText}\n";
@@ -93,17 +93,17 @@ class ShareNotificationService
     }
 
     /**
-     * Send a notification through Line Notify
+     * Send a notification through Slack
      */
-    protected function sendLineNotification(User $user, string $message): bool
+    protected function sendSlackNotification(User $user, string $message): bool
     {
         try {
-            return $this->lineNotifyService->send(
-                $user->line_notify_token,
+            return $this->slackNotifyService->send(
+                $user->slack_webhook_url,
                 $message
             );
         } catch (\Exception $e) {
-            Log::error("Line notification error: " . $e->getMessage());
+            Log::error("Slack notification error: " . $e->getMessage());
             return false;
         }
     }

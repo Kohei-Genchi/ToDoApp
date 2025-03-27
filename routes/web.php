@@ -31,8 +31,9 @@ Route::get("/auth/google/callback", [
     GoogleController::class,
     "handleGoogleCallback",
 ]);
+
 Route::middleware(["web"])->group(function () {
-    // Approval and rejection with friendly UI
+    // Approval and rejection with friendly UI - ルート名の一貫性を確保
     Route::get("/share-requests/{token}/approve", [
         App\Http\Controllers\ShareNotificationWebController::class,
         "approveRequest",
@@ -42,6 +43,27 @@ Route::middleware(["web"])->group(function () {
         App\Http\Controllers\ShareNotificationWebController::class,
         "rejectRequest",
     ])->name("share-requests.web.reject");
+
+    // 重要: API共有リクエスト承認・拒否のルート名を統一
+    Route::get("/api/share-requests/{token}/approve", [
+        App\Http\Controllers\Api\ShareRequestsController::class,
+        "approve",
+    ])->name("share-requests.approve");
+
+    Route::get("/api/share-requests/{token}/reject", [
+        App\Http\Controllers\Api\ShareRequestsController::class,
+        "reject",
+    ])->name("share-requests.reject");
+
+    // 古いカテゴリー共有ルートは無効化
+    // Route::get("/api/category-share/{token}/approve", [
+    //     App\Http\Controllers\Api\CategoryShareController::class,
+    //     "approveShareRequest",
+    // ])->name("category-share.approve");
+    // Route::get("/api/category-share/{token}/reject", [
+    //     App\Http\Controllers\Api\CategoryShareController::class,
+    //     "rejectShareRequest",
+    // ])->name("category-share.reject");
 
     // Dashboard for share requests (requires authentication)
     Route::middleware(["auth"])->group(function () {
