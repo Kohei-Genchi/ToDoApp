@@ -175,7 +175,6 @@
             function shareCategory() {
                 const email = document.getElementById('share-email').value;
                 const permission = document.getElementById('share-permission').value;
-                // パラメータ名を変更
                 const slackAuthRequired = document.getElementById('slack-auth-required').checked;
 
                 if (!email) {
@@ -197,24 +196,34 @@
                     body: JSON.stringify({
                         email: email,
                         permission: permission,
-                        // パラメータ名を修正
                         slack_auth_required: slackAuthRequired
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
+                    // Check for the "already sent" message case
+                    if (data.message && data.message.includes('already been sent')) {
+                        // Handle as a specific case - show the message but don't treat as error
+                        alert('カテゴリー共有リクエストが既に送信されています。相手はSlackで承認する必要があります。');
+                        closeShareModal();
+                        return;
+                    }
+
+                    // Normal success case
                     if (data.success) {
                         alert(slackAuthRequired
                             ? 'カテゴリー共有リクエストが送信されました。相手はSlackで承認する必要があります。'
                             : 'カテゴリーが共有されました');
                         closeShareModal();
                     } else {
+                        // Error case
+                        console.error("共有エラー:", data);
                         showShareError(data.error || '共有に失敗しました');
                     }
                 })
                 .catch(error => {
-                    console.error('Error sharing category:', error);
-                    showShareError('共有処理中にエラーが発生しました');
+                    console.error("共有処理エラー詳細:", error);
+                    showShareError(error.message || '共有処理中にエラーが発生しました');
                 });
             }
 
