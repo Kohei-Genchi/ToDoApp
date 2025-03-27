@@ -110,23 +110,30 @@ Route::middleware(["auth"])->group(function () {
     /**
      * Todo Management Web UI
      */
-    Route::prefix("todos")->group(function () {
-        // Todo list main page
-        Route::get("/", [TodoController::class, "index"])->name("todos.index");
+    Route::prefix("todos")
+        ->middleware(["web"])
+        ->group(function () {
+            // Todo list main page
+            Route::get("/", [TodoController::class, "index"])->name(
+                "todos.index"
+            );
 
-        // Create todo (web form)
-        Route::post("/", [TodoController::class, "store"])->name("todos.store");
+            // Create todo (web form)
+            Route::post("/", [TodoController::class, "store"])->name(
+                "todos.store"
+            );
 
-        // Toggle todo status
-        Route::patch("/{todo}/toggle", [TodoController::class, "toggle"])->name(
-            "todos.toggle"
-        );
+            // Toggle todo status
+            Route::patch("/{todo}/toggle", [
+                TodoController::class,
+                "toggle",
+            ])->name("todos.toggle");
 
-        // Delete todo
-        Route::delete("/{todo}", [TodoController::class, "destroy"])->name(
-            "todos.destroy"
-        );
-    });
+            // Delete todo
+            Route::delete("/{todo}", [TodoController::class, "destroy"])->name(
+                "todos.destroy"
+            );
+        });
 
     /**
      * Category Management Web UI

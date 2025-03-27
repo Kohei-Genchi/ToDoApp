@@ -72,54 +72,58 @@ Route::middleware(["auth:sanctum"])->group(function () {
     /**
      * Category Sharing
      */
-    Route::prefix("categories")->group(function () {
-        // Get all categories
-        Route::get("/", [CategoryApiController::class, "index"])->name(
-            "api.categories.index"
-        );
-
-        // Create category
-        Route::post("/", [CategoryApiController::class, "store"])->name(
-            "api.categories.store"
-        );
-
-        // Update category
-        Route::put("/{category}", [
-            CategoryApiController::class,
-            "update",
-        ])->name("api.categories.update");
-
-        // Delete category
-        Route::delete("/{category}", [
-            CategoryApiController::class,
-            "destroy",
-        ])->name("api.categories.destroy");
-
-        // Category Sharing
-        Route::prefix("/{category}/shares")->group(function () {
-            // List users with whom category is shared
-            Route::get("/", [CategoryShareController::class, "index"])->name(
-                "api.categories.shares.index"
+    Route::prefix("categories")
+        ->middleware(["web", "auth"])
+        ->group(function () {
+            // Get all categories
+            Route::get("/", [CategoryApiController::class, "index"])->name(
+                "api.categories.index"
             );
 
-            // Share category with user
-            Route::post("/", [CategoryShareController::class, "store"])->name(
-                "api.categories.shares.store"
+            // Create category
+            Route::post("/", [CategoryApiController::class, "store"])->name(
+                "api.categories.store"
             );
 
-            // Update share permissions
-            Route::put("/{user}", [
-                CategoryShareController::class,
+            // Update category
+            Route::put("/{category}", [
+                CategoryApiController::class,
                 "update",
-            ])->name("api.categories.shares.update");
+            ])->name("api.categories.update");
 
-            // Remove sharing
-            Route::delete("/{user}", [
-                CategoryShareController::class,
+            // Delete category
+            Route::delete("/{category}", [
+                CategoryApiController::class,
                 "destroy",
-            ])->name("api.categories.shares.destroy");
+            ])->name("api.categories.destroy");
+
+            // Category Sharing
+            Route::prefix("/{category}/shares")->group(function () {
+                // List users with whom category is shared
+                Route::get("/", [
+                    CategoryShareController::class,
+                    "index",
+                ])->name("api.categories.shares.index");
+
+                // Share category with user
+                Route::post("/", [
+                    CategoryShareController::class,
+                    "store",
+                ])->name("api.categories.shares.store");
+
+                // Update share permissions
+                Route::put("/{user}", [
+                    CategoryShareController::class,
+                    "update",
+                ])->name("api.categories.shares.update");
+
+                // Remove sharing
+                Route::delete("/{user}", [
+                    CategoryShareController::class,
+                    "destroy",
+                ])->name("api.categories.shares.destroy");
+            });
         });
-    });
 
     /**
      * Shared Content Access
@@ -141,39 +145,42 @@ Route::middleware(["auth:sanctum"])->group(function () {
     /**
      * Task Management
      */
-    Route::prefix("todos")->group(function () {
-        // List tasks
-        Route::get("/", [TodoApiController::class, "index"])->name(
-            "api.todos.index"
-        );
+    Route::prefix("todos")
+        ->middleware(["web", "auth"])
+        ->group(function () {
+            // List tasks
+            Route::get("/", [TodoApiController::class, "index"])->name(
+                "api.todos.index"
+            );
 
-        // Create task
-        Route::post("/", [TodoApiController::class, "store"])->name(
-            "api.todos.store"
-        );
+            // Create task
+            Route::post("/", [TodoApiController::class, "store"])->name(
+                "api.todos.store"
+            );
 
-        // Show task
-        Route::get("/{todo}", [TodoApiController::class, "show"])->name(
-            "api.todos.show"
-        );
+            // Show task
+            Route::get("/{todo}", [TodoApiController::class, "show"])->name(
+                "api.todos.show"
+            );
 
-        // Update task (support both PUT and POST for Laravel form method spoofing)
-        Route::match(["put", "post"], "/{todo}", [
-            TodoApiController::class,
-            "update",
-        ])->name("api.todos.update");
+            // Update task (support both PUT and POST for Laravel form method spoofing)
+            Route::match(["put", "post"], "/{todo}", [
+                TodoApiController::class,
+                "update",
+            ])->name("api.todos.update");
 
-        // Toggle task status
-        Route::patch("/{todo}/toggle", [
-            TodoApiController::class,
-            "toggle",
-        ])->name("api.todos.toggle");
+            // Toggle task status
+            Route::patch("/{todo}/toggle", [
+                TodoApiController::class,
+                "toggle",
+            ])->name("api.todos.toggle");
 
-        // Delete task
-        Route::delete("/{todo}", [TodoApiController::class, "destroy"])->name(
-            "api.todos.destroy"
-        );
-    });
+            // Delete task
+            Route::delete("/{todo}", [
+                TodoApiController::class,
+                "destroy",
+            ])->name("api.todos.destroy");
+        });
 
     /**
      * Memo Management
