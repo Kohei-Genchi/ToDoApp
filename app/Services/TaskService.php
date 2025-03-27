@@ -39,14 +39,6 @@ class TaskService
                     ->whereNull("due_date")
                     ->where("status", Todo::STATUS_PENDING);
                 break;
-
-            case "calendar":
-                $query->whereBetween("due_date", [
-                    $date->copy()->startOfMonth()->format("Y-m-d"),
-                    $date->copy()->endOfMonth()->format("Y-m-d"),
-                ]);
-                break;
-
             case "date":
                 // For specific date view
                 $query->whereDate("due_date", $date->format("Y-m-d"));

@@ -18,28 +18,7 @@
                     >
                         今日
                     </button>
-                    <button
-                        @click="
-                            hasSubscription
-                                ? $emit('show-calendar')
-                                : showSubscriptionMessage('カレンダー')
-                        "
-                        :class="[
-                            'px-3 py-1 rounded-md text-sm font-medium',
-                            currentView === 'calendar'
-                                ? 'bg-blue-600 text-white'
-                                : hasSubscription
-                                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed',
-                        ]"
-                        :title="
-                            !hasSubscription
-                                ? 'サブスクリプションが必要です'
-                                : ''
-                        "
-                    >
-                        カレンダー
-                    </button>
+
                     <!-- Shared tasks button with subscription check -->
                     <button
                         @click="

@@ -4,7 +4,6 @@
         <app-header
             :current-view="currentView"
             @set-view="setView"
-            @show-calendar="showCalendarView"
             @show-shared="showSharedTasksView"
             @add-task="openAddTaskModal"
         />
@@ -12,26 +11,9 @@
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
             <!-- Weekly Date Navigation - new component -->
             <weekly-date-navigation
-                v-if="currentView !== 'calendar' && currentView !== 'shared'"
+                v-if="currentView !== 'shared'"
                 :current-date="currentDate"
                 @date-selected="selectDate"
-            />
-
-            <!-- Calendar Month Navigation -->
-            <month-navigation
-                v-if="currentView === 'calendar'"
-                :formatted-month="formattedMonth"
-                @previous-month="previousMonth"
-                @next-month="nextMonth"
-            />
-
-            <!-- Calendar View -->
-            <todo-calendar
-                v-if="currentView === 'calendar'"
-                :current-date="currentDate"
-                :todos="todos"
-                @date-selected="selectDate"
-                @edit-task="openEditTaskModal"
             />
 
             <shared-tasks-calendar-view
@@ -44,7 +26,7 @@
 
             <!-- Task List (normal view) -->
             <todo-list
-                v-if="currentView !== 'calendar' && currentView !== 'shared'"
+                v-if="currentView !== 'shared'"
                 :todos="filteredTodos"
                 :categories="categories"
                 @toggle-task="toggleTaskStatus"
@@ -89,7 +71,6 @@ import CategoryApi from "../api/category";
 
 // Component imports
 const TodoList = defineAsyncComponent(() => import("./TodoList.vue"));
-const TodoCalendar = defineAsyncComponent(() => import("./TodoCalendar.vue"));
 const TaskModal = defineAsyncComponent(() => import("./TaskModal.vue"));
 const DeleteConfirmModal = defineAsyncComponent(
     () => import("./DeleteConfirmModal.vue"),
@@ -103,7 +84,6 @@ const SharedTasksCalendarView = defineAsyncComponent(
 
 // Component imports
 import AppHeader from "./AppHeader.vue";
-import MonthNavigation from "./MonthNavigation.vue";
 import WeeklyDateNavigation from "./WeeklyDateNavigation.vue";
 
 export default {
@@ -111,12 +91,10 @@ export default {
 
     components: {
         TodoList,
-        TodoCalendar,
         TaskModal,
         DeleteConfirmModal,
         NotificationComponent,
         AppHeader,
-        MonthNavigation,
         WeeklyDateNavigation,
         SharedTasksCalendarView,
     },
@@ -262,15 +240,6 @@ export default {
         });
 
         /**
-         * Format month for display
-         */
-        const formattedMonth = computed(() => {
-            const date = new Date(currentDate.value);
-            const options = { year: "numeric", month: "long" };
-            return date.toLocaleDateString("ja-JP", options);
-        });
-
-        /**
          * Filter todos based on current date
          */
         const filteredTodos = computed(() => {
@@ -293,9 +262,6 @@ export default {
         // Data Loading Functions
         // ===============================
 
-        /**
-         * Load tasks
-         */
         /**
          * Load tasks
          */
@@ -323,10 +289,7 @@ export default {
                     );
 
                     // Redirect to today view if trying to access premium feature
-                    if (
-                        currentView.value === "calendar" ||
-                        currentView.value === "shared"
-                    ) {
+                    if (currentView.value === "shared") {
                         currentView.value = "today";
                     }
 
@@ -378,15 +341,7 @@ export default {
         }
 
         /**
-         * Show calendar view
-         */
-        function showCalendarView() {
-            currentView.value = "calendar";
-            loadTasks();
-        }
-
-        /**
-         * Show shared tasks view - directly show calendar view of shared tasks
+         * Show shared tasks view - directly show shared view of tasks
          */
         function showSharedTasksView() {
             currentView.value = "shared";
@@ -403,28 +358,6 @@ export default {
         function selectDate(date) {
             currentDate.value = date;
             currentView.value = "date";
-            loadTasks();
-        }
-
-        /**
-         * Go to previous month
-         */
-        function previousMonth() {
-            const date = new Date(currentDate.value);
-            date.setMonth(date.getMonth() - 1);
-            // FIXED: Use local date format to prevent timezone issues
-            currentDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-            loadTasks();
-        }
-
-        /**
-         * Go to next month
-         */
-        function nextMonth() {
-            const date = new Date(currentDate.value);
-            date.setMonth(date.getMonth() + 1);
-            // FIXED: Use local date format to prevent timezone issues
-            currentDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
             loadTasks();
         }
 
@@ -792,7 +725,7 @@ export default {
 
         // Initialization
         onMounted(() => {
-            // FIXED: Set today's date using local format
+            // Set today's date using local format
             goToToday();
 
             loadTasks();
@@ -831,7 +764,6 @@ export default {
             currentView,
             currentDate,
             formattedDate,
-            formattedMonth,
             filteredTodos,
             showTaskModal,
             taskModalMode,
@@ -842,13 +774,10 @@ export default {
 
             // View functions
             setView,
-            showCalendarView,
             showSharedTasksView,
 
             // Date functions
             selectDate,
-            previousMonth,
-            nextMonth,
             previousDay,
             nextDay,
             goToToday,

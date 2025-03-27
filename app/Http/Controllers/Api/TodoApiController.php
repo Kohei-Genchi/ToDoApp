@@ -40,17 +40,11 @@ class TodoApiController extends Controller
             }
 
             // Subscription check for calendar view
-            if (
-                ($request->view === "calendar" ||
-                    $request->view === "shared") &&
-                !Auth::user()->subscription_id
-            ) {
+            if ($request->view === "shared" && !Auth::user()->subscription_id) {
                 return response()->json(
                     [
                         "error" =>
-                            $request->view === "calendar"
-                                ? "カレンダー機能を利用するにはサブスクリプションが必要です。"
-                                : "共有機能を利用するにはサブスクリプションが必要です。",
+                            "共有機能を利用するにはサブスクリプションが必要です。",
                         "subscription_required" => true,
                     ],
                     403
