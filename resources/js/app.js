@@ -1,38 +1,38 @@
-// In resources/js/app.js
+// resources/js/app.js
 import "./bootstrap";
 import Alpine from "alpinejs";
 import { createApp } from "vue";
 import TodoApp from "./components/TodoApp.vue";
-import SidebarMemosComponent from "./components/SidebarMemosComponent.vue";
-import SharedTasksCalendarView from "./components/SharedTasksCalendarView.vue"; // Import directly
 
+// Alpine.js の初期化
 window.Alpine = Alpine;
 Alpine.start();
 
 document.addEventListener("DOMContentLoaded", function () {
-    // TodoApp component initialization
+    // メインのTodoAppコンポーネントはすぐに読み込む
     let vm = null;
     if (document.getElementById("todo-app")) {
         vm = createApp(TodoApp).mount("#todo-app");
 
-        // Global edit task function
+        // グローバルのタスク編集機能
         window.editTodo = function (taskIdOrData, todoData = null) {
             try {
-                // Case 1: Data object provided as second parameter
                 if (todoData && typeof todoData === "object") {
                     if (!todoData.id && taskIdOrData) {
                         todoData.id = Number(taskIdOrData);
                     }
-                    callEditFunction(todoData);
+                    if (vm?.openEditTaskModal) {
+                        vm.openEditTaskModal(todoData);
+                    } else {
+                        dispatchEditEvent({ id: todoData.id, data: todoData });
+                    }
                     return;
                 }
 
-                // Case 2: No valid input
                 if (!taskIdOrData) {
-                    throw new Error("No task ID or data provided");
+                    throw new Error("タスクIDまたはデータがありません");
                 }
 
-                // Case 3: ID provided
                 if (
                     typeof taskIdOrData === "number" ||
                     (typeof taskIdOrData === "string" &&
@@ -47,30 +47,27 @@ document.addEventListener("DOMContentLoaded", function () {
                     return;
                 }
 
-                // Case 4: Object data provided directly
                 if (typeof taskIdOrData === "object") {
-                    callEditFunction(taskIdOrData);
+                    if (vm?.openEditTaskModal) {
+                        vm.openEditTaskModal(taskIdOrData);
+                    } else {
+                        const detail = taskIdOrData.id
+                            ? {
+                                  id: Number(taskIdOrData.id),
+                                  data: taskIdOrData,
+                              }
+                            : { id: null, data: taskIdOrData };
+                        dispatchEditEvent(detail);
+                    }
                     return;
                 }
 
-                throw new Error("Invalid task data format");
+                throw new Error("無効なタスクデータ形式");
             } catch (error) {
-                console.error("Edit task error:", error);
+                console.error("タスク編集エラー:", error);
                 alert("タスクの編集中にエラーが発生しました");
             }
         };
-
-        // Helper functions
-        function callEditFunction(data) {
-            if (vm?.openEditTaskopenShareModal) {
-                vm.openEditTaskModal(data);
-            } else {
-                const detail = data.id
-                    ? { id: Number(data.id), data }
-                    : { id: null, data };
-                dispatchEditEvent(detail);
-            }
-        }
 
         function dispatchEditEvent(detail) {
             document
@@ -79,17 +76,22 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // SidebarMemos component initialization
+    // サイドバーメモコンポーネントは必要なときだけ遅延読み込み
     if (document.getElementById("sidebar-memos")) {
-        createApp(SidebarMemosComponent).mount("#sidebar-memos");
+        // 動的インポート - コンポーネントが必要なときだけ読み込む
+        import("./components/SidebarMemosComponent.vue").then((module) => {
+            createApp(module.default).mount("#sidebar-memos");
+        });
     }
 
-    // Changed: Direct initialization of SharedTasksCalendarView instead of SharedTasksView
+    // 共有タスク表示コンポーネントも遅延読み込み
     if (document.getElementById("shared-tasks-view")) {
-        createApp(SharedTasksCalendarView).mount("#shared-tasks-view");
+        import("./components/SharedTasksCalendarView.vue").then((module) => {
+            createApp(module.default).mount("#shared-tasks-view");
+        });
     }
 
-    // Add event listeners to traditional edit buttons
+    // 既存の編集ボタンにイベントリスナーを追加
     document.querySelectorAll(".edit-task-btn").forEach((button) => {
         button.addEventListener("click", function (e) {
             e.preventDefault();
