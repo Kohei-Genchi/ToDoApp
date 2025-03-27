@@ -108,7 +108,7 @@ export default {
     data() {
         return {
             memos: [],
-            isLoading: true,
+            isLoading: false,
             csrfToken:
                 document
                     .querySelector('meta[name="csrf-token"]')
@@ -133,15 +133,19 @@ export default {
                     headers: {
                         "X-Requested-With": "XMLHttpRequest",
                         Accept: "application/json",
+                        "X-CSRF-TOKEN": document
+                            .querySelector('meta[name="csrf-token"]')
+                            ?.getAttribute("content"),
                     },
+                    withCredentials: true, // Important: ensures cookies are sent
                 });
 
-                if (response.data) {
-                    // Use the memos data directly from the API response
-                    this.memos = response.data;
-                }
+                this.memos = response.data;
             } catch (error) {
                 console.error("Error loading memos:", error);
+                if (error.response?.status === 401) {
+                    console.warn("You need to be logged in to view memos");
+                }
             } finally {
                 this.isLoading = false;
             }

@@ -170,14 +170,14 @@
                                             </p>
                                         </div>
                                         <div class="mt-3 flex space-x-2">
-                                            <a href="{{ URL::signedRoute('share-requests.web.approve', ['token' => $request->token]) }}"
-                                               class="inline-flex items-center px-3 py-1 bg-green-500 border border-transparent rounded-md text-xs text-white hover:bg-green-600">
-                                                承認
-                                            </a>
-                                            <a href="{{ URL::signedRoute('share-requests.web.reject', ['token' => $request->token]) }}"
-                                               class="inline-flex items-center px-3 py-1 bg-gray-500 border border-transparent rounded-md text-xs text-white hover:bg-gray-600">
-                                                拒否
-                                            </a>
+                                        <a href="{{ URL::signedRoute('share-requests.web.approve', ['token' => $request->token]) }}"
+                                           class="inline-flex items-center px-3 py-1 bg-green-500 border border-transparent rounded-md text-xs text-white hover:bg-green-600">
+                                            承認
+                                        </a>
+                                        <a href="{{ URL::signedRoute('share-requests.web.reject', ['token' => $request->token]) }}"
+                                           class="inline-flex items-center px-3 py-1 bg-gray-500 border border-transparent rounded-md text-xs text-white hover:bg-gray-600">
+                                            拒否
+                                        </a>
                                         </div>
                                     </div>
                                 @endforeach

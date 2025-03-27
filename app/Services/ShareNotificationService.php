@@ -35,10 +35,19 @@ class ShareNotificationService
         string $itemType = "カテゴリー"
     ): bool {
         // Generate approve and reject URLs
-        $approveUrl = URL::signedRoute("share-requests.approve", [
+        $approveUrl = URL::signedRoute("api.share-requests.approve", [
             "token" => $shareRequest->token,
         ]);
-        $rejectUrl = URL::signedRoute("share-requests.reject", [
+
+        $rejectUrl = URL::signedRoute("api.share-requests.reject", [
+            "token" => $shareRequest->token,
+        ]);
+
+        $approveWebUrl = URL::signedRoute("share-requests.web.approve", [
+            "token" => $shareRequest->token,
+        ]);
+
+        $rejectWebUrl = URL::signedRoute("share-requests.web.reject", [
             "token" => $shareRequest->token,
         ]);
 

@@ -1,166 +1,197 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\TodoApiController;
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\MemoApiController;
 use App\Http\Controllers\Api\CategoryShareController;
+use App\Http\Controllers\Api\ShareRequestsController;
+use App\Http\Controllers\Api\SpeechToTextController;
 use App\Http\Controllers\StripSubscriptionController;
 
-/**
- * User information API
- */
-Route::middleware("auth:sanctum")->get("/user", function (Request $request) {
-    return $request->user();
-});
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Routes for API endpoints that return JSON responses
+|
+*/
 
-Route::middleware(["auth:sanctum"])->group(function () {
-    // Get pending share requests
-    Route::get("/share-requests", [
-        App\Http\Controllers\Api\ShareRequestsController::class,
-        "index",
+/**
+ * Public Routes (No Authentication Required)
+ */
+Route::group([], function () {
+    // Stripe webhook - doesn't need CSRF
+    Route::post("stripe/subscription/webhook", [
+        StripSubscriptionController::class,
+        "webhook",
     ]);
 
-    /**
-     * カテゴリー共有 API ルート
-     */
-    Route::middleware(["web"])->group(function () {
-        // カテゴリー共有ユーザー一覧の取得
-        Route::get("/categories/{category}/shares", [
-            CategoryShareController::class,
-            "index",
-        ]);
+    // Share request approval/rejection via signed URLs (security via URL signing)
+    Route::get("share-requests/{token}/approve", [
+        ShareRequestsController::class,
+        "approve",
+    ])
+        ->name("api.share-requests.approve")
+        ->middleware(["signed"]);
 
-        // カテゴリーを特定のユーザーと共有 (LINE認証必須)
-        Route::post("/categories/{category}/shares", [
-            CategoryShareController::class,
-            "store",
-        ]);
+    Route::get("share-requests/{token}/reject", [
+        ShareRequestsController::class,
+        "reject",
+    ])
+        ->name("api.share-requests.reject")
+        ->middleware(["signed"]);
+});
 
-        // 共有権限の更新
-        Route::put("/categories/{category}/shares/{user}", [
-            CategoryShareController::class,
-            "update",
-        ]);
-
-        // 共有の解除
-        Route::delete("/categories/{category}/shares/{user}", [
-            CategoryShareController::class,
-            "destroy",
-        ]);
-
-        // 自分と共有されているカテゴリー一覧の取得
-        Route::get("/shared-categories", [
-            CategoryShareController::class,
-            "sharedWithMe",
-        ]);
-
-        // 共有カテゴリーからのタスク一覧の取得
-        Route::get("/shared-categories/tasks", [
-            CategoryShareController::class,
-            "tasksFromSharedCategories",
-        ]);
+/**
+ * Authenticated API Routes
+ */
+Route::middleware(["auth:sanctum"])->group(function () {
+    // User information
+    Route::get("user", function (Illuminate\Http\Request $request) {
+        return $request->user();
     });
 
-    // LINEで承認/拒否するためのWebルート（署名付き）
-    Route::get("/category-share/{token}/approve", [
-        CategoryShareController::class,
-        "approveShareRequest",
-    ])
-        ->name("category-share.approve")
-        ->middleware(["signed"]);
+    /**
+     * Share Requests Management
+     */
+    Route::prefix("share-requests")->group(function () {
+        // List share requests
+        Route::get("/", [ShareRequestsController::class, "index"])->name(
+            "api.share-requests.index"
+        );
 
-    Route::get("/category-share/{token}/reject", [
-        CategoryShareController::class,
-        "rejectShareRequest",
-    ])
-        ->name("category-share.reject")
-        ->middleware(["signed"]);
+        // Cancel a share request
+        Route::delete("/{shareRequest}", [
+            ShareRequestsController::class,
+            "cancel",
+        ])->name("api.share-requests.cancel");
+    });
 
-    // Cancel a share request
-    Route::delete("/share-requests/{shareRequest}", [
-        App\Http\Controllers\Api\ShareRequestsController::class,
-        "cancel",
-    ]);
+    /**
+     * Category Sharing
+     */
+    Route::prefix("categories")->group(function () {
+        // Get all categories
+        Route::get("/", [CategoryApiController::class, "index"])->name(
+            "api.categories.index"
+        );
 
-    // Speech to text API - 認証を追加
-    Route::post("/speech-to-tasks", [
-        App\Http\Controllers\Api\SpeechToTextController::class,
-        "processSpeech",
-    ]);
-});
+        // Create category
+        Route::post("/", [CategoryApiController::class, "store"])->name(
+            "api.categories.store"
+        );
 
-// Public routes for handling approvals (these will be secured by URL signing)
-Route::get("/share-requests/{token}/approve", [
-    App\Http\Controllers\Api\ShareRequestsController::class,
-    "approve",
-])
-    ->name("share-requests.approve")
-    ->middleware(["signed"]);
+        // Update category
+        Route::put("/{category}", [
+            CategoryApiController::class,
+            "update",
+        ])->name("api.categories.update");
 
-Route::get("/share-requests/{token}/reject", [
-    App\Http\Controllers\Api\ShareRequestsController::class,
-    "reject",
-])
-    ->name("share-requests.reject")
-    ->middleware(["signed"]);
+        // Delete category
+        Route::delete("/{category}", [
+            CategoryApiController::class,
+            "destroy",
+        ])->name("api.categories.destroy");
 
-/**
- * Stripe Webhook
- */
-Route::post("/stripe/subscription/webhook", [
-    StripSubscriptionController::class,
-    "webhook",
-]);
+        // Category Sharing
+        Route::prefix("/{category}/shares")->group(function () {
+            // List users with whom category is shared
+            Route::get("/", [CategoryShareController::class, "index"])->name(
+                "api.categories.shares.index"
+            );
 
-/**
- * Todo API routes
- */
-Route::prefix("todos")
-    ->middleware(["web"])
-    ->group(function () {
-        // Get tasks
-        Route::get("/", [TodoApiController::class, "index"]);
+            // Share category with user
+            Route::post("/", [CategoryShareController::class, "store"])->name(
+                "api.categories.shares.store"
+            );
+
+            // Update share permissions
+            Route::put("/{user}", [
+                CategoryShareController::class,
+                "update",
+            ])->name("api.categories.shares.update");
+
+            // Remove sharing
+            Route::delete("/{user}", [
+                CategoryShareController::class,
+                "destroy",
+            ])->name("api.categories.shares.destroy");
+        });
+    });
+
+    /**
+     * Shared Content Access
+     */
+    Route::prefix("shared")->group(function () {
+        // Get categories shared with me
+        Route::get("categories", [
+            CategoryShareController::class,
+            "sharedWithMe",
+        ])->name("api.shared.categories");
+
+        // Get tasks from shared categories
+        Route::get("categories/tasks", [
+            CategoryShareController::class,
+            "tasksFromSharedCategories",
+        ])->name("api.shared.tasks");
+    });
+
+    /**
+     * Task Management
+     */
+    Route::prefix("todos")->group(function () {
+        // List tasks
+        Route::get("/", [TodoApiController::class, "index"])->name(
+            "api.todos.index"
+        );
+
         // Create task
-        Route::post("/", [TodoApiController::class, "store"]);
-        // Individual task operations
-        Route::get("/{todo}", [TodoApiController::class, "show"]);
-        // Update task
+        Route::post("/", [TodoApiController::class, "store"])->name(
+            "api.todos.store"
+        );
+
+        // Show task
+        Route::get("/{todo}", [TodoApiController::class, "show"])->name(
+            "api.todos.show"
+        );
+
+        // Update task (support both PUT and POST for Laravel form method spoofing)
         Route::match(["put", "post"], "/{todo}", [
             TodoApiController::class,
             "update",
-        ]);
+        ])->name("api.todos.update");
+
         // Toggle task status
-        Route::patch("/{todo}/toggle", [TodoApiController::class, "toggle"]);
+        Route::patch("/{todo}/toggle", [
+            TodoApiController::class,
+            "toggle",
+        ])->name("api.todos.toggle");
+
         // Delete task
-        Route::delete("/{todo}", [TodoApiController::class, "destroy"]);
+        Route::delete("/{todo}", [TodoApiController::class, "destroy"])->name(
+            "api.todos.destroy"
+        );
     });
 
-/**
- * Category API routes
- */
-Route::prefix("categories")
-    ->middleware(["web"])
-    ->group(function () {
-        // Get categories
-        Route::get("/", [CategoryApiController::class, "index"]);
-        // Create category
-        Route::post("/", [CategoryApiController::class, "store"]);
-        // Update category
-        Route::put("/{category}", [CategoryApiController::class, "update"]);
-        // Delete category
-        Route::delete("/{category}", [CategoryApiController::class, "destroy"]);
-    });
+    /**
+     * Memo Management
+     */
+    Route::prefix("memos")
+        ->middleware(["web", "auth"]) // Add auth middleware here
+        ->group(function () {
+            // Get all memos
+            Route::get("/", [MemoApiController::class, "index"]);
+            // Create a new memo
+            Route::post("/", [MemoApiController::class, "store"]);
+        });
 
-/**
- * Memo API routes
- */
-Route::prefix("memos")
-    ->middleware(["web"])
-    ->group(function () {
-        // Get all memos
-        Route::get("/", [MemoApiController::class, "index"]);
-        // Create a new memo
-        Route::post("/", [MemoApiController::class, "store"]);
-    });
+    /**
+     * Speech to Text
+     */
+    Route::post("speech-to-tasks", [
+        SpeechToTextController::class,
+        "processSpeech",
+    ])->name("api.speech-to-tasks");
+});
