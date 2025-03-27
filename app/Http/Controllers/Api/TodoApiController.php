@@ -39,8 +39,11 @@ class TodoApiController extends Controller
                 return response()->json([]);
             }
 
-            // Subscription check for calendar view
-            if ($request->view === "shared" && !Auth::user()->subscription_id) {
+            // Subscription check for calendar and shared views
+            if (
+                ($request->view === "shared" || $request->view === "kanban") &&
+                !Auth::user()->subscription_id
+            ) {
                 return response()->json(
                     [
                         "error" =>
@@ -55,8 +58,25 @@ class TodoApiController extends Controller
             $view = $request->view ?? "today";
             $date = $request->date;
             $userId = $request->user_id;
+            $categoryId = $request->category_id; // Added for kanban filtering
+            $status = $request->status; // Added for kanban filtering
 
-            $todos = $this->taskService->getTasks($view, $date, $userId);
+            // New "all" view type for kanban board that returns all tasks regardless of date
+            if ($view === "all") {
+                $todos = $this->taskService->getAllTasks(
+                    $userId,
+                    $categoryId,
+                    $status
+                );
+                return response()->json($todos);
+            }
+
+            $todos = $this->taskService->getTasks(
+                $view,
+                $date,
+                $userId,
+                $categoryId
+            );
 
             return response()->json($todos);
         } catch (\Exception $e) {
@@ -92,7 +112,7 @@ class TodoApiController extends Controller
             return response()->json(
                 [
                     "message" => "Task created successfully",
-                    "todo" => $todo->load("category"),
+                    "todo" => $todo->load("category", "user"),
                 ],
                 201
             );
@@ -133,7 +153,7 @@ class TodoApiController extends Controller
                 );
             }
 
-            $todo->load("category");
+            $todo->load("category", "user");
 
             return response()->json($todo);
         } catch (\Exception $e) {
@@ -187,11 +207,37 @@ class TodoApiController extends Controller
             }
 
             if ($request->has("status")) {
-                $updateData["status"] = $request->input("status");
+                // Validate status is one of the allowed values for kanban
+                $allowedStatuses = [
+                    "pending",
+                    "in_progress",
+                    "review",
+                    "completed",
+                    "trashed",
+                ];
+                $status = $request->input("status");
+
+                if (in_array($status, $allowedStatuses)) {
+                    $updateData["status"] = $status;
+                } else {
+                    return response()->json(
+                        [
+                            "error" =>
+                                "Invalid status value. Allowed values are: " .
+                                implode(", ", $allowedStatuses),
+                        ],
+                        422
+                    );
+                }
             }
 
             if ($request->has("category_id")) {
                 $updateData["category_id"] = $request->input("category_id");
+            }
+
+            // Added for kanban to support description
+            if ($request->has("description")) {
+                $updateData["description"] = $request->input("description");
             }
 
             // Handle date and time carefully to prevent timezone issues
@@ -214,7 +260,7 @@ class TodoApiController extends Controller
                 $todo->save();
             }
 
-            $todo->load("category");
+            $todo->load("category", "user"); // Added loading user relation for kanban
 
             return response()->json([
                 "message" => "Task updated successfully",
@@ -267,7 +313,7 @@ class TodoApiController extends Controller
 
             return response()->json([
                 "message" => "Task status updated successfully",
-                "todo" => $updatedTodo->load("category"),
+                "todo" => $updatedTodo->load("category", "user"),
             ]);
         } catch (\Exception $e) {
             Log::error("Error toggling task status: " . $e->getMessage(), [

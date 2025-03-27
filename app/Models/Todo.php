@@ -12,10 +12,14 @@ class Todo extends Model
 
     // Status constants
     const STATUS_PENDING = "pending";
-    const STATUS_ONGOING = "ongoing";
-    const STATUS_PAUSED = "paused";
+    const STATUS_IN_PROGRESS = "in_progress"; // New for kanban
+    const STATUS_REVIEW = "review"; // New for kanban
     const STATUS_COMPLETED = "completed";
     const STATUS_TRASHED = "trashed";
+
+    // Legacy status constants (for backward compatibility)
+    const STATUS_ONGOING = "ongoing"; // Maps to in_progress
+    const STATUS_PAUSED = "paused"; // Maps to review
 
     // Location constants
     const LOCATION_INBOX = "INBOX";
@@ -25,6 +29,7 @@ class Todo extends Model
 
     protected $fillable = [
         "title",
+        "description", // Added for kanban board
         "due_date",
         "due_time",
         "status",
@@ -55,5 +60,38 @@ class Todo extends Model
     {
         return $this->recurrence_type !== "none" &&
             $this->recurrence_type !== null;
+    }
+
+    /**
+     * Check if task is in a kanban-friendly status
+     *
+     * @return bool
+     */
+    public function isKanbanStatus(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_PENDING,
+            self::STATUS_IN_PROGRESS,
+            self::STATUS_REVIEW,
+            self::STATUS_COMPLETED,
+        ]);
+    }
+
+    /**
+     * Map legacy status to kanban status
+     *
+     * @param string $status
+     * @return string
+     */
+    public static function mapLegacyStatus(string $status): string
+    {
+        switch ($status) {
+            case self::STATUS_ONGOING:
+                return self::STATUS_IN_PROGRESS;
+            case self::STATUS_PAUSED:
+                return self::STATUS_REVIEW;
+            default:
+                return $status;
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Todo;
 use App\Models\User;
+use App\Models\Category;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -13,14 +14,26 @@ class TaskService
 {
     /**
      * Get tasks based on view type and date
+     *
+     * @param string $view View type (today, scheduled, inbox, date)
+     * @param string|null $date Date string
+     * @param int|null $userId User ID
+     * @param int|null $categoryId Category ID for filtering
+     * @return Collection Tasks collection
      */
     public function getTasks(
         string $view = "today",
         ?string $date = null,
-        ?int $userId = null
-    ) {
+        ?int $userId = null,
+        ?int $categoryId = null
+    ): Collection {
         $date = $date ? now()->parse($date) : now();
         $query = $this->buildBaseTaskQuery($userId);
+
+        // If category filter is applied
+        if ($categoryId) {
+            $query->where("category_id", $categoryId);
+        }
 
         switch ($view) {
             case "today":
@@ -31,17 +44,23 @@ class TaskService
                 $query
                     ->whereNotNull("due_date")
                     ->whereDate("due_date", ">", now()->format("Y-m-d"))
-                    ->where("status", Todo::STATUS_PENDING);
+                    ->where("status", "!=", Todo::STATUS_TRASHED);
                 break;
 
             case "inbox":
                 $query
                     ->whereNull("due_date")
-                    ->where("status", Todo::STATUS_PENDING);
+                    ->where("status", "!=", Todo::STATUS_TRASHED);
                 break;
+
             case "date":
                 // For specific date view
                 $query->whereDate("due_date", $date->format("Y-m-d"));
+                break;
+
+            case "kanban":
+                // For kanban view, we load all non-trashed tasks
+                $query->where("status", "!=", Todo::STATUS_TRASHED);
                 break;
 
             default:
@@ -54,9 +73,46 @@ class TaskService
     }
 
     /**
-     * Create a new task with appropriate data preparation
+     * Get all tasks for kanban view without date restrictions
+     *
+     * @param int|null $userId User ID
+     * @param int|null $categoryId Category ID for filtering
+     * @param string|null $status Status for filtering
+     * @return Collection Tasks collection
      */
-    public function createTask(array $data)
+    public function getAllTasks(
+        ?int $userId = null,
+        ?int $categoryId = null,
+        ?string $status = null
+    ): Collection {
+        $query = $this->buildBaseTaskQuery($userId);
+
+        // Exclude trashed tasks
+        $query->where("status", "!=", Todo::STATUS_TRASHED);
+
+        // Apply category filter if provided
+        if ($categoryId) {
+            $query->where("category_id", $categoryId);
+        }
+
+        // Apply status filter if provided
+        if ($status) {
+            $query->where("status", $status);
+        }
+
+        return $query
+            ->with(["category", "user"])
+            ->orderBy("created_at", "desc")
+            ->get();
+    }
+
+    /**
+     * Create a new task with appropriate data preparation
+     *
+     * @param array $data Task data
+     * @return Todo Created task
+     */
+    public function createTask(array $data): Todo
     {
         $taskData = $this->prepareTaskData($data);
         $todo = Todo::create($taskData);
@@ -71,8 +127,11 @@ class TaskService
 
     /**
      * Toggle task status between completed and pending
+     *
+     * @param Todo $todo Task to toggle
+     * @return Todo Updated task
      */
-    public function toggleTaskStatus(Todo $todo)
+    public function toggleTaskStatus(Todo $todo): Todo
     {
         $todo->status =
             $todo->status === Todo::STATUS_COMPLETED
@@ -86,8 +145,12 @@ class TaskService
 
     /**
      * Delete a task (with optional recurring tasks deletion)
+     *
+     * @param Todo $todo Task to delete
+     * @param bool $deleteRecurring Whether to delete recurring tasks
+     * @return int Number of deleted tasks
      */
-    public function deleteTask(Todo $todo, bool $deleteRecurring = false)
+    public function deleteTask(Todo $todo, bool $deleteRecurring = false): int
     {
         if ($deleteRecurring) {
             return Todo::where("user_id", $todo->user_id)
@@ -101,6 +164,9 @@ class TaskService
 
     /**
      * Build the base query for tasks with proper access controls
+     *
+     * @param int|null $userId User ID to filter by
+     * @return \Illuminate\Database\Eloquent\Builder Query builder
      */
     protected function buildBaseTaskQuery(?int $userId = null)
     {
@@ -108,7 +174,10 @@ class TaskService
 
         // If no specific user requested, return current user's tasks
         if (!$userId) {
-            return Todo::where("user_id", $currentUserId)->with("category");
+            return Todo::where("user_id", $currentUserId)->with([
+                "category",
+                "user",
+            ]);
         }
 
         // If user is requesting their own tasks
@@ -119,35 +188,8 @@ class TaskService
             ]);
         }
 
-        // Check global share access
+        // Check shared category access
         $user = Auth::user();
-        $isSharedGlobally = $user
-            ->globallySharedBy()
-            ->where("user_id", $userId)
-            ->exists();
-
-        $isUserSharingGlobally = $user
-            ->globallySharedWith()
-            ->where("shared_with_user_id", $userId)
-            ->exists();
-
-        if ($isSharedGlobally || $isUserSharingGlobally) {
-            return Todo::where("user_id", $userId)->with(["category", "user"]);
-        }
-
-        // Check individual task sharing
-        $sharedTaskIds = $user
-            ->sharedTasks()
-            ->where("user_id", $userId)
-            ->pluck("id");
-
-        if ($sharedTaskIds->isNotEmpty()) {
-            return Todo::where("user_id", $userId)
-                ->whereIn("id", $sharedTaskIds)
-                ->with(["category", "user"]);
-        }
-
-        // Check category sharing
         $sharedCategoryIds = $user
             ->sharedCategories()
             ->where("user_id", $userId)
@@ -163,11 +205,17 @@ class TaskService
         Log::warning(
             "User {$currentUserId} attempted to access tasks of user {$userId} without permission"
         );
-        return Todo::where("user_id", $currentUserId)->with("category");
+        return Todo::where("user_id", $currentUserId)->with([
+            "category",
+            "user",
+        ]);
     }
 
     /**
      * Prepare task data for storage with proper formatting
+     *
+     * @param array $data Task data
+     * @return array Prepared task data
      */
     protected function prepareTaskData(array $data): array
     {
@@ -194,6 +242,9 @@ class TaskService
 
     /**
      * Determine if recurring tasks should be created
+     *
+     * @param array $taskData Task data
+     * @return bool Whether to create recurring tasks
      */
     protected function shouldCreateRecurringTasks(array $taskData): bool
     {
@@ -203,6 +254,9 @@ class TaskService
 
     /**
      * Create recurring tasks based on task data
+     *
+     * @param array $taskData Task data
+     * @return void
      */
     protected function createRecurringTasks(array $taskData): void
     {
@@ -252,6 +306,11 @@ class TaskService
 
     /**
      * Generate dates for recurring tasks
+     *
+     * @param Carbon $startDate Start date
+     * @param Carbon $endDate End date
+     * @param string $recurrenceType Recurrence type (daily, weekly, monthly)
+     * @return array Array of Carbon dates
      */
     protected function generateRecurringDates(
         Carbon $startDate,
