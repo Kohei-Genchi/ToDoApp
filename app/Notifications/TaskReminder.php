@@ -36,7 +36,7 @@ class TaskReminder extends Notification
 
         // Use Slack channel if webhook URL is set
         if (!empty($notifiable->slack_webhook_url)) {
-            $channels[] = "slack";
+            $channels[] = "custom-slack"; // <-- Changed from "slack" to "custom-slack"
         } else {
             // Use email as fallback
             $channels[] = "mail";
@@ -89,7 +89,7 @@ class TaskReminder extends Notification
      */
     public function toSlack(object $notifiable): string
     {
-        return $this->formatSlackMessage($notifiable);
+        return $this->formatSlackMessage($notifiable); // <-- This returns a string
     }
 
     /**
