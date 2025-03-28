@@ -1,24 +1,24 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./resources/js/*"],
-      "@composables/*": ["./resources/js/composables/*"],
-      "@services/*": ["./resources/js/services/*"],
-      "@utils/*": ["./resources/js/utils/*"]
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["./resources/js/*"],
+            "@composables/*": ["./resources/js/composables/*"],
+            "@services/*": ["./resources/js/services/*"],
+            "@utils/*": ["./resources/js/utils/*"]
+        },
+        "strict": true,
+        "jsx": "preserve",
+        "sourceMap": true,
+        "esModuleInterop": true,
+        "types": ["vite/client"],
+        "allowJs": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
     },
-    "strict": true,
-    "jsx": "preserve",
-    "sourceMap": true,
-    "esModuleInterop": true,
-    "types": ["vite/client"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["resources/js/**/*"],
-  "exclude": ["node_modules", "dist"]
+    "include": ["resources/js/**/*"],
+    "exclude": ["node_modules", "dist", "resources/js/api/**/*.js"]
 }
