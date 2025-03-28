@@ -68,7 +68,7 @@ Route::middleware(["auth:sanctum"])->group(function () {
             "cancel",
         ])->name("api.share-requests.cancel");
     });
-
+    Route::get("/slack/oauth", [SlackAuthController::class, "handleOAuth"]);
     /**
      * Category Sharing
      */

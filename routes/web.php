@@ -48,25 +48,6 @@ Route::group([], function () {
     Route::get("/guest-login", [GuestLoginController::class, "login"])
         ->middleware("guest")
         ->name("guest.login");
-
-    // Share Request Web UI Routes - accessible via links in notifications
-    Route::prefix("share-requests")->group(function () {
-        // Web view for approving request
-        Route::get("{token}/approve", [
-            ShareNotificationWebController::class,
-            "approveRequest",
-        ])
-            ->name("share-requests.web.approve")
-            ->middleware(["signed"]);
-
-        // Web view for rejecting request
-        Route::get("{token}/reject", [
-            ShareNotificationWebController::class,
-            "rejectRequest",
-        ])
-            ->name("share-requests.web.reject")
-            ->middleware(["signed"]);
-    });
 });
 
 /**
@@ -196,6 +177,25 @@ Route::middleware(["auth"])->group(function () {
         ShareNotificationWebController::class,
         "index",
     ])->name("share-requests.index");
+
+    Route::get("/share-requests-direct/{token}/approve", [
+        App\Http\Controllers\ShareNotificationWebController::class,
+        "approveRequest",
+    ])->name("share-requests.direct.approve");
+    // Find these routes
+    Route::get("/share-requests/{token}/approve", [
+        App\Http\Controllers\ShareNotificationWebController::class,
+        "approveRequest",
+    ])
+        ->name("share-requests.web.approve")
+        ->middleware("signed");
+
+    Route::get("/share-requests/{token}/reject", [
+        App\Http\Controllers\ShareNotificationWebController::class,
+        "rejectRequest",
+    ])
+        ->name("share-requests.web.reject")
+        ->middleware("signed");
 
     /**
      * Profile Management

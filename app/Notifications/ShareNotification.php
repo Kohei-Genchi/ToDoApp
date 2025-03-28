@@ -23,9 +23,9 @@ class ShareNotification extends Notification
      */
     public function __construct(
         ShareRequest $shareRequest,
-        string $requesterName,
-        string $itemName,
-        string $itemType
+        $requesterName,
+        $itemName,
+        $itemType
     ) {
         $this->shareRequest = $shareRequest;
         $this->requesterName = $requesterName;
@@ -66,12 +66,20 @@ class ShareNotification extends Notification
             "token" => $this->shareRequest->token,
         ]);
 
+        // Ensure requesterName is treated as a string
+        $requesterName = is_string($this->requesterName)
+            ? $this->requesterName
+            : (string) $this->requesterName;
+        $itemName = is_string($this->itemName)
+            ? $this->itemName
+            : (string) $this->itemName;
+
         return (new MailMessage())
             ->subject(
-                "{$this->requesterName}さんから{$this->itemType}共有のリクエストが届きました"
+                "{$requesterName}さんから{$this->itemType}共有のリクエストが届きました"
             )
             ->line(
-                "{$this->requesterName}さんがあなたと{$this->itemType}「{$this->itemName}」を共有しようとしています。"
+                "{$requesterName}さんがあなたと{$this->itemType}「{$itemName}」を共有しようとしています。"
             )
             ->line(
                 "権限: " .
@@ -98,9 +106,16 @@ class ShareNotification extends Notification
             "token" => $this->shareRequest->token,
         ]);
 
-        // Create a properly defined message variable
-        $message = "*{$this->requesterName}さんから{$this->itemType}共有のリクエストが届きました*\n\n";
-        $message .= "{$this->requesterName}さんがあなたと{$this->itemType}「{$this->itemName}」を共有しようとしています。\n";
+        // Ensure requesterName is treated as a string
+        $requesterName = is_string($this->requesterName)
+            ? $this->requesterName
+            : (string) $this->requesterName;
+        $itemName = is_string($this->itemName)
+            ? $this->itemName
+            : (string) $this->itemName;
+
+        $message = "*{$requesterName}さんから{$this->itemType}共有のリクエストが届きました*\n\n";
+        $message .= "{$requesterName}さんがあなたと{$this->itemType}「{$itemName}」を共有しようとしています。\n";
         $message .=
             "権限: " .
             ($this->shareRequest->permission === "edit"

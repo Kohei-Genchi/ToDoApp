@@ -39,6 +39,9 @@ return [
         "notifications" => [
             "bot_user_oauth_token" => env("SLACK_BOT_USER_OAUTH_TOKEN"),
             "channel" => env("SLACK_BOT_USER_DEFAULT_CHANNEL"),
+            "webhook_url" => env("SLACK_WEBHOOK_URL"),
+            "interactions_url" =>
+                "https://677c-103-210-33-190.ngrok-free.app/api/slack/interactions",
         ],
     ],
 ];
