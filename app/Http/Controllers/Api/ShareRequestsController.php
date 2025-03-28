@@ -122,22 +122,6 @@ class ShareRequestsController extends Controller
         }
     }
 
-    /**
-     * Create a new task share request - Deprecated in favor of category sharing
-     */
-    public function storeTaskShare(Request $request, Todo $todo): JsonResponse
-    {
-        // Return a message indicating that individual task sharing is deprecated
-        return response()->json(
-            [
-                "error" =>
-                    "個別タスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
-                "use_category_sharing" => true,
-            ],
-            400
-        );
-    }
-
     public function storeCategoryShare(
         Request $request,
         Category $category
@@ -258,22 +242,6 @@ class ShareRequestsController extends Controller
                 500
             );
         }
-    }
-
-    /**
-     * Create a new global share request - Deprecated in favor of category sharing
-     */
-    public function storeGlobalShare(Request $request): JsonResponse
-    {
-        // Return a message indicating that global task sharing is deprecated
-        return response()->json(
-            [
-                "error" =>
-                    "グローバルタスク共有は廃止されました。代わりにカテゴリー共有を使用してください。",
-                "use_category_sharing" => true,
-            ],
-            400
-        );
     }
 
     /**

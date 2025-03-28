@@ -13,6 +13,7 @@ class SubscriptionRequired
      */
     public function handle(Request $request, Closure $next)
     {
+        //@Todo
         // Subscription check is disabled for development
         // Uncomment this code when ready to enforce subscription requirements
 

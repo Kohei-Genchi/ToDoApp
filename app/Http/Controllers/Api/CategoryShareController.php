@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Services\ShareNotificationService;
-use App\Http\Controllers\Api\ShareRequestsController;
 use Illuminate\View\View;
 
 class CategoryShareController extends Controller
@@ -68,7 +67,7 @@ class CategoryShareController extends Controller
 
     /**
      * Share a category with a user.
-     * This method now delegates to ShareRequestsController.
+     * This method delegates to ShareRequestsController.
      */
     public function store(Request $request, Category $category): JsonResponse
     {

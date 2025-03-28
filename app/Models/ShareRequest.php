@@ -20,7 +20,7 @@ class ShareRequest extends Model
         "category_id",
         "recipient_email",
         "token",
-        "share_type", // Now supports only 'category'
+        "share_type",
         "permission",
         "status",
         "expires_at",
