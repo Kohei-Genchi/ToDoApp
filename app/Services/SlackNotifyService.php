@@ -38,12 +38,6 @@ class SlackNotifyService
         $this->lastError = null;
 
         try {
-            Log::info("Attempting to send Slack notification", [
-                "webhook_length" => strlen($webhookUrl),
-                "webhook_prefix" => substr($webhookUrl, 0, 15) . "...",
-                "message_type" => is_string($message) ? "text" : "block_kit",
-            ]);
-
             // Prepare payload based on message type
             if (is_string($message)) {
                 $payload = ["text" => $message];
@@ -63,30 +57,20 @@ class SlackNotifyService
 
             $response = Http::post($webhookUrl, $payload);
 
-            $statusCode = $response->status();
-            $responseBody = $response->body();
-
-            Log::info("Slack API response", [
-                "status" => $statusCode,
-                "body" => $responseBody,
-            ]);
-
             if (!$response->successful()) {
-                $this->lastError = "HTTP Error: Status $statusCode - $responseBody";
+                $this->lastError = "HTTP Error: Status " . $response->status();
                 Log::error("Slack Notification Error", [
-                    "status" => $statusCode,
-                    "body" => $responseBody,
+                    "status" => $response->status(),
+                    "body" => $response->body(),
                 ]);
                 return false;
             }
 
-            Log::info("Slack notification sent successfully");
             return true;
         } catch (\Exception $e) {
             $this->lastError = "Exception: " . $e->getMessage();
             Log::error("Slack Notification Exception", [
                 "message" => $e->getMessage(),
-                "trace" => $e->getTraceAsString(),
             ]);
             return false;
         }

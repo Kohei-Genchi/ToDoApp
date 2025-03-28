@@ -27,20 +27,21 @@ class CategoryShareController extends Controller
         $this->shareRequestsController = $shareRequestsController;
     }
 
-    // @Todo
     private function checkSubscription(): ?JsonResponse
     {
-        // if (!Auth::user()->subscription_id) {
-        //     return response()->json(
-        //         [
-        //             "error" =>
-        //                 "共有機能を利用するにはサブスクリプションが必要です。",
-        //             "subscription_required" => true,
-        //         ],
-        //         403
-        //     );
-        // }
-
+        // Subscription check is disabled for development
+        // Uncomment when ready to enforce subscription requirements
+        /*
+        if (!Auth::user()->subscription_id) {
+            return response()->json(
+                [
+                    "error" => "共有機能を利用するにはサブスクリプションが必要です。",
+                    "subscription_required" => true,
+                ],
+                403
+            );
+        }
+        */
         return null;
     }
 
@@ -72,12 +73,6 @@ class CategoryShareController extends Controller
     public function store(Request $request, Category $category): JsonResponse
     {
         try {
-            // Log the incoming request
-            Log::info("Category share request received", [
-                "category_id" => $category->id,
-                "request_data" => $request->only(["email", "permission"]),
-            ]);
-
             // Check subscription
             if ($subscriptionCheck = $this->checkSubscription()) {
                 return $subscriptionCheck;
@@ -91,7 +86,6 @@ class CategoryShareController extends Controller
         } catch (\Exception $e) {
             Log::error("Error in CategoryShareController->store", [
                 "error" => $e->getMessage(),
-                "trace" => $e->getTraceAsString(),
             ]);
 
             return response()->json(

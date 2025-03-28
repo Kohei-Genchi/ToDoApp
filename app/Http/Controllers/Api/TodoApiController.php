@@ -39,49 +39,35 @@ class TodoApiController extends Controller
                 return response()->json([]);
             }
 
-            // Temporarily disabled subscription check for development
-            // @Todo
-            // if (
-            //     ($request->view === "shared" || $request->view === "kanban") &&
-            //     !Auth::user()->subscription_id
-            // ) {
-            //     return response()->json(
-            //         [
-            //             "error" =>
-            //                 "共有機能を利用するにはサブスクリプションが必要です。",
-            //             "subscription_required" => true,
-            //         ],
-            //         403
-            //     );
-            // }
+            // Subscription check is disabled for development
+            // Uncomment when ready to enforce subscription requirements
+            /*
+            if (
+                ($request->view === "shared" || $request->view === "kanban") &&
+                !Auth::user()->subscription_id
+            ) {
+                return response()->json(
+                    [
+                        "error" => "共有機能を利用するにはサブスクリプションが必要です。",
+                        "subscription_required" => true,
+                    ],
+                    403
+                );
+            }
+            */
 
             // Get tasks using the service
             $view = $request->view ?? "today";
             $date = $request->date;
             $userId = $request->user_id;
-            $categoryId = $request->category_id; // Added for kanban filtering
-            $status = $request->status; // Added for kanban filtering
-
-            // Log the request parameters for debugging
-            Log::info("Task request parameters:", [
-                "view" => $view,
-                "date" => $date,
-                "user_id" => $userId,
-                "category_id" => $categoryId,
-                "status" => $status,
-            ]);
+            $categoryId = $request->category_id;
+            $status = $request->status;
 
             // If a specific category is requested, we check if it's shared with the current user
             if ($categoryId) {
                 $category = Category::find($categoryId);
 
                 if ($category) {
-                    Log::info("Category requested:", [
-                        "category_id" => $categoryId,
-                        "category_name" => $category->name,
-                        "owner_id" => $category->user_id,
-                    ]);
-
                     // If the category is owned by someone else
                     if ($category->user_id !== Auth::id()) {
                         // Check if it's shared with current user
@@ -89,10 +75,6 @@ class TodoApiController extends Controller
                             ->sharedCategories()
                             ->where("category_id", $categoryId)
                             ->exists();
-
-                        Log::info("Category shared status:", [
-                            "is_shared" => $isShared,
-                        ]);
 
                         if (!$isShared) {
                             return response()->json(
@@ -108,10 +90,6 @@ class TodoApiController extends Controller
                         $todos = Todo::where("category_id", $categoryId)
                             ->with(["category", "user"])
                             ->get();
-
-                        Log::info("Returning tasks from shared category", [
-                            "count" => $todos->count(),
-                        ]);
 
                         return response()->json($todos);
                     }
@@ -137,10 +115,7 @@ class TodoApiController extends Controller
 
             return response()->json($todos);
         } catch (\Exception $e) {
-            Log::error("Error retrieving tasks: " . $e->getMessage(), [
-                "exception" => $e,
-                "request" => $request->all(),
-            ]);
+            Log::error("Error retrieving tasks: " . $e->getMessage());
             return response()->json(
                 ["error" => "Error retrieving tasks: " . $e->getMessage()],
                 500
@@ -174,10 +149,7 @@ class TodoApiController extends Controller
                 201
             );
         } catch (\Exception $e) {
-            Log::error("Error creating task: " . $e->getMessage(), [
-                "exception" => $e,
-                "request" => $request->all(),
-            ]);
+            Log::error("Error creating task: " . $e->getMessage());
             return response()->json(
                 ["error" => "Error creating task: " . $e->getMessage()],
                 500
@@ -214,10 +186,7 @@ class TodoApiController extends Controller
 
             return response()->json($todo);
         } catch (\Exception $e) {
-            Log::error("Error retrieving task: " . $e->getMessage(), [
-                "exception" => $e,
-                "todo_id" => $todo->id ?? "unknown",
-            ]);
+            Log::error("Error retrieving task: " . $e->getMessage());
             return response()->json(
                 ["error" => "Error retrieving task: " . $e->getMessage()],
                 500
@@ -234,7 +203,6 @@ class TodoApiController extends Controller
      */
     public function update(Request $request, Todo $todo): JsonResponse
     {
-        Log::info("タスク更新リクエスト:", $request->all());
         try {
             // Check if user is authenticated
             if (!Auth::check()) {
@@ -317,18 +285,14 @@ class TodoApiController extends Controller
                 $todo->save();
             }
 
-            $todo->load("category", "user"); // Added loading user relation for kanban
+            $todo->load("category", "user");
 
             return response()->json([
                 "message" => "Task updated successfully",
                 "todo" => $todo,
             ]);
         } catch (\Exception $e) {
-            Log::error("Error updating task: " . $e->getMessage(), [
-                "exception" => $e,
-                "request" => $request->all(),
-                "task_id" => $todo->id,
-            ]);
+            Log::error("Error updating task: " . $e->getMessage());
 
             return response()->json(
                 ["error" => "Error updating task: " . $e->getMessage()],
@@ -373,10 +337,7 @@ class TodoApiController extends Controller
                 "todo" => $updatedTodo->load("category", "user"),
             ]);
         } catch (\Exception $e) {
-            Log::error("Error toggling task status: " . $e->getMessage(), [
-                "exception" => $e,
-                "todo_id" => $todo->id,
-            ]);
+            Log::error("Error toggling task status: " . $e->getMessage());
             return response()->json(
                 ["error" => "Error toggling task status: " . $e->getMessage()],
                 500
@@ -423,11 +384,7 @@ class TodoApiController extends Controller
                     : "Task deleted successfully",
             ]);
         } catch (\Exception $e) {
-            Log::error("Error deleting task: " . $e->getMessage(), [
-                "exception" => $e,
-                "todo_id" => $todo->id,
-                "delete_recurring" => $request->has("delete_recurring"),
-            ]);
+            Log::error("Error deleting task: " . $e->getMessage());
             return response()->json(
                 ["error" => "Error deleting task: " . $e->getMessage()],
                 500

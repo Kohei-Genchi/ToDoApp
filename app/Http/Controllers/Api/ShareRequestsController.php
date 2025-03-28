@@ -211,15 +211,6 @@ class ShareRequestsController extends Controller
 
             if ($recipientUser) {
                 try {
-                    // Improved notification with better error handling
-                    Log::info("Sending category share notification", [
-                        "recipient_id" => $recipientUser->id,
-                        "recipient_email" => $recipientUser->email,
-                        "has_slack_webhook" => !empty(
-                            $recipientUser->slack_webhook_url
-                        ),
-                    ]);
-
                     // Prepare the notification
                     $notification = new ShareNotification(
                         $shareRequest,
@@ -232,11 +223,9 @@ class ShareRequestsController extends Controller
                     $recipientUser->notify($notification);
 
                     $notificationSent = true;
-                    Log::info("Share notification sent successfully");
                 } catch (\Exception $e) {
                     Log::error(
-                        "Error sending notification: " . $e->getMessage(),
-                        ["exception" => $e]
+                        "Error sending notification: " . $e->getMessage()
                     );
                     // Continue even if notification fails
                 }
@@ -246,13 +235,6 @@ class ShareRequestsController extends Controller
             if (!$recipientUser) {
                 $message .=
                     ". Note: This user is not registered yet. They will need to create an account first.";
-            }
-
-            if (!$notificationSent && $recipientUser) {
-                Log::warning(
-                    "Failed to send notification for category share request: " .
-                        $shareRequest->id
-                );
             }
 
             return response()->json(
@@ -265,8 +247,7 @@ class ShareRequestsController extends Controller
             );
         } catch (\Exception $e) {
             Log::error(
-                "Error creating category share request: " . $e->getMessage(),
-                ["trace" => $e->getTraceAsString()]
+                "Error creating category share request: " . $e->getMessage()
             );
             return response()->json(
                 [

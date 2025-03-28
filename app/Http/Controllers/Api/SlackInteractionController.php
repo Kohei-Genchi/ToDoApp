@@ -8,7 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB; // Add this import
+use Illuminate\Support\Facades\DB;
 
 class SlackInteractionController extends Controller
 {
@@ -21,17 +21,12 @@ class SlackInteractionController extends Controller
     public function approveShare(string $token)
     {
         try {
-            Log::info("Slack approveShare called", ["token" => $token]);
-
             $shareRequest = ShareRequest::where("token", $token)
                 ->where("status", "pending")
                 ->where("expires_at", ">", now())
                 ->first();
 
             if (!$shareRequest) {
-                Log::error("Share request not found or expired", [
-                    "token" => $token,
-                ]);
                 return response()->view(
                     "share-requests.error",
                     [
@@ -42,31 +37,11 @@ class SlackInteractionController extends Controller
                 );
             }
 
-            Log::info("Share request found", [
-                "id" => $shareRequest->id,
-                "type" => $shareRequest->share_type,
-                "category_id" => $shareRequest->category_id,
-                "email" => $shareRequest->recipient_email,
-            ]);
-
             // Find the recipient user
             $recipient = User::where(
                 "email",
                 $shareRequest->recipient_email
             )->first();
-
-            Log::info("Recipient user info", [
-                "found" => $recipient ? "yes" : "no",
-                "id" => $recipient ? $recipient->id : "none",
-                "email" => $recipient ? $recipient->email : "none",
-            ]);
-
-            // Check current login status
-            Log::info("Current auth status", [
-                "logged_in" => Auth::check() ? "yes" : "no",
-                "user_id" => Auth::check() ? Auth::id() : "none",
-                "user_email" => Auth::check() ? Auth::user()->email : "none",
-            ]);
 
             // Auto-login if not authenticated or wrong user
             if (
@@ -75,32 +50,16 @@ class SlackInteractionController extends Controller
             ) {
                 if ($recipient) {
                     // Force login
-                    Log::info("Forcing login for recipient", [
-                        "id" => $recipient->id,
-                    ]);
-                    Auth::logout(); // First log out current user (Guest)
-                    session()->invalidate(); // Destroy the current session
-                    session()->regenerateToken(); // Generate a new CSRF token
-                    Auth::login($recipient, true); // Login with "remember me" to create a stronger session
+                    Auth::logout();
+                    session()->invalidate();
+                    session()->regenerateToken();
+                    Auth::login($recipient, true);
                     session()->regenerate();
-
-                    // Verify login
-                    Log::info("After forced login", [
-                        "logged_in" => Auth::check() ? "yes" : "no",
-                        "user_id" => Auth::check() ? Auth::id() : "none",
-                        "user_email" => Auth::check()
-                            ? Auth::user()->email
-                            : "none",
-                    ]);
                 }
             }
 
             // Process the approval
-            Log::info("Calling shareRequest->approve()");
             $success = $shareRequest->approve();
-            Log::info("Approval result", [
-                "success" => $success ? "yes" : "no",
-            ]);
 
             // Return appropriate view based on result
             if ($success) {
@@ -135,8 +94,7 @@ class SlackInteractionController extends Controller
             }
         } catch (\Exception $e) {
             Log::error(
-                "Error in Slack share request approval: " . $e->getMessage(),
-                ["exception" => $e->getTraceAsString()]
+                "Error in Slack share request approval: " . $e->getMessage()
             );
 
             return response()->view(

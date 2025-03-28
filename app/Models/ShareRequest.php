@@ -69,14 +69,6 @@ class ShareRequest extends Model
      */
     public function approve(): bool
     {
-        Log::info("ShareRequest::approve starting", [
-            "id" => $this->id,
-            "user_id" => Auth::id(),
-            "user_email" => Auth::user() ? Auth::user()->email : "none",
-            "recipient_email" => $this->recipient_email,
-            "category_id" => $this->category_id,
-        ]);
-
         if (!$this->isValid()) {
             Log::error("Share request is not valid", ["id" => $this->id]);
             return false;
@@ -86,24 +78,13 @@ class ShareRequest extends Model
         $this->responded_at = now();
         $this->save();
 
-        Log::info("Share request marked as approved", ["id" => $this->id]);
-
         // Process category sharing (the only supported type now)
         if ($this->share_type === "category" && $this->category) {
-            Log::info("Processing category sharing", [
-                "category_id" => $this->category_id,
-                "share_type" => $this->share_type,
-            ]);
-
-            // Here's where we'll add direct debugging
-            $result = $this->processCategorySharing();
-            Log::info("processCategorySharing result", ["success" => $result]);
-            return $result;
+            return $this->processCategorySharing();
         }
 
         Log::error("Share request type not supported", [
             "share_type" => $this->share_type,
-            "has_category" => $this->category ? true : false,
         ]);
         return false;
     }
@@ -111,11 +92,6 @@ class ShareRequest extends Model
     protected function processCategorySharing(): bool
     {
         try {
-            Log::info("processCategorySharing start", [
-                "category_id" => $this->category_id,
-                "recipient_email" => $this->recipient_email,
-            ]);
-
             // Find the recipient user
             $recipientUser = User::where(
                 "email",
@@ -129,42 +105,19 @@ class ShareRequest extends Model
                 return false;
             }
 
-            Log::info("Recipient user found", [
-                "id" => $recipientUser->id,
-                "email" => $recipientUser->email,
-            ]);
-
             // Check if category exists and is loaded
             if (!$this->category) {
-                Log::error("Category not found or not loaded", [
-                    "category_id" => $this->category_id,
-                ]);
-
-                // Try to reload the category
                 $this->load("category");
-
-                // Check again
                 if (!$this->category) {
-                    Log::error(
-                        "Category still not loaded after explicit loading"
-                    );
+                    Log::error("Category not found or not loaded", [
+                        "category_id" => $this->category_id,
+                    ]);
                     return false;
                 }
-
-                Log::info("Category loaded after explicit loading", [
-                    "id" => $this->category->id,
-                    "name" => $this->category->name,
-                ]);
             }
 
             // Try direct DB insert as a fallback
             try {
-                Log::info("Attempting direct DB insert for category share", [
-                    "category_id" => $this->category_id,
-                    "user_id" => $recipientUser->id,
-                    "permission" => $this->permission,
-                ]);
-
                 // First check if the entry already exists
                 $exists = DB::table("category_shares")
                     ->where("category_id", $this->category_id)
@@ -172,7 +125,6 @@ class ShareRequest extends Model
                     ->exists();
 
                 if ($exists) {
-                    Log::info("Category share already exists");
                     return true;
                 }
 
@@ -185,49 +137,33 @@ class ShareRequest extends Model
                     "updated_at" => now(),
                 ]);
 
-                Log::info("Direct DB insert result", ["success" => $inserted]);
                 return $inserted;
             } catch (\Exception $e) {
-                Log::error("Error in direct DB insert: " . $e->getMessage(), [
-                    "trace" => $e->getTraceAsString(),
-                ]);
+                Log::error("Error in direct DB insert: " . $e->getMessage());
             }
 
             // Original approach using the model relationship
             try {
-                Log::info("About to call category->shareTo", [
-                    "category_id" => $this->category->id,
-                    "user_id" => $recipientUser->id,
-                    "permission" => $this->permission,
-                ]);
-
                 // Use transaction for safety
                 DB::beginTransaction();
                 try {
                     $this->category->shareTo($recipientUser, $this->permission);
                     DB::commit();
-                    Log::info(
-                        "Category shared successfully - transaction committed"
-                    );
                     return true;
                 } catch (\Exception $e) {
                     DB::rollBack();
-                    Log::error("Error in transaction: " . $e->getMessage(), [
-                        "trace" => $e->getTraceAsString(),
-                    ]);
+                    Log::error("Error in transaction: " . $e->getMessage());
                     return false;
                 }
             } catch (\Exception $e) {
                 Log::error(
-                    "Error processing category sharing: " . $e->getMessage(),
-                    ["trace" => $e->getTraceAsString()]
+                    "Error processing category sharing: " . $e->getMessage()
                 );
                 return false;
             }
         } catch (\Exception $e) {
             Log::error(
-                "Error processing category sharing: " . $e->getMessage(),
-                ["trace" => $e->getTraceAsString()]
+                "Error processing category sharing: " . $e->getMessage()
             );
             return false;
         }
