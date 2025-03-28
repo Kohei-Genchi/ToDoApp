@@ -30,7 +30,7 @@ class SpeechToTextController extends Controller
      */
     public function processSpeech(Request $request)
     {
-        \Log::info("Speech processing request received", [
+        Log::info("Speech processing request received", [
             "authenticated" => auth()->check(),
             "user_id" => auth()->id(),
             "has_audio_file" => $request->hasFile("audio"),

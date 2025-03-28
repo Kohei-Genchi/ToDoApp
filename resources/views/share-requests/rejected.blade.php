@@ -4,14 +4,14 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
                     <div class="text-center">
-                        <div class="inline-flex items-center justify-center h-24 w-24 rounded-full bg-green-100 mb-6">
-                            <svg class="h-12 w-12 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        <div class="inline-flex items-center justify-center h-24 w-24 rounded-full bg-red-100 mb-6">
+                            <svg class="h-12 w-12 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </div>
 
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4">共有リクエストを承認しました</h2>
-                        <p class="mb-4 text-gray-600">{{ $requesterName }}さんからの{{ $shareType }}共有を承認しました。</p>
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">共有リクエストを拒否しました</h2>
+                        <p class="mb-4 text-gray-600">{{ $requesterName }}さんからの{{ $shareType }}共有を拒否しました。</p>
 
                         <div class="mt-8">
                             <a href="{{ route('todos.index') }}"

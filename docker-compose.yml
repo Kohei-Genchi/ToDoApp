@@ -29,14 +29,6 @@ services:
         networks:
             - app-network
         command: ["/bin/bash", "/scheduler.sh"]
-        #  @Todo
-    # mailhog:
-    #     image: jcalonso/mailhog:latest
-    #     ports:
-    #         - "1025:1025" # SMTP server
-    #         - "8025:8025" # Web UI
-    #     networks:
-    #         - app-network
 
     nginx:
         image: nginx:alpine

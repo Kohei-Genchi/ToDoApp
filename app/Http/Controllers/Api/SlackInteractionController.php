@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB; // Add this import
 
 class SlackInteractionController extends Controller
 {
@@ -48,7 +49,6 @@ class SlackInteractionController extends Controller
                 "email" => $shareRequest->recipient_email,
             ]);
 
-            // ユーザー情報を詳細にロギング
             // Find the recipient user
             $recipient = User::where(
                 "email",
@@ -61,7 +61,7 @@ class SlackInteractionController extends Controller
                 "email" => $recipient ? $recipient->email : "none",
             ]);
 
-            // 重要：現在のログインユーザーをチェック
+            // Check current login status
             Log::info("Current auth status", [
                 "logged_in" => Auth::check() ? "yes" : "no",
                 "user_id" => Auth::check() ? Auth::id() : "none",
@@ -74,13 +74,17 @@ class SlackInteractionController extends Controller
                 Auth::user()->email !== $shareRequest->recipient_email
             ) {
                 if ($recipient) {
-                    // 強制的にログイン - これが重要！
+                    // Force login
                     Log::info("Forcing login for recipient", [
                         "id" => $recipient->id,
                     ]);
-                    Auth::login($recipient);
+                    Auth::logout(); // First log out current user (Guest)
+                    session()->invalidate(); // Destroy the current session
+                    session()->regenerateToken(); // Generate a new CSRF token
+                    Auth::login($recipient, true); // Login with "remember me" to create a stronger session
+                    session()->regenerate();
 
-                    // ログイン後の状態確認
+                    // Verify login
                     Log::info("After forced login", [
                         "logged_in" => Auth::check() ? "yes" : "no",
                         "user_id" => Auth::check() ? Auth::id() : "none",
@@ -98,7 +102,37 @@ class SlackInteractionController extends Controller
                 "success" => $success ? "yes" : "no",
             ]);
 
-            // ここまでのコードは変更なし...
+            // Return appropriate view based on result
+            if ($success) {
+                // Get requester info for UI
+                $requester = User::find($shareRequest->user_id);
+                $requesterName = $requester
+                    ? $requester->name
+                    : "不明なユーザー";
+
+                // Determine share type for UI
+                $shareTypeName = "全タスク"; // Default
+                if ($shareRequest->share_type === "task") {
+                    $shareTypeName = "タスク";
+                } elseif ($shareRequest->share_type === "category") {
+                    $shareTypeName = "カテゴリー";
+                }
+
+                return response()->view("share-requests.approved", [
+                    "shareRequest" => $shareRequest,
+                    "requesterName" => $requesterName,
+                    "shareType" => $shareTypeName,
+                ]);
+            } else {
+                return response()->view(
+                    "share-requests.error",
+                    [
+                        "message" => "共有リクエストの承認に失敗しました。",
+                        "title" => "共有リクエストエラー",
+                    ],
+                    500
+                );
+            }
         } catch (\Exception $e) {
             Log::error(
                 "Error in Slack share request approval: " . $e->getMessage(),

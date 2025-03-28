@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ShareRequest extends Model
 {
@@ -66,7 +69,13 @@ class ShareRequest extends Model
      */
     public function approve(): bool
     {
-        Log::info("ShareRequest::approve called", ["id" => $this->id]);
+        Log::info("ShareRequest::approve starting", [
+            "id" => $this->id,
+            "user_id" => Auth::id(),
+            "user_email" => Auth::user() ? Auth::user()->email : "none",
+            "recipient_email" => $this->recipient_email,
+            "category_id" => $this->category_id,
+        ]);
 
         if (!$this->isValid()) {
             Log::error("Share request is not valid", ["id" => $this->id]);
@@ -85,7 +94,11 @@ class ShareRequest extends Model
                 "category_id" => $this->category_id,
                 "share_type" => $this->share_type,
             ]);
-            return $this->processCategorySharing();
+
+            // Here's where we'll add direct debugging
+            $result = $this->processCategorySharing();
+            Log::info("processCategorySharing result", ["success" => $result]);
+            return $result;
         }
 
         Log::error("Share request type not supported", [
@@ -127,10 +140,10 @@ class ShareRequest extends Model
                     "category_id" => $this->category_id,
                 ]);
 
-                // 追加: カテゴリーを明示的に再読み込み
+                // Try to reload the category
                 $this->load("category");
 
-                // 再チェック
+                // Check again
                 if (!$this->category) {
                     Log::error(
                         "Category still not loaded after explicit loading"
@@ -144,33 +157,71 @@ class ShareRequest extends Model
                 ]);
             }
 
-            // Check if the category's shareTo method is available
-            if (!method_exists($this->category, "shareTo")) {
-                Log::error("shareTo method not found on Category model");
-                return false;
-            }
-
-            // 実際の共有処理
-            Log::info("About to call category->shareTo", [
-                "category_id" => $this->category->id,
-                "user_id" => $recipientUser->id,
-                "permission" => $this->permission,
-            ]);
-
-            // トランザクションで処理
-            DB::beginTransaction();
+            // Try direct DB insert as a fallback
             try {
-                $this->category->shareTo($recipientUser, $this->permission);
-                DB::commit();
-                Log::info(
-                    "Category shared successfully - transaction committed"
-                );
-                return true;
+                Log::info("Attempting direct DB insert for category share", [
+                    "category_id" => $this->category_id,
+                    "user_id" => $recipientUser->id,
+                    "permission" => $this->permission,
+                ]);
+
+                // First check if the entry already exists
+                $exists = DB::table("category_shares")
+                    ->where("category_id", $this->category_id)
+                    ->where("user_id", $recipientUser->id)
+                    ->exists();
+
+                if ($exists) {
+                    Log::info("Category share already exists");
+                    return true;
+                }
+
+                // Insert directly via DB query
+                $inserted = DB::table("category_shares")->insert([
+                    "category_id" => $this->category_id,
+                    "user_id" => $recipientUser->id,
+                    "permission" => $this->permission,
+                    "created_at" => now(),
+                    "updated_at" => now(),
+                ]);
+
+                Log::info("Direct DB insert result", ["success" => $inserted]);
+                return $inserted;
             } catch (\Exception $e) {
-                DB::rollBack();
-                Log::error("Error in transaction: " . $e->getMessage(), [
+                Log::error("Error in direct DB insert: " . $e->getMessage(), [
                     "trace" => $e->getTraceAsString(),
                 ]);
+            }
+
+            // Original approach using the model relationship
+            try {
+                Log::info("About to call category->shareTo", [
+                    "category_id" => $this->category->id,
+                    "user_id" => $recipientUser->id,
+                    "permission" => $this->permission,
+                ]);
+
+                // Use transaction for safety
+                DB::beginTransaction();
+                try {
+                    $this->category->shareTo($recipientUser, $this->permission);
+                    DB::commit();
+                    Log::info(
+                        "Category shared successfully - transaction committed"
+                    );
+                    return true;
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    Log::error("Error in transaction: " . $e->getMessage(), [
+                        "trace" => $e->getTraceAsString(),
+                    ]);
+                    return false;
+                }
+            } catch (\Exception $e) {
+                Log::error(
+                    "Error processing category sharing: " . $e->getMessage(),
+                    ["trace" => $e->getTraceAsString()]
+                );
                 return false;
             }
         } catch (\Exception $e) {

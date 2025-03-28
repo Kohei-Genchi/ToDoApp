@@ -32,16 +32,17 @@ return [
     "google" => [
         "client_id" => env("GOOGLE_CLIENT_ID"),
         "client_secret" => env("GOOGLE_CLIENT_SECRET"),
-        "redirect" => env("GOOGLE_REDIRECT_URI"),
+        "redirect" => env("APP_URL") . "/auth/google/callback",
     ],
-
     "slack" => [
         "notifications" => [
             "bot_user_oauth_token" => env("SLACK_BOT_USER_OAUTH_TOKEN"),
             "channel" => env("SLACK_BOT_USER_DEFAULT_CHANNEL"),
             "webhook_url" => env("SLACK_WEBHOOK_URL"),
-            "interactions_url" =>
-                "http://e4e6-223-187-97-199.ngrok-free.app/api/slack/interactions",
+            "interactions_url" => env(
+                "SLACK_INTERACTIONS_URL",
+                "http://localhost:8080/api/slack/interactions"
+            ),
         ],
     ],
 ];

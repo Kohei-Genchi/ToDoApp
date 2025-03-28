@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\CategoryShareController;
 use App\Http\Controllers\ShareNotificationWebController;
 use App\Http\Controllers\SharedTasksController;
 use App\Http\Controllers\StripSubscriptionController;
-
+use App\Http\Controllers\DirectShareApprovalController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -169,6 +169,11 @@ Route::middleware(["auth"])->group(function () {
             "analytics",
         ])->name("tasks.analytics");
     });
+
+    Route::get("/share/approve/{token}", [
+        DirectShareApprovalController::class,
+        "processApproval",
+    ])->name("share.direct.approve");
 
     /**
      * Share Requests Web UI
