@@ -19,8 +19,6 @@
                         今日
                     </button>
 
-                    <!-- Shared tasks button with subscription check -->
-
                     <!-- Shared tasks button - directs to Kanban board -->
                     <a
                         href="/tasks/kanban"
@@ -76,7 +74,7 @@ export default {
         },
     },
 
-    emits: ["set-view", "show-calendar", "show-shared", "add-task"],
+    emits: ["set-view", "add-task"],
 
     computed: {
         /**

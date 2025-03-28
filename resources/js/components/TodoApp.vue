@@ -4,7 +4,6 @@
         <app-header
             :current-view="currentView"
             @set-view="setView"
-            @show-shared="showSharedTasksView"
             @add-task="openAddTaskModal"
         />
 
@@ -14,14 +13,6 @@
                 v-if="currentView !== 'shared'"
                 :current-date="currentDate"
                 @date-selected="selectDate"
-            />
-
-            <shared-tasks-calendar-view
-                v-if="currentView === 'shared'"
-                @back="setView('today')"
-                @task-updated="loadSharedTasks"
-                @task-created="loadSharedTasks"
-                @task-deleted="loadSharedTasks"
             />
 
             <!-- Task List (normal view) -->
@@ -78,9 +69,6 @@ const DeleteConfirmModal = defineAsyncComponent(
 const NotificationComponent = defineAsyncComponent(
     () => import("./UI/NotificationComponent.vue"),
 );
-const SharedTasksCalendarView = defineAsyncComponent(
-    () => import("./SharedTasksCalendarView.vue"),
-);
 
 // Component imports
 import AppHeader from "./AppHeader.vue";
@@ -96,7 +84,6 @@ export default {
         NotificationComponent,
         AppHeader,
         WeeklyDateNavigation,
-        SharedTasksCalendarView,
     },
 
     setup() {
@@ -340,13 +327,6 @@ export default {
             loadTasks();
         }
 
-        /**
-         * Show shared tasks view - directly show shared view of tasks
-         */
-        function showSharedTasksView() {
-            currentView.value = "shared";
-        }
-
         // ===============================
         // Date Functions
         // ===============================
@@ -383,18 +363,6 @@ export default {
 
             showTaskModal.value = true;
         }
-
-        const loadSharedTasks = async () => {
-            try {
-                // この関数は単に共有タスクビューとの連携用
-                // 実際の処理は SharedTasksCalendarView コンポーネント内で行われる
-                console.log("loadSharedTasks called in TodoApp");
-                return true;
-            } catch (error) {
-                console.error("Error in loadSharedTasks:", error);
-                return false;
-            }
-        };
 
         /**
          * Open edit task modal
@@ -774,7 +742,6 @@ export default {
 
             // View functions
             setView,
-            showSharedTasksView,
 
             // Date functions
             selectDate,
@@ -798,7 +765,6 @@ export default {
             // Other functions
             loadCategories,
             isRecurringTask,
-            loadSharedTasks,
         };
     },
 };

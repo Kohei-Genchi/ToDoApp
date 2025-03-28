@@ -84,13 +84,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // 共有タスク表示コンポーネントも遅延読み込み
-    if (document.getElementById("shared-tasks-view")) {
-        import("./components/SharedTasksCalendarView.vue").then((module) => {
-            createApp(module.default).mount("#shared-tasks-view");
-        });
-    }
-
     // 既存の編集ボタンにイベントリスナーを追加
     document.querySelectorAll(".edit-task-btn").forEach((button) => {
         button.addEventListener("click", function (e) {
