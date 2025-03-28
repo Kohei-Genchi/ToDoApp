@@ -98,6 +98,7 @@ class ShareNotification extends Notification
             "token" => $this->shareRequest->token,
         ]);
 
+        // Create a properly defined message variable
         $message = "*{$this->requesterName}さんから{$this->itemType}共有のリクエストが届きました*\n\n";
         $message .= "{$this->requesterName}さんがあなたと{$this->itemType}「{$this->itemName}」を共有しようとしています。\n";
         $message .=
