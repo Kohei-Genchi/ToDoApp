@@ -66,7 +66,10 @@ class ShareRequest extends Model
      */
     public function approve(): bool
     {
+        Log::info("ShareRequest::approve called", ["id" => $this->id]);
+
         if (!$this->isValid()) {
+            Log::error("Share request is not valid", ["id" => $this->id]);
             return false;
         }
 
@@ -74,12 +77,109 @@ class ShareRequest extends Model
         $this->responded_at = now();
         $this->save();
 
+        Log::info("Share request marked as approved", ["id" => $this->id]);
+
         // Process category sharing (the only supported type now)
         if ($this->share_type === "category" && $this->category) {
+            Log::info("Processing category sharing", [
+                "category_id" => $this->category_id,
+                "share_type" => $this->share_type,
+            ]);
             return $this->processCategorySharing();
         }
 
+        Log::error("Share request type not supported", [
+            "share_type" => $this->share_type,
+            "has_category" => $this->category ? true : false,
+        ]);
         return false;
+    }
+
+    protected function processCategorySharing(): bool
+    {
+        try {
+            Log::info("processCategorySharing start", [
+                "category_id" => $this->category_id,
+                "recipient_email" => $this->recipient_email,
+            ]);
+
+            // Find the recipient user
+            $recipientUser = User::where(
+                "email",
+                $this->recipient_email
+            )->first();
+
+            if (!$recipientUser) {
+                Log::error("Recipient user not found", [
+                    "email" => $this->recipient_email,
+                ]);
+                return false;
+            }
+
+            Log::info("Recipient user found", [
+                "id" => $recipientUser->id,
+                "email" => $recipientUser->email,
+            ]);
+
+            // Check if category exists and is loaded
+            if (!$this->category) {
+                Log::error("Category not found or not loaded", [
+                    "category_id" => $this->category_id,
+                ]);
+
+                // 追加: カテゴリーを明示的に再読み込み
+                $this->load("category");
+
+                // 再チェック
+                if (!$this->category) {
+                    Log::error(
+                        "Category still not loaded after explicit loading"
+                    );
+                    return false;
+                }
+
+                Log::info("Category loaded after explicit loading", [
+                    "id" => $this->category->id,
+                    "name" => $this->category->name,
+                ]);
+            }
+
+            // Check if the category's shareTo method is available
+            if (!method_exists($this->category, "shareTo")) {
+                Log::error("shareTo method not found on Category model");
+                return false;
+            }
+
+            // 実際の共有処理
+            Log::info("About to call category->shareTo", [
+                "category_id" => $this->category->id,
+                "user_id" => $recipientUser->id,
+                "permission" => $this->permission,
+            ]);
+
+            // トランザクションで処理
+            DB::beginTransaction();
+            try {
+                $this->category->shareTo($recipientUser, $this->permission);
+                DB::commit();
+                Log::info(
+                    "Category shared successfully - transaction committed"
+                );
+                return true;
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error("Error in transaction: " . $e->getMessage(), [
+                    "trace" => $e->getTraceAsString(),
+                ]);
+                return false;
+            }
+        } catch (\Exception $e) {
+            Log::error(
+                "Error processing category sharing: " . $e->getMessage(),
+                ["trace" => $e->getTraceAsString()]
+            );
+            return false;
+        }
     }
 
     /**
@@ -95,34 +195,6 @@ class ShareRequest extends Model
         $this->responded_at = now();
 
         return $this->save();
-    }
-
-    /**
-     * Process the category sharing after approval
-     */
-    protected function processCategorySharing(): bool
-    {
-        try {
-            // Find the recipient user
-            $recipientUser = User::where(
-                "email",
-                $this->recipient_email
-            )->first();
-
-            if (!$recipientUser) {
-                return false;
-            }
-
-            // Share the category with the user
-            $this->category->shareTo($recipientUser, $this->permission);
-
-            return true;
-        } catch (\Exception $e) {
-            \Log::error(
-                "Error processing category sharing: " . $e->getMessage()
-            );
-            return false;
-        }
     }
 
     /**

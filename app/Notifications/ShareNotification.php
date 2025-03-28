@@ -105,6 +105,8 @@ class ShareNotification extends Notification
         try {
             // Generate URLs for web browser
             $baseUrl = config("app.url");
+
+            // $baseUrl = "http://10.104.210.115:8080";
             $token = $this->shareRequest->token;
 
             // Direct URLs for API endpoints
