@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Notification;
-use App\Notifications\Channels\SlackNotifyChannel;
+use App\Notifications\Channels\CustomSlackChannel;
 use App\Services\SlackNotifyService;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,11 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Register the Slack channel
-        Notification::extend("slack", function ($app) {
-            return new SlackNotifyChannel(
-                $app->make(SlackNotifyService::class)
-            );
+        // Register custom Slack channel
+        Notification::extend("custom-slack", function ($app) {
+            return new CustomSlackChannel();
         });
     }
 }

@@ -209,39 +209,34 @@ class ShareRequestsController extends Controller
             // Send notification through Slack if available
             $notificationSent = false;
 
-            if ($recipientUser && $recipientUser->slack_webhook_url) {
-                // Use the notification system
+            if ($recipientUser) {
                 try {
-                    $recipientUser->notify(
-                        new ShareNotification(
-                            $shareRequest,
-                            Auth::user()->name,
-                            $category->name,
-                            "カテゴリー"
-                        )
+                    // Improved notification with better error handling
+                    Log::info("Sending category share notification", [
+                        "recipient_id" => $recipientUser->id,
+                        "recipient_email" => $recipientUser->email,
+                        "has_slack_webhook" => !empty(
+                            $recipientUser->slack_webhook_url
+                        ),
+                    ]);
+
+                    // Prepare the notification
+                    $notification = new ShareNotification(
+                        $shareRequest,
+                        Auth::user()->name,
+                        $category->name,
+                        "カテゴリー"
                     );
+
+                    // Send the notification
+                    $recipientUser->notify($notification);
+
                     $notificationSent = true;
+                    Log::info("Share notification sent successfully");
                 } catch (\Exception $e) {
                     Log::error(
-                        "Error sending notification: " . $e->getMessage()
-                    );
-                    // Continue even if notification fails
-                }
-            } elseif ($recipientUser && $recipientUser->email) {
-                // Fallback to email notification
-                try {
-                    $recipientUser->notify(
-                        new ShareNotification(
-                            $shareRequest,
-                            Auth::user()->name,
-                            $category->name,
-                            "カテゴリー"
-                        )
-                    );
-                    $notificationSent = true;
-                } catch (\Exception $e) {
-                    Log::error(
-                        "Error sending email notification: " . $e->getMessage()
+                        "Error sending notification: " . $e->getMessage(),
+                        ["exception" => $e]
                     );
                     // Continue even if notification fails
                 }
@@ -270,7 +265,8 @@ class ShareRequestsController extends Controller
             );
         } catch (\Exception $e) {
             Log::error(
-                "Error creating category share request: " . $e->getMessage()
+                "Error creating category share request: " . $e->getMessage(),
+                ["trace" => $e->getTraceAsString()]
             );
             return response()->json(
                 [

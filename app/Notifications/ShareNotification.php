@@ -8,6 +8,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use App\Models\ShareRequest;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Log;
 
 class ShareNotification extends Notification
 {
@@ -42,9 +43,9 @@ class ShareNotification extends Notification
     {
         $channels = [];
 
-        // Use Slack channel if webhook URL is set
+        // Use our custom Slack channel if webhook URL is set
         if (!empty($notifiable->slack_webhook_url)) {
-            $channels[] = "slack";
+            $channels[] = "custom-slack";
         } else {
             // Use email as fallback
             $channels[] = "mail";
@@ -95,42 +96,64 @@ class ShareNotification extends Notification
 
     /**
      * Get the Slack representation of the notification.
+     *
+     * @param mixed $notifiable
+     * @return string
      */
-    public function toSlack(object $notifiable): string
+    public function toSlack($notifiable): string
     {
-        $approveUrl = URL::signedRoute("share-requests.web.approve", [
-            "token" => $this->shareRequest->token,
-        ]);
+        try {
+            // Generate URLs for web browser
+            $baseUrl = config("app.url");
+            $token = $this->shareRequest->token;
 
-        $rejectUrl = URL::signedRoute("share-requests.web.reject", [
-            "token" => $this->shareRequest->token,
-        ]);
+            // Direct URLs for API endpoints
+            $approveUrl = "{$baseUrl}/api/slack/approve/{$token}";
+            $rejectUrl = "{$baseUrl}/api/slack/reject/{$token}";
 
-        // Ensure requesterName is treated as a string
-        $requesterName = is_string($this->requesterName)
-            ? $this->requesterName
-            : (string) $this->requesterName;
-        $itemName = is_string($this->itemName)
-            ? $this->itemName
-            : (string) $this->itemName;
+            // Ensure requesterName is treated as a string
+            $requesterName = is_string($this->requesterName)
+                ? $this->requesterName
+                : (string) $this->requesterName;
+            $itemName = is_string($this->itemName)
+                ? $this->itemName
+                : (string) $this->itemName;
 
-        $message = "*{$requesterName}さんから{$this->itemType}共有のリクエストが届きました*\n\n";
-        $message .= "{$requesterName}さんがあなたと{$this->itemType}「{$itemName}」を共有しようとしています。\n";
-        $message .=
-            "権限: " .
-            ($this->shareRequest->permission === "edit"
-                ? "編集可能"
-                : "閲覧のみ") .
-            "\n\n";
-        $message .=
-            "リクエストを承認するには、下のリンクをクリックしてください:\n";
-        $message .= $approveUrl . "\n\n";
-        $message .=
-            "リクエストを拒否するには、下のリンクをクリックしてください:\n";
-        $message .= $rejectUrl . "\n\n";
-        $message .= "このリクエストは7日間有効です。";
+            // Create main message text with clear links
+            $messageText = "*{$requesterName}さんから{$this->itemType}共有のリクエストが届きました*\n\n";
+            $messageText .= "{$requesterName}さんがあなたと{$this->itemType}「{$itemName}」を共有しようとしています。\n";
+            $messageText .=
+                "権限: " .
+                ($this->shareRequest->permission === "edit"
+                    ? "編集可能"
+                    : "閲覧のみ") .
+                "\n\n";
+            $messageText .= "・<{$approveUrl}|承認する>\n";
+            $messageText .= "・<{$rejectUrl}|拒否する>\n\n";
+            $messageText .= "このリクエストは7日間有効です。";
 
-        return $message;
+            // Log for debugging
+            Log::debug("ShareNotification: Sending Slack message", [
+                "message_length" => strlen($messageText),
+                "token" => substr($token, 0, 6) . "...",
+            ]);
+
+            return $messageText;
+        } catch (\Exception $e) {
+            // If anything fails, return a simple error message
+            Log::error(
+                "Error formatting Slack notification: " . $e->getMessage(),
+                ["exception" => $e]
+            );
+
+            $baseUrl = config("app.url");
+            $token = $this->shareRequest->token;
+
+            $approveUrl = "{$baseUrl}/api/slack/approve/{$token}";
+            $rejectUrl = "{$baseUrl}/api/slack/reject/{$token}";
+
+            return "カテゴリー共有リクエストが届いています。\n承認: {$approveUrl}\n拒否: {$rejectUrl}";
+        }
     }
 
     /**

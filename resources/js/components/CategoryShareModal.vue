@@ -39,7 +39,7 @@
                                 <option value="edit">編集可能</option>
                             </select>
                             <button
-                                @click="unshareCategory(user)"
+                                @click.stop="unshareCategory(user)"
                                 class="text-red-500 hover:text-red-700"
                                 title="共有解除"
                             >
@@ -90,22 +90,23 @@
                                 type="checkbox"
                                 id="slack-auth-required"
                                 v-model="slackAuthRequired"
-                                class="mr-2"
-                                disabled
-                                checked
+                                class="mr-2 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                             />
                             <label for="slack-auth-required" class="text-sm">
-                                Slack認証を必須にする（必須）
+                                Slack認証を必須にする
                             </label>
                         </div>
                         <div class="ml-2 text-xs text-gray-500">
                             <span
                                 class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded"
                             >
-                                カテゴリー共有にはSlack認証が必要です
+                                推奨
                             </span>
                         </div>
                     </div>
+                    <p class="text-xs text-gray-500 mb-2">
+                        Slack認証を有効にすると、ユーザーはSlackで承認を行えます
+                    </p>
                     <button
                         @click="shareCategory"
                         class="w-full bg-blue-500 text-white rounded py-2 text-sm hover:bg-blue-600 transition"
@@ -118,9 +119,12 @@
                         {{ isSubmitting ? "処理中..." : "共有する" }}
                     </button>
                 </div>
-                <p v-if="errorMessage" class="mt-2 text-sm text-red-500">
+                <div v-if="errorMessage" class="mt-2 text-sm text-red-500">
                     {{ errorMessage }}
-                </p>
+                </div>
+                <div v-if="successMessage" class="mt-2 text-sm text-green-500">
+                    {{ successMessage }}
+                </div>
             </div>
 
             <!-- アクションボタン -->
@@ -157,9 +161,11 @@ export default {
         const sharedUsers = ref([]);
         const shareEmail = ref("");
         const sharePermission = ref("view");
-        const slackAuthRequired = ref(true); // Slack認証は常に必須
+        const slackAuthRequired = ref(true); // デフォルトでSlack認証を有効に
         const isSubmitting = ref(false);
         const errorMessage = ref("");
+        const successMessage = ref("");
+        const notificationSent = ref(false);
 
         // メールアドレスの正規表現
         const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -190,70 +196,97 @@ export default {
         };
 
         // カテゴリーの共有
-        function shareCategory() {
-            const email = document.getElementById("share-email").value;
-            const permission =
-                document.getElementById("share-permission").value;
-            const slackAuthRequired = document.getElementById(
-                "slack-auth-required",
-            ).checked;
-
-            if (!email) {
-                showShareError("メールアドレスを入力してください");
+        const shareCategory = async () => {
+            if (!isValidEmail.value) {
+                errorMessage.value = "有効なメールアドレスを入力してください";
                 return;
             }
 
-            // CSRFトークンを取得
-            const csrfToken = document
-                .querySelector('meta[name="csrf-token"]')
-                .getAttribute("content");
+            isSubmitting.value = true;
+            errorMessage.value = "";
+            successMessage.value = "";
 
-            // APIリクエストを送信
-            fetch(`/api/categories/${currentCategoryId}/shares`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": csrfToken,
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                body: JSON.stringify({
-                    email: email,
-                    permission: permission,
-                    slack_auth_required: slackAuthRequired,
-                }),
-            })
-                .then((response) => {
-                    if (!response.ok) {
-                        return response.json().then((data) => {
-                            console.error("共有エラー:", data);
-                            throw new Error(
-                                data.error ||
-                                    `Server responded with status ${response.status}`,
-                            );
-                        });
-                    }
-                    return response.json();
-                })
-                .then((data) => {
-                    if (data.success) {
-                        alert(
-                            slackAuthRequired
-                                ? "カテゴリー共有リクエストが送信されました。相手はSlackで承認する必要があります。"
-                                : "カテゴリーが共有されました",
-                        );
-                        closeShareModal();
+            try {
+                // CSRFトークンを取得
+                const csrfToken = document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content");
+
+                // APIリクエストを送信
+                const response = await axios.post(
+                    `/api/categories/${props.category.id}/shares`,
+                    {
+                        email: shareEmail.value,
+                        permission: sharePermission.value,
+                        slack_auth_required: slackAuthRequired.value,
+                    },
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": csrfToken,
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                    },
+                );
+
+                const data = response.data;
+
+                // 共有リクエストが既に送信済みの場合
+                if (
+                    data.message &&
+                    data.message.includes("already been sent")
+                ) {
+                    successMessage.value =
+                        "カテゴリー共有リクエストが既に送信されています。相手はSlackで承認する必要があります。";
+                    setTimeout(() => {
+                        emit("close");
+                    }, 2000);
+                    return;
+                }
+
+                // 成功した場合
+                if (data.success) {
+                    // Slack通知が送信された場合
+                    if (data.message && data.message.includes("Slack")) {
+                        successMessage.value =
+                            "カテゴリー共有リクエストをSlackに送信しました。承認されるまでお待ちください。";
                     } else {
-                        console.error("共有レスポンスエラー:", data);
-                        showShareError(data.error || "共有に失敗しました");
+                        successMessage.value = slackAuthRequired.value
+                            ? "カテゴリー共有リクエストが送信されました。相手はSlackで承認する必要があります。"
+                            : "カテゴリーが共有されました";
                     }
-                })
-                .catch((error) => {
-                    console.error("共有処理エラー詳細:", error);
-                    showShareError(
-                        error.message || "共有処理中にエラーが発生しました",
-                    );
-                });
-        }
+
+                    shareEmail.value = "";
+
+                    // 共有ユーザー一覧を更新
+                    await loadSharedUsers();
+
+                    // 成功メッセージを表示した後、モーダルを閉じる
+                    setTimeout(() => {
+                        emit("close");
+                    }, 2000);
+                } else {
+                    errorMessage.value = data.error || "共有に失敗しました";
+                }
+            } catch (error) {
+                console.error("共有エラー:", error);
+
+                if (error.response && error.response.data) {
+                    // API からのエラーメッセージを表示
+                    errorMessage.value =
+                        error.response.data.error ||
+                        (error.response.data.errors
+                            ? Object.values(error.response.data.errors)
+                                  .flat()
+                                  .join(", ")
+                            : "共有処理中にエラーが発生しました");
+                } else {
+                    errorMessage.value = "共有処理中にエラーが発生しました";
+                }
+            } finally {
+                isSubmitting.value = false;
+            }
+        };
 
         // 共有権限の更新
         const updatePermission = async (user) => {
@@ -270,11 +303,16 @@ export default {
                         },
                     },
                 );
+
+                successMessage.value = "権限を更新しました";
+                setTimeout(() => {
+                    successMessage.value = "";
+                }, 2000);
             } catch (error) {
                 console.error("Error updating permission:", error);
-                alert("権限の更新に失敗しました");
+                errorMessage.value = "権限の更新に失敗しました";
                 // 変更を元に戻す（再読み込み）
-                loadSharedUsers();
+                await loadSharedUsers();
             }
         };
 
@@ -297,9 +335,14 @@ export default {
                 sharedUsers.value = sharedUsers.value.filter(
                     (u) => u.id !== user.id,
                 );
+
+                successMessage.value = "共有を解除しました";
+                setTimeout(() => {
+                    successMessage.value = "";
+                }, 2000);
             } catch (error) {
                 console.error("Error unsharing category:", error);
-                alert("共有解除に失敗しました");
+                errorMessage.value = "共有解除に失敗しました";
             }
         };
 
@@ -315,6 +358,8 @@ export default {
             slackAuthRequired,
             isSubmitting,
             errorMessage,
+            successMessage,
+            notificationSent,
             isValidEmail,
             shareCategory,
             updatePermission,

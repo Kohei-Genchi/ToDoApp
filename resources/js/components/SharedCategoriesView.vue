@@ -9,6 +9,33 @@
             </div>
         </div>
 
+        <!-- Debugging info -->
+        <div
+            v-if="debugMode"
+            class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm"
+        >
+            <strong>Debug Info:</strong>
+            <pre>{{
+                JSON.stringify(
+                    {
+                        categoriesCount: sharedCategories.length,
+                        tasksCount: categoryTasks.length,
+                    },
+                    null,
+                    2,
+                )
+            }}</pre>
+            <button
+                @click="
+                    loadSharedCategories();
+                    debugMode = false;
+                "
+                class="mt-2 text-xs bg-blue-500 text-white px-2 py-1 rounded"
+            >
+                Reload Data
+            </button>
+        </div>
+
         <!-- 読み込み中表示 -->
         <div v-if="isLoading" class="flex justify-center py-8">
             <svg
@@ -57,11 +84,17 @@
                         <div>
                             <h3 class="font-medium">{{ category.name }}</h3>
                             <p class="text-sm text-gray-500">
-                                所有者: {{ category.user.name }}
+                                所有者:
+                                {{
+                                    category.user
+                                        ? category.user.name
+                                        : "Unknown"
+                                }}
                                 <span
                                     class="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs"
                                 >
                                     {{
+                                        category.pivot &&
                                         category.pivot.permission === "edit"
                                             ? "編集可能"
                                             : "閲覧のみ"
@@ -74,7 +107,11 @@
                         @click="viewCategoryTasks(category)"
                         class="text-sm text-blue-500 hover:text-blue-700"
                     >
-                        タスク一覧
+                        {{
+                            expandedCategory === category.id
+                                ? "閉じる"
+                                : "タスク一覧"
+                        }}
                     </button>
                 </div>
 
@@ -106,10 +143,7 @@
                                 type="checkbox"
                                 :checked="task.status === 'completed'"
                                 @change="toggleTaskStatus(task)"
-                                :disabled="
-                                    task.pivot &&
-                                    task.pivot.permission === 'view'
-                                "
+                                :disabled="!canEdit(category)"
                                 class="mr-3 h-4 w-4"
                             />
                             <span class="flex-1">{{ task.title }}</span>
@@ -143,20 +177,38 @@ export default {
         const expandedCategory = ref(null);
         const categoryTasks = ref([]);
         const isLoadingTasks = ref(false);
+        const debugMode = ref(false); // For debugging
 
         // カテゴリー一覧の取得
         const loadSharedCategories = async () => {
+            console.log("Loading shared categories...");
             try {
                 isLoading.value = true;
-                const response = await axios.get("/api/shared-categories", {
+                const response = await axios.get("/api/shared/categories", {
                     headers: {
                         Accept: "application/json",
                         "X-Requested-With": "XMLHttpRequest",
                     },
                 });
-                sharedCategories.value = response.data;
+                console.log("Shared categories response:", response.data);
+                sharedCategories.value = response.data || [];
+
+                // If there was previously an expanded category, try to load its tasks
+                if (expandedCategory.value !== null) {
+                    const category = sharedCategories.value.find(
+                        (c) => c.id === expandedCategory.value,
+                    );
+                    if (category) {
+                        await loadCategoryTasks(category.id);
+                    } else {
+                        // Category no longer exists or is no longer shared
+                        expandedCategory.value = null;
+                        categoryTasks.value = [];
+                    }
+                }
             } catch (error) {
                 console.error("Error loading shared categories:", error);
+                debugMode.value = true; // Enable debug mode on error
             } finally {
                 isLoading.value = false;
             }
@@ -165,21 +217,24 @@ export default {
         // 特定のカテゴリーに属するタスクの取得
         const loadCategoryTasks = async (categoryId) => {
             try {
+                console.log("Loading tasks for category ID:", categoryId);
                 isLoadingTasks.value = true;
                 const response = await axios.get("/api/todos", {
                     params: {
                         category_id: categoryId,
-                        view: "category",
+                        view: "all",
                     },
                     headers: {
                         Accept: "application/json",
                         "X-Requested-With": "XMLHttpRequest",
                     },
                 });
-                categoryTasks.value = response.data;
+                console.log("Category tasks response:", response.data);
+                categoryTasks.value = response.data || [];
             } catch (error) {
                 console.error("Error loading category tasks:", error);
                 categoryTasks.value = [];
+                debugMode.value = true; // Enable debug mode on error
             } finally {
                 isLoadingTasks.value = false;
             }
@@ -198,10 +253,23 @@ export default {
             }
         };
 
+        // Check if user can edit tasks in this category
+        const canEdit = (category) => {
+            return (
+                category &&
+                category.pivot &&
+                category.pivot.permission === "edit"
+            );
+        };
+
         // タスクの完了状態を切り替え
         const toggleTaskStatus = async (task) => {
             // 閲覧権限しかない場合は操作不可
-            if (task.pivot && task.pivot.permission === "view") {
+            const category = sharedCategories.value.find(
+                (c) => c.id === expandedCategory.value,
+            );
+            if (!canEdit(category)) {
+                console.log("Cannot edit - view permission only");
                 return;
             }
 
@@ -225,12 +293,14 @@ export default {
                         },
                     },
                 );
+                console.log(`Task ${task.id} status updated to ${newStatus}`);
             } catch (error) {
                 console.error("Error toggling task status:", error);
                 // エラー時は元に戻す
                 task.status =
                     task.status === "completed" ? "pending" : "completed";
                 alert("タスク状態の更新に失敗しました");
+                debugMode.value = true; // Enable debug mode on error
             }
         };
 
@@ -274,10 +344,13 @@ export default {
             expandedCategory,
             categoryTasks,
             isLoadingTasks,
+            debugMode,
             viewCategoryTasks,
             toggleTaskStatus,
             formatDate,
             formatTime,
+            loadSharedCategories,
+            canEdit,
         };
     },
 };

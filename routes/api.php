@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CategoryShareController;
 use App\Http\Controllers\Api\ShareRequestsController;
 use App\Http\Controllers\Api\SpeechToTextController;
 use App\Http\Controllers\StripSubscriptionController;
+use App\Http\Controllers\Api\SlackInteractionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -68,7 +69,18 @@ Route::middleware(["auth:sanctum"])->group(function () {
             "cancel",
         ])->name("api.share-requests.cancel");
     });
-    Route::get("/slack/oauth", [SlackAuthController::class, "handleOAuth"]);
+
+    Route::prefix("slack")->group(function () {
+        Route::get("/approve/{token}", [
+            SlackInteractionController::class,
+            "approveShare",
+        ])->name("api.slack.approve");
+
+        Route::get("/reject/{token}", [
+            SlackInteractionController::class,
+            "rejectShare",
+        ])->name("api.slack.reject");
+    });
     /**
      * Category Sharing
      */

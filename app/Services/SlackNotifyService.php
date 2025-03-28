@@ -24,14 +24,14 @@ class SlackNotifyService
      * Send a message via Slack Webhook.
      *
      * @param string $webhookUrl The Slack webhook URL
-     * @param string $message The message to send
+     * @param string|array $message The message to send (string or Block Kit format)
      * @param string $username Optional username to display
      * @param string $channel Optional channel to post to
      * @return bool Whether the message was sent successfully
      */
     public function send(
         string $webhookUrl,
-        string $message,
+        $message,
         string $username = null,
         string $channel = null
     ): bool {
@@ -41,15 +41,16 @@ class SlackNotifyService
             Log::info("Attempting to send Slack notification", [
                 "webhook_length" => strlen($webhookUrl),
                 "webhook_prefix" => substr($webhookUrl, 0, 15) . "...",
-                "message_length" => strlen($message),
-                "message_preview" =>
-                    substr($message, 0, 50) .
-                    (strlen($message) > 50 ? "..." : ""),
+                "message_type" => is_string($message) ? "text" : "block_kit",
             ]);
 
-            $payload = [
-                "text" => $message,
-            ];
+            // Prepare payload based on message type
+            if (is_string($message)) {
+                $payload = ["text" => $message];
+            } else {
+                // Assume it's already a properly structured Block Kit payload
+                $payload = $message;
+            }
 
             // Add optional parameters if provided
             if ($username) {

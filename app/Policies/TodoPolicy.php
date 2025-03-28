@@ -23,12 +23,16 @@ class TodoPolicy
 
         // Check for shared categories
         if ($todo->category_id) {
-            $sharedCategories = $user
+            Log::debug(
+                "Checking category share permission for task {$todo->id}, category {$todo->category_id}"
+            );
+
+            $sharedCategory = $user
                 ->sharedCategories()
                 ->where("categories.id", $todo->category_id)
                 ->first();
 
-            if ($sharedCategories) {
+            if ($sharedCategory) {
                 Log::info(
                     "Task {$todo->id} is viewable through shared category {$todo->category_id} for user {$user->id}"
                 );
@@ -59,10 +63,21 @@ class TodoPolicy
 
         // Check for shared categories with edit permission
         if ($todo->category_id) {
+            Log::debug(
+                "Checking category edit permission for task {$todo->id}, category {$todo->category_id}"
+            );
+
             $sharedCategory = $user
                 ->sharedCategories()
                 ->where("categories.id", $todo->category_id)
                 ->first();
+
+            Log::debug("Shared category found:", [
+                "has_category" => $sharedCategory ? true : false,
+                "permission" => $sharedCategory
+                    ? $sharedCategory->pivot->permission
+                    : "none",
+            ]);
 
             if (
                 $sharedCategory &&
@@ -83,6 +98,7 @@ class TodoPolicy
 
     public function delete(User $user, Todo $todo): bool
     {
+        // Only the owner can delete tasks
         return $user->id === $todo->user_id;
     }
 

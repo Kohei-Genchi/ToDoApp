@@ -10,23 +10,19 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Services\SlackNotifyService;
 use App\Services\ShareNotificationService;
 use App\Http\Controllers\Api\ShareRequestsController;
 use Illuminate\View\View;
 
 class CategoryShareController extends Controller
 {
-    protected $slackNotifyService;
     protected $shareNotificationService;
     protected $shareRequestsController;
 
     public function __construct(
-        SlackNotifyService $slackNotifyService,
         ShareNotificationService $shareNotificationService,
         ShareRequestsController $shareRequestsController
     ) {
-        $this->slackNotifyService = $slackNotifyService;
         $this->shareNotificationService = $shareNotificationService;
         $this->shareRequestsController = $shareRequestsController;
     }
@@ -75,16 +71,37 @@ class CategoryShareController extends Controller
      */
     public function store(Request $request, Category $category): JsonResponse
     {
-        // Check subscription
-        if ($subscriptionCheck = $this->checkSubscription()) {
-            return $subscriptionCheck;
-        }
+        try {
+            // Log the incoming request
+            Log::info("Category share request received", [
+                "category_id" => $category->id,
+                "request_data" => $request->only(["email", "permission"]),
+            ]);
 
-        // Delegate to ShareRequestsController
-        return $this->shareRequestsController->storeCategoryShare(
-            $request,
-            $category
-        );
+            // Check subscription
+            if ($subscriptionCheck = $this->checkSubscription()) {
+                return $subscriptionCheck;
+            }
+
+            // Delegate to ShareRequestsController
+            return $this->shareRequestsController->storeCategoryShare(
+                $request,
+                $category
+            );
+        } catch (\Exception $e) {
+            Log::error("Error in CategoryShareController->store", [
+                "error" => $e->getMessage(),
+                "trace" => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(
+                [
+                    "success" => false,
+                    "message" => "エラーが発生しました: " . $e->getMessage(),
+                ],
+                500
+            );
+        }
     }
 
     /**

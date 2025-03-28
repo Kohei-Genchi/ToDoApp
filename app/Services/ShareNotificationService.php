@@ -34,53 +34,67 @@ class ShareNotificationService
         $itemName,
         string $itemType = "カテゴリー"
     ): bool {
-        // Generate approve and reject URLs
-        $approveUrl = URL::signedRoute("api.share-requests.approve", [
-            "token" => $shareRequest->token,
-        ]);
+        try {
+            // Generate approve and reject URLs
+            $approveUrl = URL::signedRoute("api.share-requests.approve", [
+                "token" => $shareRequest->token,
+            ]);
 
-        $rejectUrl = URL::signedRoute("api.share-requests.reject", [
-            "token" => $shareRequest->token,
-        ]);
+            $rejectUrl = URL::signedRoute("api.share-requests.reject", [
+                "token" => $shareRequest->token,
+            ]);
 
-        $approveWebUrl = URL::signedRoute("share-requests.web.approve", [
-            "token" => $shareRequest->token,
-        ]);
+            $approveWebUrl = URL::signedRoute("share-requests.web.approve", [
+                "token" => $shareRequest->token,
+            ]);
 
-        $rejectWebUrl = URL::signedRoute("share-requests.web.reject", [
-            "token" => $shareRequest->token,
-        ]);
+            $rejectWebUrl = URL::signedRoute("share-requests.web.reject", [
+                "token" => $shareRequest->token,
+            ]);
 
-        // Extract item name if it's a category object
-        $itemNameStr = is_string($itemName)
-            ? $itemName
-            : (is_object($itemName) && method_exists($itemName, "getAttribute")
-                ? $itemName->getAttribute("name")
-                : "Shared Item");
+            // Extract item name if it's a category object
+            $itemNameStr = is_string($itemName)
+                ? $itemName
+                : (is_object($itemName) &&
+                method_exists($itemName, "getAttribute")
+                    ? $itemName->getAttribute("name")
+                    : "Shared Item");
 
-        // Create the message
-        $message = $this->buildShareRequestMessage(
-            $requester,
-            $itemNameStr,
-            $shareRequest,
-            $approveUrl,
-            $rejectUrl,
-            $itemType
-        );
+            // Create the message
+            $message = $this->buildShareRequestMessage(
+                $requester,
+                $itemNameStr,
+                $shareRequest,
+                $approveUrl,
+                $rejectUrl,
+                $itemType
+            );
 
-        // Send notification via Slack if the user has a webhook URL
-        if ($recipient->slack_webhook_url) {
-            $success = $this->sendSlackNotification($recipient, $message);
-            if ($success) {
-                return true;
+            // Send notification via Slack if the user has a webhook URL
+            if ($recipient->slack_webhook_url) {
+                Log::info("Sending slack notification to user", [
+                    "recipient_id" => $recipient->id,
+                    "webhook_length" => strlen($recipient->slack_webhook_url),
+                ]);
+
+                $success = $this->sendSlackNotification($recipient, $message);
+                return $success;
             }
-        }
 
-        // No valid notification channels configured
-        Log::warning(
-            "Failed to send share request notification to {$recipient->email}. No valid notification channels configured."
-        );
-        return false;
+            // No valid notification channels configured
+            Log::warning(
+                "Failed to send share request notification to {$recipient->email}. No valid notification channels configured."
+            );
+            return false;
+        } catch (\Exception $e) {
+            Log::error(
+                "Error in sendShareRequestNotification: " . $e->getMessage(),
+                [
+                    "trace" => $e->getTraceAsString(),
+                ]
+            );
+            return false;
+        }
     }
 
     /**
@@ -109,10 +123,12 @@ class ShareNotificationService
         $message .= "有効期限: {$shareRequest->expires_at->format(
             "Y-m-d H:i"
         )}\n\n";
+
+        // Use Slack's link format: <url|text>
         $message .= "承認するには下のリンクをクリックしてください:\n";
-        $message .= "{$approveUrl}\n\n";
+        $message .= "<{$approveUrl}|承認する>\n\n";
         $message .= "拒否するには下のリンクをクリックしてください:\n";
-        $message .= "{$rejectUrl}\n";
+        $message .= "<{$rejectUrl}|拒否する>\n";
 
         return $message;
     }

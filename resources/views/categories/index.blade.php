@@ -166,6 +166,11 @@
                 document.getElementById('share-modal').classList.remove('hidden');
                 document.getElementById('share-error').classList.add('hidden');
                 document.getElementById('share-email').value = '';
+
+                // Reset the checkbox (in case it was changed previously)
+                if (document.getElementById('slack-auth-required')) {
+                    document.getElementById('slack-auth-required').checked = true;
+                }
             }
 
             function closeShareModal() {
@@ -175,12 +180,19 @@
             function shareCategory() {
                 const email = document.getElementById('share-email').value;
                 const permission = document.getElementById('share-permission').value;
-                const slackAuthRequired = document.getElementById('slack-auth-required').checked;
+                const slackAuthRequired = document.getElementById('slack-auth-required') ?
+                                         document.getElementById('slack-auth-required').checked : true;
 
                 if (!email) {
                     showShareError('メールアドレスを入力してください');
                     return;
                 }
+
+                // Show loading state
+                const shareButton = document.querySelector('#share-form button[type="button"]:last-child');
+                const originalText = shareButton.textContent;
+                shareButton.textContent = '処理中...';
+                shareButton.disabled = true;
 
                 // CSRFトークンを取得
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -199,29 +211,48 @@
                         slack_auth_required: slackAuthRequired
                     })
                 })
-                .then(response => response.json())
+                .then(response => {
+                    // Reset button state
+                    shareButton.textContent = originalText;
+                    shareButton.disabled = false;
+
+                    return response.json();
+                })
                 .then(data => {
-                    // Check for the "already sent" message case
-                    if (data.message && data.message.includes('already been sent')) {
-                        // Handle as a specific case - show the message but don't treat as error
+                    // Handle various response types
+                    if (data.success) {
+                        if (data.message.includes('Slack') || data.message.includes('slack')) {
+                            // Slack notification sent
+                            alert(data.message || 'カテゴリー共有リクエストをSlackに送信しました。承認されるまでお待ちください。');
+                        } else {
+                            // Regular success
+                            alert(slackAuthRequired
+                                ? 'カテゴリー共有リクエストが送信されました。相手はSlackで承認する必要があります。'
+                                : 'カテゴリーが共有されました');
+                        }
+                        closeShareModal();
+                    }
+                    // Handle the case for already sent request
+                    else if (data.message && data.message.includes('already been sent')) {
                         alert('カテゴリー共有リクエストが既に送信されています。相手はSlackで承認する必要があります。');
                         closeShareModal();
-                        return;
                     }
-
-                    // Normal success case
-                    if (data.success) {
-                        alert(slackAuthRequired
-                            ? 'カテゴリー共有リクエストが送信されました。相手はSlackで承認する必要があります。'
-                            : 'カテゴリーが共有されました');
-                        closeShareModal();
-                    } else {
-                        // Error case
-                        console.error("共有エラー:", data);
-                        showShareError(data.error || '共有に失敗しました');
+                    // Handle error cases
+                    else if (data.error || data.errors) {
+                        const errorMessage = data.error || (data.errors ? Object.values(data.errors).flat().join(', ') : '共有に失敗しました');
+                        showShareError(errorMessage);
+                    }
+                    else {
+                        // Fallback for unexpected responses
+                        console.error("共有レスポンス:", data);
+                        showShareError('予期しないエラーが発生しました');
                     }
                 })
                 .catch(error => {
+                    // Reset button state
+                    shareButton.textContent = originalText;
+                    shareButton.disabled = false;
+
                     console.error("共有処理エラー詳細:", error);
                     showShareError(error.message || '共有処理中にエラーが発生しました');
                 });
@@ -233,10 +264,23 @@
                 errorElement.classList.remove('hidden');
             }
 
+            // カテゴリー編集モーダル関連の関数
+            function openEditModal(id, name, color) {
+                document.getElementById('edit-name').value = name;
+                document.getElementById('edit-color').value = color;
+                document.getElementById('edit-form').action = `/categories/${id}`;
+                document.getElementById('edit-modal').classList.remove('hidden');
+            }
+
+            function closeEditModal() {
+                document.getElementById('edit-modal').classList.add('hidden');
+            }
+
             // ESCキーでモーダルを閉じる
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
                     closeShareModal();
+                    closeEditModal();
                 }
             });
         </script>

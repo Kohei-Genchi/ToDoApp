@@ -62,6 +62,62 @@ class TodoApiController extends Controller
             $categoryId = $request->category_id; // Added for kanban filtering
             $status = $request->status; // Added for kanban filtering
 
+            // Log the request parameters for debugging
+            Log::info("Task request parameters:", [
+                "view" => $view,
+                "date" => $date,
+                "user_id" => $userId,
+                "category_id" => $categoryId,
+                "status" => $status,
+            ]);
+
+            // If a specific category is requested, we check if it's shared with the current user
+            if ($categoryId) {
+                $category = Category::find($categoryId);
+
+                if ($category) {
+                    Log::info("Category requested:", [
+                        "category_id" => $categoryId,
+                        "category_name" => $category->name,
+                        "owner_id" => $category->user_id,
+                    ]);
+
+                    // If the category is owned by someone else
+                    if ($category->user_id !== Auth::id()) {
+                        // Check if it's shared with current user
+                        $isShared = Auth::user()
+                            ->sharedCategories()
+                            ->where("category_id", $categoryId)
+                            ->exists();
+
+                        Log::info("Category shared status:", [
+                            "is_shared" => $isShared,
+                        ]);
+
+                        if (!$isShared) {
+                            return response()->json(
+                                [
+                                    "error" =>
+                                        "You do not have access to this category",
+                                ],
+                                403
+                            );
+                        }
+
+                        // If shared, we'll get all tasks from this category
+                        $todos = Todo::where("category_id", $categoryId)
+                            ->with(["category", "user"])
+                            ->get();
+
+                        Log::info("Returning tasks from shared category", [
+                            "count" => $todos->count(),
+                        ]);
+
+                        return response()->json($todos);
+                    }
+                }
+            }
+
             // New "all" view type for kanban board that returns all tasks regardless of date
             if ($view === "all") {
                 $todos = $this->taskService->getAllTasks(
