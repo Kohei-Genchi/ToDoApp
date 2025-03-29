@@ -309,7 +309,9 @@
         <script>
         // Ensure TaskModal is properly loaded
         document.addEventListener('DOMContentLoaded', function() {
-            // Add a global function to edit tasks
+            // Replace this function in resources/views/layouts/app.blade.php
+            // Search for "window.editTodo" and replace the entire function with this:
+
             window.editTodo = function(taskIdOrData, todoData = null) {
                 try {
                     console.log("editTodo called with:", taskIdOrData, todoData);
@@ -324,13 +326,17 @@
                         todoApp.style.zIndex = '9999';
                         document.body.appendChild(todoApp);
 
-                        // Load TodoApp component
-                        const script = document.createElement('script');
-                        script.src = '/js/app.js';
-                        document.head.appendChild(script);
-
-                        // This will cause app.js to initialize and mount TodoApp
-                        return setTimeout(() => window.editTodo(taskIdOrData, todoData), 500);
+                        // Use existing Vite instance instead of trying to load direct JS file
+                        console.log("TodoApp doesn't exist, dispatching event on document");
+                        // Instead of loading a script, dispatch an event that the app can listen for
+                        const event = new CustomEvent('open-task-modal', {
+                            detail: {
+                                taskId: typeof taskIdOrData === 'object' ? null : taskIdOrData,
+                                taskData: typeof taskIdOrData === 'object' ? taskIdOrData : todoData
+                            }
+                        });
+                        document.dispatchEvent(event);
+                        return;
                     }
 
                     // Create and dispatch custom event

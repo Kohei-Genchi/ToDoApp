@@ -157,10 +157,9 @@ Route::middleware(["auth"])->group(function () {
             "tasks.kanban"
         );
 
-        // Team members
         Route::get("/team", [
-            SharedTasksController::class,
-            "teamMembers",
+            App\Http\Controllers\SharedTeamMembersController::class,
+            "index",
         ])->name("tasks.team");
 
         // Analytics
