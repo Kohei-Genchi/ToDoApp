@@ -102,6 +102,22 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
+    // KanbanBoard component loading
+    if (document.getElementById("kanban-board")) {
+        // Dynamic import - load only when needed
+        import("./components/KanbanBoard.vue")
+            .then((module) => {
+                Vue.createApp(module.default).mount("#kanban-board");
+            })
+            .catch((error) => {
+                console.error("Error loading KanbanBoard component:", error);
+                document.getElementById("kanban-board").innerHTML =
+                    '<div class="bg-red-100 p-4 rounded text-red-700">' +
+                    "Error loading Kanban Board component. Please refresh the page or try again later." +
+                    "</div>";
+            });
+    }
+
     // For existing edit buttons
     document.querySelectorAll(".edit-task-btn").forEach((button) => {
         button.addEventListener("click", function (e) {

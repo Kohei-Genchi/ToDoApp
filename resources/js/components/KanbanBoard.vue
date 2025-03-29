@@ -6,7 +6,7 @@
                 class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
             >
                 <h1 class="text-xl font-semibold text-gray-800">
-                    Team Kanban Board
+                    チームタスク管理ボード
                 </h1>
 
                 <div class="flex flex-wrap gap-2">
@@ -16,7 +16,7 @@
                         class="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm"
                         @change="applyFilters"
                     >
-                        <option value="">All Categories</option>
+                        <option value="">全てのカテゴリー</option>
                         <option
                             v-for="category in categories"
                             :key="category.id"
@@ -32,7 +32,7 @@
                         class="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm"
                         @change="applyFilters"
                     >
-                        <option value="">All Team Members</option>
+                        <option value="">全てのメンバー</option>
                         <option
                             v-for="user in teamUsers"
                             :key="user.id"
@@ -47,7 +47,7 @@
                         <input
                             v-model="searchQuery"
                             type="text"
-                            placeholder="Search tasks..."
+                            placeholder="タスクを検索..."
                             class="bg-white border border-gray-300 rounded-md pl-8 pr-3 py-1 text-sm"
                             @input="applyFilters"
                         />
@@ -86,7 +86,7 @@
                                 d="M12 4v16m8-8H4"
                             />
                         </svg>
-                        Add Task
+                        新しいタスク
                     </button>
                 </div>
             </div>
@@ -104,7 +104,7 @@
             v-if="errorMessage"
             class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
         >
-            <strong class="font-bold">Error!</strong>
+            <strong class="font-bold">エラー!</strong>
             <span class="block sm:inline"> {{ errorMessage }}</span>
             <button
                 @click="errorMessage = ''"
@@ -129,17 +129,275 @@
         <!-- Kanban board -->
         <div
             v-else-if="!isLoading"
-            class="kanban-board flex space-x-4 overflow-x-auto pb-4"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
         >
-            <kanban-column
-                v-for="column in columns"
-                :key="column.id"
-                :column="column"
-                :tasks="getTasksByStatus(column.id)"
-                @add-task="openAddTaskModal(column.id)"
-                @edit-task="openEditTaskModal"
-                @drop="handleDrop"
-            />
+            <!-- To Do Column -->
+            <div
+                class="bg-gray-100 rounded-lg p-4"
+                @dragover.prevent
+                @drop="onDrop($event, 'pending')"
+            >
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-medium">To Do</h3>
+                    <div class="flex items-center">
+                        <span
+                            class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2"
+                        >
+                            {{ getTasksByStatus("pending").length }}
+                        </span>
+                        <button
+                            @click="openAddTaskModal('pending')"
+                            class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-gray-600"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div
+                        v-for="task in getTasksByStatus('pending')"
+                        :key="task.id"
+                        class="bg-white rounded shadow p-3 cursor-pointer"
+                        draggable="true"
+                        @dragstart="onDragStart($event, task.id)"
+                        @click="openEditTaskModal(task)"
+                    >
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-sm">
+                                {{ task.title }}
+                            </h4>
+                            <span
+                                v-if="task.category"
+                                class="w-2 h-2 rounded-full"
+                                :style="{
+                                    backgroundColor: task.category.color,
+                                }"
+                            ></span>
+                        </div>
+                        <div
+                            v-if="task.due_date"
+                            class="mt-2 text-xs text-gray-500"
+                        >
+                            {{ formatDate(task.due_date) }}
+                            <span v-if="task.due_time">
+                                {{ formatTime(task.due_time) }}</span
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- In Progress Column -->
+            <div
+                class="bg-blue-100 rounded-lg p-4"
+                @dragover.prevent
+                @drop="onDrop($event, 'in_progress')"
+            >
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-medium">In Progress</h3>
+                    <div class="flex items-center">
+                        <span
+                            class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2"
+                        >
+                            {{ getTasksByStatus("in_progress").length }}
+                        </span>
+                        <button
+                            @click="openAddTaskModal('in_progress')"
+                            class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-gray-600"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div
+                        v-for="task in getTasksByStatus('in_progress')"
+                        :key="task.id"
+                        class="bg-white rounded shadow p-3 cursor-pointer"
+                        draggable="true"
+                        @dragstart="onDragStart($event, task.id)"
+                        @click="openEditTaskModal(task)"
+                    >
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-sm">
+                                {{ task.title }}
+                            </h4>
+                            <span
+                                v-if="task.category"
+                                class="w-2 h-2 rounded-full"
+                                :style="{
+                                    backgroundColor: task.category.color,
+                                }"
+                            ></span>
+                        </div>
+                        <div
+                            v-if="task.due_date"
+                            class="mt-2 text-xs text-gray-500"
+                        >
+                            {{ formatDate(task.due_date) }}
+                            <span v-if="task.due_time">
+                                {{ formatTime(task.due_time) }}</span
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Column -->
+            <div
+                class="bg-yellow-100 rounded-lg p-4"
+                @dragover.prevent
+                @drop="onDrop($event, 'review')"
+            >
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-medium">Review</h3>
+                    <div class="flex items-center">
+                        <span
+                            class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2"
+                        >
+                            {{ getTasksByStatus("review").length }}
+                        </span>
+                        <button
+                            @click="openAddTaskModal('review')"
+                            class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-gray-600"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div
+                        v-for="task in getTasksByStatus('review')"
+                        :key="task.id"
+                        class="bg-white rounded shadow p-3 cursor-pointer"
+                        draggable="true"
+                        @dragstart="onDragStart($event, task.id)"
+                        @click="openEditTaskModal(task)"
+                    >
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-sm">
+                                {{ task.title }}
+                            </h4>
+                            <span
+                                v-if="task.category"
+                                class="w-2 h-2 rounded-full"
+                                :style="{
+                                    backgroundColor: task.category.color,
+                                }"
+                            ></span>
+                        </div>
+                        <div
+                            v-if="task.due_date"
+                            class="mt-2 text-xs text-gray-500"
+                        >
+                            {{ formatDate(task.due_date) }}
+                            <span v-if="task.due_time">
+                                {{ formatTime(task.due_time) }}</span
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Completed Column -->
+            <div
+                class="bg-green-100 rounded-lg p-4"
+                @dragover.prevent
+                @drop="onDrop($event, 'completed')"
+            >
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-medium">Completed</h3>
+                    <div class="flex items-center">
+                        <span
+                            class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2"
+                        >
+                            {{ getTasksByStatus("completed").length }}
+                        </span>
+                        <button
+                            @click="openAddTaskModal('completed')"
+                            class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-gray-600"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div
+                        v-for="task in getTasksByStatus('completed')"
+                        :key="task.id"
+                        class="bg-white rounded shadow p-3 cursor-pointer"
+                        draggable="true"
+                        @dragstart="onDragStart($event, task.id)"
+                        @click="openEditTaskModal(task)"
+                    >
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-sm">
+                                {{ task.title }}
+                            </h4>
+                            <span
+                                v-if="task.category"
+                                class="w-2 h-2 rounded-full"
+                                :style="{
+                                    backgroundColor: task.category.color,
+                                }"
+                            ></span>
+                        </div>
+                        <div
+                            v-if="task.due_date"
+                            class="mt-2 text-xs text-gray-500"
+                        >
+                            {{ formatDate(task.due_date) }}
+                            <span v-if="task.due_time">
+                                {{ formatTime(task.due_time) }}</span
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Task Modal -->
@@ -149,7 +407,12 @@
             :todo-id="selectedTaskId"
             :todo-data="selectedTaskData"
             :categories="categories"
-            :statuses="columns.map((c) => ({ id: c.id, name: c.name }))"
+            :statuses="[
+                { id: 'pending', name: 'To Do' },
+                { id: 'in_progress', name: 'In Progress' },
+                { id: 'review', name: 'Review' },
+                { id: 'completed', name: 'Completed' },
+            ]"
             @close="closeTaskModal"
             @submit="submitTask"
             @delete="handleTaskDelete"
@@ -159,17 +422,22 @@
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted, watch } from "vue";
-import KanbanColumn from "./kanban/KanbanColumn.vue";
-import TaskModal from "./TaskModal.vue";
-import TodoApi from "../api/todo";
-import CategoryApi from "../api/category";
+import {
+    ref,
+    reactive,
+    computed,
+    onMounted,
+    watch,
+    defineAsyncComponent,
+} from "vue";
+
+// Import TaskModal component asynchronously
+const TaskModal = defineAsyncComponent(() => import("./TaskModal.vue"));
 
 export default {
     name: "KanbanBoard",
 
     components: {
-        KanbanColumn,
         TaskModal,
     },
 
@@ -194,14 +462,6 @@ export default {
         const selectedTaskId = ref(null);
         const selectedTaskData = ref(null);
         const initialColumnId = ref(null);
-
-        // Kanban columns
-        const columns = reactive([
-            { id: "pending", name: "To Do", color: "bg-gray-100" },
-            { id: "in_progress", name: "In Progress", color: "bg-blue-100" },
-            { id: "review", name: "Review", color: "bg-yellow-100" },
-            { id: "completed", name: "Completed", color: "bg-green-100" },
-        ]);
 
         // Get tasks for a specific status column
         const getTasksByStatus = (status) => {
@@ -237,140 +497,118 @@ export default {
             });
         };
 
-        // Load all data
-        const loadData = async () => {
-            isLoading.value = true;
-            errorMessage.value = "";
-
+        // Load tasks from API
+        const loadTasks = async () => {
             try {
-                // Get current user ID
-                if (window.Laravel?.user) {
-                    currentUserId.value = window.Laravel.user.id;
+                const response = await fetch("/api/todos?view=all", {
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to load tasks");
                 }
 
-                // Load categories
-                await loadCategories();
+                const data = await response.json();
 
-                // Load tasks - try first with own tasks only
-                await loadTasks();
-
-                // Extract unique users from tasks
-                const userMap = new Map();
-                allTasks.value.forEach((task) => {
-                    if (task.user && !userMap.has(task.user.id)) {
-                        userMap.set(task.user.id, {
-                            id: task.user.id,
-                            name: task.user.name,
-                            email: task.user.email,
-                        });
+                // Process tasks and convert legacy statuses
+                allTasks.value = data.map((task) => {
+                    // Convert legacy statuses
+                    if (task.status === "ongoing") {
+                        task.status = "in_progress";
+                    } else if (task.status === "paused") {
+                        task.status = "review";
                     }
+                    return task;
                 });
-                teamUsers.value = Array.from(userMap.values());
+
+                console.log(`Loaded ${allTasks.value.length} tasks`);
 
                 // Apply initial filters
                 applyFilters();
             } catch (error) {
-                console.error("Error loading kanban data:", error);
+                console.error("Error loading tasks:", error);
                 errorMessage.value =
-                    "Failed to load kanban board data. Please try again.";
-            } finally {
-                isLoading.value = false;
+                    "タスクの読み込みに失敗しました。ページを更新してください。";
             }
         };
 
-        // Load categories
+        // Load categories from API
         const loadCategories = async () => {
             try {
-                const response = await CategoryApi.getCategories();
-                categories.value = response.data;
-                console.log("Categories loaded:", categories.value.length);
-            } catch (error) {
-                console.error("Error loading categories:", error);
-                errorMessage.value =
-                    "Failed to load categories. Please try again.";
-            }
-        };
-
-        // Load tasks from all views (simpler approach to avoid 404 errors)
-        const loadTasks = async () => {
-            try {
-                console.log("Loading all tasks...");
-
-                // First try to get all user's tasks
-                const ownTasksResponse = await TodoApi.getTasks("all");
-                const ownTasks = ownTasksResponse.data;
-
-                console.log(`Loaded ${ownTasks.length} tasks`);
-
-                // Process all tasks
-                const taskMap = new Map();
-                ownTasks.forEach((task) => {
-                    // Convert legacy status values for kanban
-                    task.status = convertStatusForKanban(task.status);
-                    taskMap.set(task.id, task);
+                const response = await fetch("/api/categories", {
+                    headers: {
+                        Accept: "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
                 });
 
-                // Now try to load shared tasks if endpoint is available
-                try {
-                    const sharedResponse = await fetch(
-                        "/api/todos?view=shared",
-                        {
-                            headers: {
-                                Accept: "application/json",
-                                "X-Requested-With": "XMLHttpRequest",
-                            },
-                        },
-                    );
-
-                    if (sharedResponse.ok) {
-                        const sharedTasks = await sharedResponse.json();
-                        console.log(
-                            `Loaded ${sharedTasks.length} shared tasks`,
-                        );
-
-                        // Add shared tasks to the map
-                        sharedTasks.forEach((task) => {
-                            task.status = convertStatusForKanban(task.status);
-                            taskMap.set(task.id, task);
-                        });
-                    }
-                } catch (sharedError) {
-                    console.warn(
-                        "Shared tasks endpoint not available:",
-                        sharedError,
-                    );
-                    // Continue with just user's own tasks
+                if (!response.ok) {
+                    throw new Error("Failed to load categories");
                 }
 
-                // Set all tasks from the map
-                allTasks.value = Array.from(taskMap.values());
-                console.log(
-                    `Total tasks after deduplication: ${allTasks.value.length}`,
-                );
+                const data = await response.json();
+                categories.value = data;
+
+                console.log(`Loaded ${categories.value.length} categories`);
             } catch (error) {
-                console.error("Error loading tasks:", error);
-                errorMessage.value = "Failed to load tasks. Please try again.";
+                console.error("Error loading categories:", error);
+                // Don't show error for categories, as they're not critical
             }
         };
 
-        // Convert legacy status values to kanban statuses
-        const convertStatusForKanban = (status) => {
-            switch (status) {
-                case "pending":
-                    return "pending";
-                case "completed":
-                    return "completed";
-                case "ongoing":
-                    return "in_progress";
-                case "paused":
-                    return "review";
-                default:
-                    return status || "pending";
+        // Format date
+        const formatDate = (dateStr) => {
+            if (!dateStr) return "";
+            const date = new Date(dateStr);
+            return new Intl.DateTimeFormat("ja-JP", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+            }).format(date);
+        };
+
+        // Format time
+        const formatTime = (timeStr) => {
+            if (!timeStr) return "";
+
+            // Handle both ISO datetime and time strings
+            let hours, minutes;
+
+            if (timeStr.includes("T")) {
+                // ISO datetime format
+                const date = new Date(timeStr);
+                hours = date.getHours();
+                minutes = date.getMinutes();
+            } else {
+                // HH:MM or HH:MM:SS format
+                const parts = timeStr.split(":");
+                hours = parseInt(parts[0], 10);
+                minutes = parseInt(parts[1], 10);
             }
+
+            return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+        };
+
+        // Handle task drag start
+        const onDragStart = (event, taskId) => {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", taskId);
+            event.target.classList.add("opacity-50");
         };
 
         // Handle dropping a task into a new column
-        const handleDrop = async (taskId, newStatus) => {
+        const onDrop = async (event, newStatus) => {
+            // Remove dragging classes
+            document.querySelectorAll(".opacity-50").forEach((el) => {
+                el.classList.remove("opacity-50");
+            });
+
+            const taskId = Number(event.dataTransfer.getData("text/plain"));
+            if (!taskId) return;
+
             try {
                 const taskIndex = allTasks.value.findIndex(
                     (t) => t.id === taskId,
@@ -392,44 +630,42 @@ export default {
                 allTasks.value[taskIndex] = { ...task, status: newStatus };
                 applyFilters();
 
-                // Log for debugging
-                console.log(
-                    `Updating task ${taskId} status from ${originalStatus} to ${newStatus}`,
-                );
+                // Get CSRF token
+                const csrfToken = document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content");
 
                 // Update task status via API
-                try {
-                    await TodoApi.updateTask(taskId, { status: newStatus });
-                    console.log(
-                        `Successfully updated task ${taskId} status to ${newStatus}`,
-                    );
-                } catch (error) {
-                    console.error("Failed to update task status:", error);
+                const response = await fetch(`/api/todos/${taskId}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": csrfToken,
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                    body: JSON.stringify({
+                        _method: "PUT",
+                        status: newStatus,
+                    }),
+                });
 
-                    // Revert on error
-                    allTasks.value[taskIndex] = {
-                        ...task,
-                        status: originalStatus,
-                    };
-                    applyFilters();
-
-                    // Show error notification
-                    if (error.response?.status === 403) {
-                        errorMessage.value =
-                            "Permission denied: You cannot update this task.";
-                    } else {
-                        errorMessage.value =
-                            "Failed to update task status: " +
-                            (error.response?.data?.error || error.message);
-                    }
+                if (!response.ok) {
+                    throw new Error("Failed to update task status");
                 }
+
+                console.log(
+                    `Successfully updated task ${taskId} status to ${newStatus}`,
+                );
             } catch (error) {
-                console.error("Error handling task drop:", error);
-                errorMessage.value = "Error handling task update.";
+                console.error("Error updating task status:", error);
+                errorMessage.value = "タスクのステータス更新に失敗しました。";
+
+                // Reload tasks to ensure correct state
+                await loadTasks();
             }
         };
 
-        // Modal functions
+        // Open add task modal
         const openAddTaskModal = (columnId = "pending") => {
             taskModalMode.value = "add";
             selectedTaskId.value = null;
@@ -447,21 +683,21 @@ export default {
             showTaskModal.value = true;
         };
 
+        // Open edit task modal
         const openEditTaskModal = (task) => {
             taskModalMode.value = "edit";
             selectedTaskId.value = task.id;
             selectedTaskData.value = { ...task };
             showTaskModal.value = true;
-
-            // Log for debugging
-            console.log("Opening edit modal for task:", task);
         };
 
+        // Close task modal
         const closeTaskModal = () => {
             showTaskModal.value = false;
             selectedTaskData.value = null;
         };
 
+        // Submit task
         const submitTask = async (taskData) => {
             try {
                 // Ensure status is set for new tasks
@@ -469,88 +705,150 @@ export default {
                     taskData.status = initialColumnId.value;
                 }
 
-                // Log for debugging
-                console.log(
-                    `${taskModalMode.value === "add" ? "Creating" : "Updating"} task:`,
-                    taskData,
-                );
+                // Get CSRF token
+                const csrfToken = document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content");
 
                 let response;
                 if (taskModalMode.value === "add") {
-                    response = await TodoApi.createTask(taskData);
-                    console.log("Task created successfully:", response.data);
+                    // Create new task
+                    response = await fetch("/api/todos", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": csrfToken,
+                            "X-Requested-With": "XMLHttpRequest",
+                        },
+                        body: JSON.stringify(taskData),
+                    });
                 } else {
-                    response = await TodoApi.updateTask(
-                        selectedTaskId.value,
-                        taskData,
+                    // Update existing task
+                    response = await fetch(
+                        `/api/todos/${selectedTaskId.value}`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": csrfToken,
+                                "X-Requested-With": "XMLHttpRequest",
+                            },
+                            body: JSON.stringify({
+                                ...taskData,
+                                _method: "PUT",
+                            }),
+                        },
                     );
-                    console.log("Task updated successfully:", response.data);
+                }
+
+                if (!response.ok) {
+                    throw new Error("Failed to save task");
                 }
 
                 closeTaskModal();
 
                 // Reload data to ensure we have the latest tasks
                 await loadTasks();
-                applyFilters();
             } catch (error) {
                 console.error("Error saving task:", error);
-                errorMessage.value =
-                    "Failed to save task: " +
-                    (error.response?.data?.error || error.message);
+                errorMessage.value = "タスクの保存に失敗しました。";
             }
         };
 
+        // Handle task delete
         const handleTaskDelete = async (taskId) => {
             try {
-                console.log("Deleting task:", taskId);
+                // Get CSRF token
+                const csrfToken = document
+                    .querySelector('meta[name="csrf-token"]')
+                    .getAttribute("content");
 
-                await TodoApi.deleteTask(taskId);
-                console.log("Task deleted successfully");
+                const response = await fetch(`/api/todos/${taskId}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": csrfToken,
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to delete task");
+                }
+
+                closeTaskModal();
 
                 // Remove from lists
                 allTasks.value = allTasks.value.filter((t) => t.id !== taskId);
                 applyFilters();
-
-                closeTaskModal();
             } catch (error) {
                 console.error("Error deleting task:", error);
-                errorMessage.value =
-                    "Failed to delete task: " +
-                    (error.response?.data?.error || error.message);
+                errorMessage.value = "タスクの削除に失敗しました。";
             }
         };
+
+        // Initialize
+        onMounted(async () => {
+            console.log("KanbanBoard component mounted");
+
+            // Get current user ID from Laravel global variable
+            if (window.Laravel && window.Laravel.user) {
+                currentUserId.value = window.Laravel.user.id;
+            }
+
+            // Load all data
+            try {
+                await Promise.all([loadTasks(), loadCategories()]);
+
+                // Extract unique users from tasks
+                const userMap = new Map();
+                allTasks.value.forEach((task) => {
+                    if (task.user && !userMap.has(task.user.id)) {
+                        userMap.set(task.user.id, {
+                            id: task.user.id,
+                            name: task.user.name,
+                            email: task.user.email,
+                        });
+                    }
+                });
+                teamUsers.value = Array.from(userMap.values());
+            } catch (error) {
+                console.error("Error initializing kanban board:", error);
+                errorMessage.value = "カンバンボードの初期化に失敗しました。";
+            } finally {
+                isLoading.value = false;
+            }
+        });
 
         // Watch for filter changes to reapply filters
         watch([selectedCategoryId, selectedUserId, searchQuery], () => {
             applyFilters();
         });
 
-        // Initialize
-        onMounted(() => {
-            console.log("KanbanBoard component mounted");
-            loadData();
-        });
-
         return {
+            // State
             isLoading,
             errorMessage,
             allTasks,
             filteredTasks,
             categories,
             teamUsers,
-            columns,
-            selectedCategoryId,
-            selectedUserId,
-            searchQuery,
+            currentUserId,
             showTaskModal,
             taskModalMode,
             selectedTaskId,
             selectedTaskData,
-            currentUserId,
+            selectedCategoryId,
+            selectedUserId,
+            searchQuery,
 
+            // Methods
             getTasksByStatus,
             applyFilters,
-            handleDrop,
+            formatDate,
+            formatTime,
+            onDragStart,
+            onDrop,
             openAddTaskModal,
             openEditTaskModal,
             closeTaskModal,
@@ -564,32 +862,15 @@ export default {
 
 <style scoped>
 .kanban-container {
-    height: calc(100vh - 180px);
-    display: flex;
-    flex-direction: column;
+    min-height: calc(100vh - 180px);
 }
 
-.kanban-board {
-    flex: 1;
-    min-height: 0;
+/* Drag and drop styles */
+[draggable="true"] {
+    cursor: grab;
 }
 
-/* Custom scrollbar */
-.kanban-board::-webkit-scrollbar {
-    height: 8px;
-}
-
-.kanban-board::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.kanban-board::-webkit-scrollbar-thumb {
-    background: #c5c5c5;
-    border-radius: 4px;
-}
-
-.kanban-board::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
+.opacity-50 {
+    opacity: 0.5;
 }
 </style>
