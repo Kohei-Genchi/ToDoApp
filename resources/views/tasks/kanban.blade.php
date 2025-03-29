@@ -32,11 +32,9 @@
             <div class="bg-blue-50 p-4 m-4 rounded-lg border border-blue-200">
                 <h3 class="text-lg font-semibold mb-2 text-blue-800">カンバンボードの使い方</h3>
                 <ul class="list-disc ml-5 space-y-1 text-blue-700">
-                    <li>「To Do」「In Progress」「Review」「Completed」の4つの列でタスクを管理できます</li>
+                    <li>「To Do」「In Progress」「Paused」「Completed」の4つの列でタスクを管理できます</li>
                     <li>タスクをドラッグ＆ドロップして進捗状況を更新できます</li>
-                    <li>各列の「＋」ボタンをクリックして新しいタスクを追加できます</li>
                     <li>タスクをクリックすると詳細を確認・編集できます</li>
-                    <li>画面上部のフィルターを使ってタスクを絞り込めます</li>
                 </ul>
             </div>
 
@@ -45,7 +43,7 @@
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-medium">Kanban Board</h2>
-                        <button onclick="showAddTaskModal('pending')" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">新しいタスク</button>
+                        <button onclick="addNewTask()" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">新しいタスク</button>
                     </div>
 
                     <!-- Kanban Columns -->
@@ -55,17 +53,9 @@
                             <div class="flex justify-between items-center mb-3">
                                 <h3 class="font-medium">To Do</h3>
                                 <div class="flex items-center">
-                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2" id="pending-count">
+                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full" id="pending-count">
                                         {{ $pendingTasks->count() }}
                                     </span>
-                                    <button
-                                        onclick="showAddTaskModal('pending')"
-                                        class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
-                                    >
-                                        <svg class="w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
                                 </div>
                             </div>
                             <div class="task-container space-y-2">
@@ -99,17 +89,9 @@
                             <div class="flex justify-between items-center mb-3">
                                 <h3 class="font-medium">In Progress</h3>
                                 <div class="flex items-center">
-                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2" id="in_progress-count">
+                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full" id="in_progress-count">
                                         {{ $inProgressTasks->count() }}
                                     </span>
-                                    <button
-                                        onclick="showAddTaskModal('in_progress')"
-                                        class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
-                                    >
-                                        <svg class="w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
                                 </div>
                             </div>
                             <div class="task-container space-y-2">
@@ -138,22 +120,14 @@
                             </div>
                         </div>
 
-                        <!-- Review Column -->
-                        <div class="bg-yellow-100 rounded-lg p-4" id="column-review" ondragover="allowDrop(event)" ondrop="dropTask(event, 'review')">
+                        <!-- Paused Column (Previously Review) -->
+                        <div class="bg-yellow-100 rounded-lg p-4" id="column-paused" ondragover="allowDrop(event)" ondrop="dropTask(event, 'paused')">
                             <div class="flex justify-between items-center mb-3">
-                                <h3 class="font-medium">Review</h3>
+                                <h3 class="font-medium">Paused</h3>
                                 <div class="flex items-center">
-                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2" id="review-count">
+                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full" id="paused-count">
                                         {{ $reviewTasks->count() }}
                                     </span>
-                                    <button
-                                        onclick="showAddTaskModal('review')"
-                                        class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
-                                    >
-                                        <svg class="w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
                                 </div>
                             </div>
                             <div class="task-container space-y-2">
@@ -162,6 +136,7 @@
                                      draggable="true"
                                      ondragstart="dragTask(event, {{ $task->id }})"
                                      data-task-id="{{ $task->id }}"
+                                     data-status="paused"
                                      onclick="editTask(event, {{ $task->id }})">
                                     <div class="flex items-center justify-between">
                                         <h4 class="font-medium text-sm">{{ $task->title }}</h4>
@@ -187,17 +162,9 @@
                             <div class="flex justify-between items-center mb-3">
                                 <h3 class="font-medium">Completed</h3>
                                 <div class="flex items-center">
-                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2" id="completed-count">
+                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full" id="completed-count">
                                         {{ $completedTasks->count() }}
                                     </span>
-                                    <button
-                                        onclick="showAddTaskModal('completed')"
-                                        class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
-                                    >
-                                        <svg class="w-4 h-4 text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
                                 </div>
                             </div>
                             <div class="task-container space-y-2">
@@ -282,7 +249,7 @@
 
     function updateColumnCounts() {
         // Update the count for each column
-        const columns = ['pending', 'in_progress', 'review', 'completed'];
+        const columns = ['pending', 'in_progress', 'paused', 'completed'];
 
         columns.forEach(status => {
             const taskCount = document.querySelectorAll(`#column-${status} .task-card`).length;
@@ -297,7 +264,11 @@
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-            const response = await fetch(`/api/todos/${taskId}`, {
+            // Log the request for debugging
+            console.log(`Updating task ${taskId} to status ${newStatus}`);
+
+            // Fix: Use a custom endpoint specifically for status updates
+            const response = await fetch(`/tasks/status/${taskId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -305,13 +276,12 @@
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
-                    _method: 'PUT',
                     status: newStatus
                 })
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update task status');
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
             }
 
             console.log(`Successfully updated task ${taskId} status to ${newStatus}`);
@@ -324,35 +294,44 @@
         }
     }
 
-    // Edit task using the global editTodo function
+    // Direct display of task data without any navigation
     function editTask(event, taskId) {
         // Prevent default click behavior
         event.preventDefault();
         event.stopPropagation();
 
-        // Use the global editTodo function if it exists
-        if (typeof window.editTodo === 'function') {
-            window.editTodo(taskId);
-        } else {
-            // Fallback to using the task edit page
-            alert("タスク編集機能を読み込めませんでした。ページを更新してください。");
+        // Get the task
+        const taskElement = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+        if (!taskElement) {
+            console.error(`Task element with ID ${taskId} not found`);
+            return;
         }
+
+        // Get task title
+        const titleElement = taskElement.querySelector('h4');
+        const title = titleElement ? titleElement.textContent.trim() : '';
+
+        // Get task date if available
+        const dateElement = taskElement.querySelector('.mt-2');
+        const dateText = dateElement ? dateElement.textContent.trim() : '';
+
+        // Create alert with task information
+        alert(`タスク情報: ${title}\n${dateText ? '期限: ' + dateText : ''}\n\n注: タスク編集機能はこのビューでは利用できません。タスク一覧画面から編集してください。`);
     }
 
-    // Show add task modal with the specified status
-    function showAddTaskModal(status = 'pending') {
-        // Use the global editTodo function to add a new task
-        if (typeof window.editTodo === 'function') {
-            window.editTodo({
-                title: "",
-                description: "",
-                due_date: new Date().toISOString().split('T')[0],
-                status: status
-            });
-        } else {
-            // Fallback
-            alert("タスク作成機能を読み込めませんでした。ページを更新してください。");
-        }
+    // Simple task creation alert
+    function addNewTask() {
+        alert("新しいタスクの作成機能はまだ実装中です。メインのタスク一覧画面からタスクを作成してください。");
+    }
+
+    // Direct navigation to task edit page since editTodo isn't working
+    function editTask(event, taskId) {
+        // Prevent default click behavior
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Navigate to edit page
+        window.location.href = `/todos/${taskId}/edit`;
     }
 
     // Add dragged task indicator styles

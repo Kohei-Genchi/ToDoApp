@@ -305,5 +305,63 @@
                 });
             });
         </script>
+        <!-- Add this to your app.blade.php before the closing </body> tag -->
+        <script>
+        // Ensure TaskModal is properly loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add a global function to edit tasks
+            window.editTodo = function(taskIdOrData, todoData = null) {
+                try {
+                    console.log("editTodo called with:", taskIdOrData, todoData);
+
+                    // Try to find TodoApp instance
+                    let todoApp = document.getElementById('todo-app');
+                    if (!todoApp) {
+                        // Create a temporary container for TodoApp if not exists
+                        todoApp = document.createElement('div');
+                        todoApp.id = 'todo-app';
+                        todoApp.style.position = 'fixed';
+                        todoApp.style.zIndex = '9999';
+                        document.body.appendChild(todoApp);
+
+                        // Load TodoApp component
+                        const script = document.createElement('script');
+                        script.src = '/js/app.js';
+                        document.head.appendChild(script);
+
+                        // This will cause app.js to initialize and mount TodoApp
+                        return setTimeout(() => window.editTodo(taskIdOrData, todoData), 500);
+                    }
+
+                    // Create and dispatch custom event
+                    const event = new CustomEvent('edit-todo', {
+                        detail: {
+                            id: typeof taskIdOrData === 'object' ? null : taskIdOrData,
+                            data: typeof taskIdOrData === 'object' ? taskIdOrData : todoData
+                        }
+                    });
+
+                    // Dispatch the event
+                    todoApp.dispatchEvent(event);
+
+                    console.log("Event dispatched:", event);
+                } catch (error) {
+                    console.error("Error in editTodo:", error);
+                    alert("タスク編集機能を呼び出せませんでした。");
+                }
+            };
+
+            // Also listen for the custom event we created
+            document.addEventListener('open-task-modal', function(event) {
+                const { taskId, taskData } = event.detail;
+
+                if (taskId) {
+                    window.editTodo(taskId);
+                } else if (taskData) {
+                    window.editTodo(taskData);
+                }
+            });
+        });
+        </script>
     </body>
 </html>

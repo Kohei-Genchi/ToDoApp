@@ -170,6 +170,13 @@ Route::middleware(["auth"])->group(function () {
         ])->name("tasks.analytics");
     });
 
+    Route::post("/tasks/status/{todo}", [
+        App\Http\Controllers\Api\TodoStatusController::class,
+        "updateStatus",
+    ])
+        ->middleware(["auth"])
+        ->name("tasks.status.update");
+
     Route::get("/share/approve/{token}", [
         DirectShareApprovalController::class,
         "processApproval",
