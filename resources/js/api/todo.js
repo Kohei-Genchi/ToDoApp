@@ -1,13 +1,13 @@
 /**
- * Todo API クライアント
+ * Todo API Client
  *
- * タスク管理に関するすべてのAPI操作を処理する
+ * Handles all task management API operations
  */
 import axios from "axios";
 
 /**
- * 共通のリクエストヘッダーを生成
- * @returns {Object} 共通ヘッダー
+ * Generate common request headers
+ * @returns {Object} Common headers
  */
 const getCommonHeaders = () => ({
     Accept: "application/json",
@@ -15,8 +15,8 @@ const getCommonHeaders = () => ({
 });
 
 /**
- * CSRF保護されたリクエストヘッダーを生成
- * @returns {Object} CSRF保護されたヘッダー
+ * Generate CSRF-protected request headers
+ * @returns {Object} CSRF-protected headers
  */
 const getCsrfHeaders = () => {
     const csrfToken = document
@@ -24,7 +24,7 @@ const getCsrfHeaders = () => {
         ?.getAttribute("content");
 
     if (!csrfToken) {
-        console.warn("CSRF tokenが見つかりません");
+        console.warn("CSRF token not found");
     }
 
     return {
@@ -35,49 +35,49 @@ const getCsrfHeaders = () => {
 };
 
 /**
- * IDの有効性を検証
- * @param {number|string} id 検証するID
- * @param {string} methodName 呼び出し元メソッド名（エラーメッセージ用）
- * @returns {boolean} IDが有効かどうか
+ * Validate ID
+ * @param {number|string} id ID to validate
+ * @param {string} methodName Method name (for error message)
+ * @returns {boolean} Whether ID is valid
  */
 const validateId = (id, methodName) => {
     if (id === undefined || id === null) {
         console.error(`Error: ${methodName} called without an ID`);
-        throw new Error("タスクIDが指定されていません");
+        throw new Error("Task ID is missing");
     }
     return true;
 };
 
 export default {
     /**
-     * ビューと日付に基づいてタスク一覧を取得
-     * @param {string} view ビュータイプ（today, scheduled, inbox, calendar, date）
-     * @param {string} date 日付（YYYY-MM-DD形式）
-     * @returns {Promise} APIレスポンス
+     * Get tasks based on view and date
+     * @param {string|Object} view View type or params object
+     * @param {string} date Date in YYYY-MM-DD format
+     * @param {Object} additionalParams Additional parameters
+     * @returns {Promise} API response
      */
     getTasks(view, date, additionalParams = {}) {
-        // パラメータを処理 - オブジェクトと直接パラメータの両方のケースを処理
+        // Handle parameters - both object and direct parameter cases
         let params = {};
 
         if (typeof view === "object" && view !== null) {
-            // 最初の引数がオブジェクトの場合、それをパラメータとして使用
+            // If first argument is an object, use it as parameters
             params = { ...view };
         } else {
-            // パラメータが直接渡された場合
+            // If parameters are passed directly
             params = {
                 view: view || "today",
                 date: date || new Date().toISOString().split("T")[0],
             };
 
-            // 追加パラメータがある場合はマージ
+            // Merge additional parameters if provided
             if (additionalParams && typeof additionalParams === "object") {
                 params = { ...params, ...additionalParams };
             }
         }
 
-        // user_id パラメータが存在する場合、確実に数値/文字列として送信
+        // Ensure user_id is sent as a string if present
         if (params.user_id !== undefined) {
-            // 明示的に文字列に変換（数値の場合も文字列になる）
             params.user_id = String(params.user_id);
         }
 
@@ -88,10 +88,11 @@ export default {
             headers: getCommonHeaders(),
         });
     },
+
     /**
-     * 特定のタスクをIDで取得
-     * @param {number} id タスクID
-     * @returns {Promise} APIレスポンス
+     * Get a specific task by ID
+     * @param {number} id Task ID
+     * @returns {Promise} API response
      */
     getTaskById(id) {
         validateId(id, "getTaskById");
@@ -101,29 +102,23 @@ export default {
     },
 
     /**
-     * 新しいタスクを作成
-     * @param {Object} taskData タスクデータ
-     * @returns {Promise} APIレスポンス
+     * Create a new task
+     * @param {Object} taskData Task data
+     * @returns {Promise} API response
      */
     createTask(taskData) {
-        return axios.post("/api/todos", taskData, {
+        // Clone data to avoid modifying the original
+        const data = { ...taskData };
+
+        console.log("Creating task with data:", data);
+
+        return axios.post("/api/todos", data, {
             headers: getCsrfHeaders(),
         });
     },
 
     /**
-     * 既存のタスクを更新
-     * @param {number} id タスクID
-     * @param {Object} taskData 更新するタスクデータ
-     * @returns {Promise} APIレスポンス
-     */
-
-    //Networkタブで /api/todos/{id} へのリクエストを確認
-    // In resources/js/api/todo.js
-    // Find the updateTask method and replace it with this improved version:
-
-    /**
-     * Update existing task
+     * Update an existing task
      * @param {number} id Task ID
      * @param {Object} taskData Update data
      * @returns {Promise} API response
@@ -155,7 +150,7 @@ export default {
             }
         }
 
-        console.log("Sending task update with data:", data);
+        console.log("Updating task with data:", data);
 
         // Use POST with _method param for Laravel's PUT handling
         return axios.post(
@@ -171,13 +166,35 @@ export default {
     },
 
     /**
-     * タスクを完全に削除
-     * @param {number} id タスクID
-     * @param {boolean} deleteRecurring 繰り返しタスクも削除するかどうか
-     * @returns {Promise} APIレスポンス
+     * Toggle task status between completed and pending
+     * @param {number} id Task ID
+     * @returns {Promise} API response
+     */
+    toggleTask(id) {
+        validateId(id, "toggleTask");
+
+        console.log("Toggling task status:", id);
+
+        return axios.patch(
+            `/api/todos/${id}/toggle`,
+            {},
+            {
+                headers: getCsrfHeaders(),
+            },
+        );
+    },
+
+    /**
+     * Delete a task
+     * @param {number} id Task ID
+     * @param {boolean} deleteRecurring Whether to delete recurring tasks
+     * @returns {Promise} API response
      */
     deleteTask(id, deleteRecurring = false) {
         validateId(id, "deleteTask");
+
+        console.log("Deleting task:", id, "Delete recurring:", deleteRecurring);
+
         return axios.delete(`/api/todos/${id}`, {
             headers: getCsrfHeaders(),
             params: { delete_recurring: deleteRecurring ? 1 : 0 },

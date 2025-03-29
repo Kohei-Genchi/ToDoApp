@@ -96,6 +96,34 @@ class TodoApiController extends Controller
                 }
             }
 
+            // Handle "shared" view specifically for shared tasks
+            if ($view === "shared") {
+                try {
+                    // Get tasks from shared categories
+                    $sharedCategoryIds = Auth::user()
+                        ->sharedCategories()
+                        ->pluck("categories.id");
+
+                    $todos = [];
+
+                    if ($sharedCategoryIds->isNotEmpty()) {
+                        $todos = Todo::whereIn(
+                            "category_id",
+                            $sharedCategoryIds
+                        )
+                            ->with(["category", "user"])
+                            ->get();
+                    }
+
+                    return response()->json($todos);
+                } catch (\Exception $e) {
+                    Log::error(
+                        "Error retrieving shared tasks: " . $e->getMessage()
+                    );
+                    return response()->json([]);
+                }
+            }
+
             // New "all" view type for kanban board that returns all tasks regardless of date
             if ($view === "all") {
                 $todos = $this->taskService->getAllTasks(
@@ -274,6 +302,22 @@ class TodoApiController extends Controller
             if ($request->has("due_time")) {
                 $updateData["due_time"] = $request->input("due_time");
             }
+
+            // Recurrence fields
+            if ($request->has("recurrence_type")) {
+                $updateData["recurrence_type"] = $request->input(
+                    "recurrence_type"
+                );
+            }
+
+            if ($request->has("recurrence_end_date")) {
+                $updateData["recurrence_end_date"] = $request->input(
+                    "recurrence_end_date"
+                );
+            }
+
+            // Log the update data for debugging
+            Log::info("Updating task with data: ", $updateData);
 
             // Update the task with only the provided fields
             $todo->update($updateData);

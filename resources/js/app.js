@@ -1,90 +1,108 @@
 // resources/js/app.js
 import "./bootstrap";
 import Alpine from "alpinejs";
-import { createApp } from "vue";
-import TodoApp from "./components/TodoApp.vue";
+import * as Vue from "vue";
 
-// Alpine.js の初期化
+// Make Vue available globally for component mounting
+window.Vue = Vue;
+
+// Alpine.js initialization
 window.Alpine = Alpine;
 Alpine.start();
 
 document.addEventListener("DOMContentLoaded", function () {
-    // メインのTodoAppコンポーネントはすぐに読み込む
+    // Main TodoApp component loading
     let vm = null;
     if (document.getElementById("todo-app")) {
-        vm = createApp(TodoApp).mount("#todo-app");
+        // Import the TodoApp component dynamically
+        import("./components/TodoApp.vue")
+            .then((module) => {
+                vm = Vue.createApp(module.default).mount("#todo-app");
 
-        // グローバルのタスク編集機能
-        window.editTodo = function (taskIdOrData, todoData = null) {
-            try {
-                if (todoData && typeof todoData === "object") {
-                    if (!todoData.id && taskIdOrData) {
-                        todoData.id = Number(taskIdOrData);
+                // Global task editing function
+                window.editTodo = function (taskIdOrData, todoData = null) {
+                    try {
+                        if (todoData && typeof todoData === "object") {
+                            if (!todoData.id && taskIdOrData) {
+                                todoData.id = Number(taskIdOrData);
+                            }
+                            if (vm?.openEditTaskModal) {
+                                vm.openEditTaskModal(todoData);
+                            } else {
+                                dispatchEditEvent({
+                                    id: todoData.id,
+                                    data: todoData,
+                                });
+                            }
+                            return;
+                        }
+
+                        if (!taskIdOrData) {
+                            throw new Error("タスクIDまたはデータがありません");
+                        }
+
+                        if (
+                            typeof taskIdOrData === "number" ||
+                            (typeof taskIdOrData === "string" &&
+                                !isNaN(parseInt(taskIdOrData)))
+                        ) {
+                            const id = Number(taskIdOrData);
+                            if (vm?.fetchAndEditTask) {
+                                vm.fetchAndEditTask(id);
+                            } else {
+                                dispatchEditEvent({ id, data: null });
+                            }
+                            return;
+                        }
+
+                        if (typeof taskIdOrData === "object") {
+                            if (vm?.openEditTaskModal) {
+                                vm.openEditTaskModal(taskIdOrData);
+                            } else {
+                                const detail = taskIdOrData.id
+                                    ? {
+                                          id: Number(taskIdOrData.id),
+                                          data: taskIdOrData,
+                                      }
+                                    : { id: null, data: taskIdOrData };
+                                dispatchEditEvent(detail);
+                            }
+                            return;
+                        }
+
+                        throw new Error("無効なタスクデータ形式");
+                    } catch (error) {
+                        console.error("タスク編集エラー:", error);
+                        alert("タスクの編集中にエラーが発生しました");
                     }
-                    if (vm?.openEditTaskModal) {
-                        vm.openEditTaskModal(todoData);
-                    } else {
-                        dispatchEditEvent({ id: todoData.id, data: todoData });
-                    }
-                    return;
+                };
+
+                function dispatchEditEvent(detail) {
+                    document
+                        .getElementById("todo-app")
+                        .dispatchEvent(
+                            new CustomEvent("edit-todo", { detail }),
+                        );
                 }
-
-                if (!taskIdOrData) {
-                    throw new Error("タスクIDまたはデータがありません");
-                }
-
-                if (
-                    typeof taskIdOrData === "number" ||
-                    (typeof taskIdOrData === "string" &&
-                        !isNaN(parseInt(taskIdOrData)))
-                ) {
-                    const id = Number(taskIdOrData);
-                    if (vm?.fetchAndEditTask) {
-                        vm.fetchAndEditTask(id);
-                    } else {
-                        dispatchEditEvent({ id, data: null });
-                    }
-                    return;
-                }
-
-                if (typeof taskIdOrData === "object") {
-                    if (vm?.openEditTaskModal) {
-                        vm.openEditTaskModal(taskIdOrData);
-                    } else {
-                        const detail = taskIdOrData.id
-                            ? {
-                                  id: Number(taskIdOrData.id),
-                                  data: taskIdOrData,
-                              }
-                            : { id: null, data: taskIdOrData };
-                        dispatchEditEvent(detail);
-                    }
-                    return;
-                }
-
-                throw new Error("無効なタスクデータ形式");
-            } catch (error) {
-                console.error("タスク編集エラー:", error);
-                alert("タスクの編集中にエラーが発生しました");
-            }
-        };
-
-        function dispatchEditEvent(detail) {
-            document
-                .getElementById("todo-app")
-                .dispatchEvent(new CustomEvent("edit-todo", { detail }));
-        }
+            })
+            .catch((error) => {
+                console.error("Error loading TodoApp component:", error);
+            });
     }
 
-    // サイドバーメモコンポーネントは必要なときだけ遅延読み込み
+    // Sidebar memos component loading
     if (document.getElementById("sidebar-memos")) {
-        // 動的インポート - コンポーネントが必要なときだけ読み込む
-        import("./components/SidebarMemosComponent.vue").then((module) => {
-            createApp(module.default).mount("#sidebar-memos");
-        });
+        // Dynamic import - load only when needed
+        import("./components/SidebarMemosComponent.vue")
+            .then((module) => {
+                Vue.createApp(module.default).mount("#sidebar-memos");
+            })
+            .catch((error) => {
+                console.error("Error loading SidebarMemosComponent:", error);
+            });
     }
 
-    // 既存の編集ボタンにイベントリスナーを追加
+    // For existing edit buttons
     document.querySelectorAll(".edit-task-btn").forEach((button) => {
         button.addEventListener("click", function (e) {
             e.preventDefault();

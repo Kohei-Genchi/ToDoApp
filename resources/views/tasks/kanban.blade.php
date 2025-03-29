@@ -40,22 +40,196 @@
                 </ul>
             </div>
 
-            <div id="kanban-app" class="h-full"></div>
+            <!-- Simple Kanban Board Implementation -->
+            <div id="simple-kanban" class="p-4">
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-medium">Kanban Board</h2>
+                        <a href="#" onclick="showAddTaskModal(); return false;" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">新しいタスク</a>
+                    </div>
+
+                    <!-- Kanban Columns -->
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                        <!-- To Do Column -->
+                        <div class="bg-gray-100 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="font-medium">To Do</h3>
+                                <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full">
+                                    {{ $pendingTasks->count() }}
+                                </span>
+                            </div>
+                            <div class="space-y-2">
+                                @foreach($pendingTasks as $task)
+                                <div class="bg-white rounded shadow p-3 cursor-pointer" onclick="editTask({{ $task->id }})">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="font-medium text-sm">{{ $task->title }}</h4>
+                                        @if($task->category)
+                                        <span class="w-2 h-2 rounded-full" style="background-color: {{ $task->category->color }}"></span>
+                                        @endif
+                                    </div>
+                                    @if($task->due_date)
+                                    <div class="mt-2 text-xs text-gray-500">
+                                        {{ \Carbon\Carbon::parse($task->due_date)->format('Y/m/d') }}
+                                        @if($task->due_time)
+                                        {{ \Carbon\Carbon::parse($task->due_time)->format('H:i') }}
+                                        @endif
+                                    </div>
+                                    @endif
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- In Progress Column -->
+                        <div class="bg-blue-100 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="font-medium">In Progress</h3>
+                                <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full">
+                                    {{ $inProgressTasks->count() }}
+                                </span>
+                            </div>
+                            <div class="space-y-2">
+                                @foreach($inProgressTasks as $task)
+                                <div class="bg-white rounded shadow p-3 cursor-pointer" onclick="editTask({{ $task->id }})">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="font-medium text-sm">{{ $task->title }}</h4>
+                                        @if($task->category)
+                                        <span class="w-2 h-2 rounded-full" style="background-color: {{ $task->category->color }}"></span>
+                                        @endif
+                                    </div>
+                                    @if($task->due_date)
+                                    <div class="mt-2 text-xs text-gray-500">
+                                        {{ \Carbon\Carbon::parse($task->due_date)->format('Y/m/d') }}
+                                        @if($task->due_time)
+                                        {{ \Carbon\Carbon::parse($task->due_time)->format('H:i') }}
+                                        @endif
+                                    </div>
+                                    @endif
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Review Column -->
+                        <div class="bg-yellow-100 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="font-medium">Review</h3>
+                                <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full">
+                                    {{ $reviewTasks->count() }}
+                                </span>
+                            </div>
+                            <div class="space-y-2">
+                                @foreach($reviewTasks as $task)
+                                <div class="bg-white rounded shadow p-3 cursor-pointer" onclick="editTask({{ $task->id }})">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="font-medium text-sm">{{ $task->title }}</h4>
+                                        @if($task->category)
+                                        <span class="w-2 h-2 rounded-full" style="background-color: {{ $task->category->color }}"></span>
+                                        @endif
+                                    </div>
+                                    @if($task->due_date)
+                                    <div class="mt-2 text-xs text-gray-500">
+                                        {{ \Carbon\Carbon::parse($task->due_date)->format('Y/m/d') }}
+                                        @if($task->due_time)
+                                        {{ \Carbon\Carbon::parse($task->due_time)->format('H:i') }}
+                                        @endif
+                                    </div>
+                                    @endif
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Completed Column -->
+                        <div class="bg-green-100 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="font-medium">Completed</h3>
+                                <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full">
+                                    {{ $completedTasks->count() }}
+                                </span>
+                            </div>
+                            <div class="space-y-2">
+                                @foreach($completedTasks as $task)
+                                <div class="bg-white rounded shadow p-3 cursor-pointer" onclick="editTask({{ $task->id }})">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="font-medium text-sm">{{ $task->title }}</h4>
+                                        @if($task->category)
+                                        <span class="w-2 h-2 rounded-full" style="background-color: {{ $task->category->color }}"></span>
+                                        @endif
+                                    </div>
+                                    @if($task->due_date)
+                                    <div class="mt-2 text-xs text-gray-500">
+                                        {{ \Carbon\Carbon::parse($task->due_date)->format('Y/m/d') }}
+                                        @if($task->due_time)
+                                        {{ \Carbon\Carbon::parse($task->due_time)->format('H:i') }}
+                                        @endif
+                                    </div>
+                                    @endif
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mount the kanban app when DOM is ready
-            const kanbanApp = document.getElementById('kanban-app');
-            if (kanbanApp) {
-                // Dynamically import the KanbanBoard component
-                import('../js/components/KanbanBoard.vue').then(module => {
-                    createApp(module.default).mount('#kanban-app');
-                });
+        function editTask(taskId) {
+            // Use the global editTodo function if it exists
+            if (typeof window.editTodo === 'function') {
+                window.editTodo(taskId);
+            } else {
+                // Fallback to redirecting to the task edit page
+                window.location.href = `/api/todos/${taskId}`;
             }
-        });
+        }
+
+        function showAddTaskModal() {
+            // If editTodo exists, use it to show the add task modal
+            if (typeof window.editTodo === 'function') {
+                window.editTodo({
+                    title: "",
+                    description: "",
+                    due_date: new Date().toISOString().split('T')[0],
+                    status: "pending"
+                });
+            } else {
+                // Fallback
+                alert('Task creation modal is not available. Please use the main task list to create tasks.');
+            }
+        }
+
+        // Function to update task status
+        async function updateTaskStatus(taskId, newStatus) {
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                const response = await fetch(`/api/todos/${taskId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        _method: 'PUT',
+                        status: newStatus
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update task status');
+                }
+
+                // Reload the page to show updated status
+                window.location.reload();
+
+            } catch (error) {
+                console.error('Error updating task status:', error);
+                alert('Error updating task status. Please try again.');
+            }
+        }
     </script>
-    @endpush
 </x-app-layout>

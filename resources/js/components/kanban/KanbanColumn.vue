@@ -112,11 +112,28 @@ export default defineComponent({
         const onDragStart = (event, taskId) => {
             event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData("text/plain", taskId);
+
+            // Add a class to indicate the dragged element
+            event.target.classList.add("dragging");
+
+            // Log for debugging
+            console.log(`Started dragging task: ${taskId}`);
         };
 
         // Handle drop
         const onDrop = (event) => {
+            // Remove any dragging classes
+            document.querySelectorAll(".dragging").forEach((el) => {
+                el.classList.remove("dragging");
+            });
+
             const taskId = Number(event.dataTransfer.getData("text/plain"));
+
+            // Log for debugging
+            console.log(
+                `Dropped task ${taskId} into column: ${props.column.id}`,
+            );
+
             emit("drop", taskId, props.column.id);
         };
 
@@ -151,5 +168,10 @@ export default defineComponent({
 
 .kanban-column > div:last-child::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
+}
+
+/* Drag and drop styling */
+.dragging {
+    opacity: 0.5;
 }
 </style>

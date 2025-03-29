@@ -59,7 +59,8 @@ class TaskService
                 break;
 
             case "kanban":
-                // For kanban view, we load all non-trashed tasks
+            case "shared":
+                // For kanban and shared views, load all non-trashed tasks
                 $query->where("status", "!=", Todo::STATUS_TRASHED);
                 break;
 
@@ -115,6 +116,10 @@ class TaskService
     public function createTask(array $data): Todo
     {
         $taskData = $this->prepareTaskData($data);
+
+        // Log for debugging
+        Log::info("Creating task with data: ", $taskData);
+
         $todo = Todo::create($taskData);
 
         // Create recurring tasks if needed
@@ -221,6 +226,27 @@ class TaskService
     {
         $taskData = $data;
         $taskData["user_id"] = Auth::id();
+
+        // Handle kanban-specific statuses
+        if (isset($taskData["status"])) {
+            // Validate against allowed statuses
+            $allowedStatuses = [
+                Todo::STATUS_PENDING,
+                Todo::STATUS_IN_PROGRESS,
+                Todo::STATUS_REVIEW,
+                Todo::STATUS_COMPLETED,
+                Todo::STATUS_TRASHED,
+                // Legacy statuses
+                Todo::STATUS_ONGOING,
+                Todo::STATUS_PAUSED,
+            ];
+
+            if (!in_array($taskData["status"], $allowedStatuses)) {
+                $taskData["status"] = Todo::STATUS_PENDING;
+            }
+        } else {
+            $taskData["status"] = Todo::STATUS_PENDING;
+        }
 
         // Set task location
         if (isset($taskData["due_date"]) && $taskData["due_date"]) {

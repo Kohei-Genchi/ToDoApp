@@ -99,8 +99,38 @@
             ></div>
         </div>
 
+        <!-- Error message -->
+        <div
+            v-if="errorMessage"
+            class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+        >
+            <strong class="font-bold">Error!</strong>
+            <span class="block sm:inline"> {{ errorMessage }}</span>
+            <button
+                @click="errorMessage = ''"
+                class="absolute top-0 bottom-0 right-0 px-4"
+            >
+                <svg
+                    class="h-6 w-6 text-red-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M6 18L18 6M6 6l12 12"
+                    />
+                </svg>
+            </button>
+        </div>
+
         <!-- Kanban board -->
-        <div v-else class="kanban-board flex space-x-4 overflow-x-auto pb-4">
+        <div
+            v-else-if="!isLoading"
+            class="kanban-board flex space-x-4 overflow-x-auto pb-4"
+        >
             <kanban-column
                 v-for="column in columns"
                 :key="column.id"
@@ -123,12 +153,13 @@
             @close="closeTaskModal"
             @submit="submitTask"
             @delete="handleTaskDelete"
+            @category-created="loadCategories"
         />
     </div>
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import KanbanColumn from "./kanban/KanbanColumn.vue";
 import TaskModal from "./TaskModal.vue";
 import TodoApi from "../api/todo";
@@ -145,6 +176,7 @@ export default {
     setup() {
         // State
         const isLoading = ref(true);
+        const errorMessage = ref("");
         const allTasks = ref([]);
         const filteredTasks = ref([]);
         const categories = ref([]);
@@ -208,6 +240,7 @@ export default {
         // Load all data
         const loadData = async () => {
             isLoading.value = true;
+            errorMessage.value = "";
 
             try {
                 // Get current user ID
@@ -216,11 +249,10 @@ export default {
                 }
 
                 // Load categories
-                const categoriesResponse = await CategoryApi.getCategories();
-                categories.value = categoriesResponse.data;
+                await loadCategories();
 
-                // Load shared tasks
-                await loadSharedTasks();
+                // Load tasks - try first with own tasks only
+                await loadTasks();
 
                 // Extract unique users from tasks
                 const userMap = new Map();
@@ -239,49 +271,85 @@ export default {
                 applyFilters();
             } catch (error) {
                 console.error("Error loading kanban data:", error);
+                errorMessage.value =
+                    "Failed to load kanban board data. Please try again.";
             } finally {
                 isLoading.value = false;
             }
         };
 
-        // Load shared tasks from all available sources
-        const loadSharedTasks = async () => {
+        // Load categories
+        const loadCategories = async () => {
             try {
-                // Load tasks from shared categories
-                const response = await fetch("/api/shared-categories/tasks", {
-                    headers: {
-                        Accept: "application/json",
-                        "X-Requested-With": "XMLHttpRequest",
-                    },
-                });
+                const response = await CategoryApi.getCategories();
+                categories.value = response.data;
+                console.log("Categories loaded:", categories.value.length);
+            } catch (error) {
+                console.error("Error loading categories:", error);
+                errorMessage.value =
+                    "Failed to load categories. Please try again.";
+            }
+        };
 
-                const sharedCategoryTasks = await response.json();
+        // Load tasks from all views (simpler approach to avoid 404 errors)
+        const loadTasks = async () => {
+            try {
+                console.log("Loading all tasks...");
 
-                // Load user's own tasks
+                // First try to get all user's tasks
                 const ownTasksResponse = await TodoApi.getTasks("all");
                 const ownTasks = ownTasksResponse.data;
 
-                // Combine and deduplicate tasks
+                console.log(`Loaded ${ownTasks.length} tasks`);
+
+                // Process all tasks
                 const taskMap = new Map();
-
-                // Process shared category tasks
-                sharedCategoryTasks.forEach((task) => {
-                    // Convert legacy status values for kanban
-                    task.status = convertStatusForKanban(task.status);
-                    taskMap.set(task.id, task);
-                });
-
-                // Process own tasks
                 ownTasks.forEach((task) => {
                     // Convert legacy status values for kanban
                     task.status = convertStatusForKanban(task.status);
                     taskMap.set(task.id, task);
                 });
 
-                // Convert to array
+                // Now try to load shared tasks if endpoint is available
+                try {
+                    const sharedResponse = await fetch(
+                        "/api/todos?view=shared",
+                        {
+                            headers: {
+                                Accept: "application/json",
+                                "X-Requested-With": "XMLHttpRequest",
+                            },
+                        },
+                    );
+
+                    if (sharedResponse.ok) {
+                        const sharedTasks = await sharedResponse.json();
+                        console.log(
+                            `Loaded ${sharedTasks.length} shared tasks`,
+                        );
+
+                        // Add shared tasks to the map
+                        sharedTasks.forEach((task) => {
+                            task.status = convertStatusForKanban(task.status);
+                            taskMap.set(task.id, task);
+                        });
+                    }
+                } catch (sharedError) {
+                    console.warn(
+                        "Shared tasks endpoint not available:",
+                        sharedError,
+                    );
+                    // Continue with just user's own tasks
+                }
+
+                // Set all tasks from the map
                 allTasks.value = Array.from(taskMap.values());
+                console.log(
+                    `Total tasks after deduplication: ${allTasks.value.length}`,
+                );
             } catch (error) {
-                console.error("Error loading shared tasks:", error);
+                console.error("Error loading tasks:", error);
+                errorMessage.value = "Failed to load tasks. Please try again.";
             }
         };
 
@@ -297,7 +365,7 @@ export default {
                 case "paused":
                     return "review";
                 default:
-                    return "pending";
+                    return status || "pending";
             }
         };
 
@@ -312,13 +380,29 @@ export default {
                 const task = allTasks.value[taskIndex];
                 const originalStatus = task.status;
 
+                // Only update if status actually changed
+                if (originalStatus === newStatus) {
+                    console.log(
+                        `Task ${taskId} status unchanged (${newStatus})`,
+                    );
+                    return;
+                }
+
                 // Optimistic update
                 allTasks.value[taskIndex] = { ...task, status: newStatus };
                 applyFilters();
 
+                // Log for debugging
+                console.log(
+                    `Updating task ${taskId} status from ${originalStatus} to ${newStatus}`,
+                );
+
                 // Update task status via API
                 try {
                     await TodoApi.updateTask(taskId, { status: newStatus });
+                    console.log(
+                        `Successfully updated task ${taskId} status to ${newStatus}`,
+                    );
                 } catch (error) {
                     console.error("Failed to update task status:", error);
 
@@ -331,18 +415,17 @@ export default {
 
                     // Show error notification
                     if (error.response?.status === 403) {
-                        alert(
-                            "Permission denied: You cannot update this task.",
-                        );
+                        errorMessage.value =
+                            "Permission denied: You cannot update this task.";
                     } else {
-                        alert(
+                        errorMessage.value =
                             "Failed to update task status: " +
-                                (error.response?.data?.error || error.message),
-                        );
+                            (error.response?.data?.error || error.message);
                     }
                 }
             } catch (error) {
                 console.error("Error handling task drop:", error);
+                errorMessage.value = "Error handling task update.";
             }
         };
 
@@ -369,6 +452,9 @@ export default {
             selectedTaskId.value = task.id;
             selectedTaskData.value = { ...task };
             showTaskModal.value = true;
+
+            // Log for debugging
+            console.log("Opening edit modal for task:", task);
         };
 
         const closeTaskModal = () => {
@@ -383,31 +469,43 @@ export default {
                     taskData.status = initialColumnId.value;
                 }
 
+                // Log for debugging
+                console.log(
+                    `${taskModalMode.value === "add" ? "Creating" : "Updating"} task:`,
+                    taskData,
+                );
+
                 let response;
                 if (taskModalMode.value === "add") {
                     response = await TodoApi.createTask(taskData);
+                    console.log("Task created successfully:", response.data);
                 } else {
                     response = await TodoApi.updateTask(
                         selectedTaskId.value,
                         taskData,
                     );
+                    console.log("Task updated successfully:", response.data);
                 }
 
                 closeTaskModal();
-                await loadSharedTasks();
+
+                // Reload data to ensure we have the latest tasks
+                await loadTasks();
                 applyFilters();
             } catch (error) {
                 console.error("Error saving task:", error);
-                alert(
+                errorMessage.value =
                     "Failed to save task: " +
-                        (error.response?.data?.error || error.message),
-                );
+                    (error.response?.data?.error || error.message);
             }
         };
 
         const handleTaskDelete = async (taskId) => {
             try {
+                console.log("Deleting task:", taskId);
+
                 await TodoApi.deleteTask(taskId);
+                console.log("Task deleted successfully");
 
                 // Remove from lists
                 allTasks.value = allTasks.value.filter((t) => t.id !== taskId);
@@ -416,20 +514,26 @@ export default {
                 closeTaskModal();
             } catch (error) {
                 console.error("Error deleting task:", error);
-                alert(
+                errorMessage.value =
                     "Failed to delete task: " +
-                        (error.response?.data?.error || error.message),
-                );
+                    (error.response?.data?.error || error.message);
             }
         };
 
+        // Watch for filter changes to reapply filters
+        watch([selectedCategoryId, selectedUserId, searchQuery], () => {
+            applyFilters();
+        });
+
         // Initialize
         onMounted(() => {
+            console.log("KanbanBoard component mounted");
             loadData();
         });
 
         return {
             isLoading,
+            errorMessage,
             allTasks,
             filteredTasks,
             categories,
@@ -452,6 +556,7 @@ export default {
             closeTaskModal,
             submitTask,
             handleTaskDelete,
+            loadCategories,
         };
     },
 };
@@ -459,7 +564,7 @@ export default {
 
 <style scoped>
 .kanban-container {
-    height: calc(100vh - 150px);
+    height: calc(100vh - 180px);
     display: flex;
     flex-direction: column;
 }
