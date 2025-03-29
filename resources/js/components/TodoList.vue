@@ -1,7 +1,30 @@
 <template>
     <div>
-        <!-- Empty state when no tasks -->
-        <empty-state v-if="todos.length === 0" />
+        <div
+            v-if="todos.length === 0"
+            class="bg-white rounded-lg shadow-sm p-8 text-center"
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-12 w-12 mx-auto text-gray-400 mb-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
+            </svg>
+            <h3 class="text-lg font-medium text-gray-700 mb-2">
+                タスクはありません
+            </h3>
+            <p class="text-sm text-gray-500 mb-4">
+                新しいタスクを追加しましょう
+            </p>
+        </div>
 
         <!-- Task list -->
         <div v-else class="bg-white rounded-lg shadow-sm">
@@ -23,13 +46,12 @@
 
 <script>
 import { ref, onMounted } from "vue";
-import EmptyState from "./EmptyState.vue";
+
 import TaskItem from "./TaskItem.vue";
 
 export default {
     name: "TodoList",
     components: {
-        EmptyState,
         TaskItem,
     },
 

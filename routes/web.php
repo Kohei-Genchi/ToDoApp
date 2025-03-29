@@ -127,28 +127,19 @@ Route::middleware(["auth"])->group(function () {
             "tasks.kanban"
         );
 
-        // Team members
         Route::get("/team", [
             SharedTasksController::class,
             "teamMembers",
         ])->name("tasks.team");
-
-        // Analytics
-        Route::get("/analytics", [
-            SharedTasksController::class,
-            "analytics",
-        ])->name("tasks.analytics");
     });
 
     Route::post("/tasks/status/{todo}", [
-        App\Http\Controllers\Api\TodoStatusController::class,
+        TodoApiController::class,
         "updateStatus",
-    ])
-        ->middleware(["auth"])
-        ->name("tasks.status.update");
+    ])->name("tasks.status.update");
 
     Route::get("/share/approve/{token}", [
-        DirectShareApprovalController::class,
+        ShareNotificationWebController::class,
         "processApproval",
     ])->name("share.direct.approve");
 

@@ -5,9 +5,29 @@ namespace App\Notifications\Channels;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Services\SlackNotifyService;
 
 class CustomSlackChannel
 {
+    protected $slackNotifyService;
+    protected $lastError = null;
+
+    /**
+     * Create a new Slack channel instance.
+     */
+    public function __construct(SlackNotifyService $slackNotifyService = null)
+    {
+        $this->slackNotifyService = $slackNotifyService;
+    }
+
+    /**
+     * Get the last error message
+     */
+    public function getLastError()
+    {
+        return $this->lastError;
+    }
+
     /**
      * Send the given notification.
      *
@@ -52,19 +72,37 @@ class CustomSlackChannel
             // Prepare payload
             $payload = is_string($message) ? ["text" => $message] : $message;
 
-            // Send notification via HTTP
-            $response = Http::post($webhookUrl, $payload);
+            // Send notification via HTTP or service
+            if ($this->slackNotifyService) {
+                // Use service if available
+                $result = $this->slackNotifyService->send(
+                    $webhookUrl,
+                    $payload
+                );
+                if (!$result) {
+                    $this->lastError = $this->slackNotifyService->getLastError();
+                    Log::error("Slack notification failed using service", [
+                        "error" => $this->lastError,
+                    ]);
+                }
+            } else {
+                // Send directly via HTTP
+                $response = Http::post($webhookUrl, $payload);
 
-            if (!$response->successful()) {
-                Log::error("Slack notification failed", [
-                    "status" => $response->status(),
-                    "response" => $response->body(),
-                ]);
-                return;
+                if (!$response->successful()) {
+                    $this->lastError =
+                        "HTTP Error: Status " . $response->status();
+                    Log::error("Slack notification failed", [
+                        "status" => $response->status(),
+                        "response" => $response->body(),
+                    ]);
+                    return;
+                }
             }
 
             Log::info("Slack notification sent successfully");
         } catch (\Exception $e) {
+            $this->lastError = "Exception: " . $e->getMessage();
             Log::error(
                 "Error sending slack notification: " . $e->getMessage(),
                 [

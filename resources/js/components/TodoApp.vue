@@ -50,8 +50,23 @@
             @cancel="showDeleteConfirmModal = false"
         />
 
-        <!-- Notification Component -->
-        <notification-component ref="notification" />
+        <!-- Inline Notification Component -->
+        <div class="fixed top-0 right-0 p-4 z-50">
+            <div
+                v-if="notificationMessage"
+                :class="[
+                    'p-4 rounded-md shadow-md transition-all duration-300 transform',
+                    notificationVisible
+                        ? 'translate-y-0 opacity-100'
+                        : '-translate-y-4 opacity-0',
+                    notificationType === 'error'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-green-500 text-white',
+                ]"
+            >
+                {{ notificationMessage }}
+            </div>
+        </div>
     </div>
 </template>
 
@@ -66,9 +81,6 @@ const TaskModal = defineAsyncComponent(() => import("./TaskModal.vue"));
 const DeleteConfirmModal = defineAsyncComponent(
     () => import("./DeleteConfirmModal.vue"),
 );
-const NotificationComponent = defineAsyncComponent(
-    () => import("./UI/NotificationComponent.vue"),
-);
 
 // Component imports
 import AppHeader from "./AppHeader.vue";
@@ -81,7 +93,6 @@ export default {
         TodoList,
         TaskModal,
         DeleteConfirmModal,
-        NotificationComponent,
         AppHeader,
         WeeklyDateNavigation,
     },
@@ -110,6 +121,29 @@ export default {
 
         // Notification reference
         const notification = ref(null);
+
+        // In the setup function
+        const notificationMessage = ref("");
+        const notificationType = ref("success");
+        const notificationVisible = ref(false);
+        let notificationTimeout = null;
+
+        function showNotification(message, type = "success", duration = 3000) {
+            // Clear any existing timeout
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+            }
+
+            // Set notification properties
+            notificationMessage.value = message;
+            notificationType.value = type;
+            notificationVisible.value = true;
+
+            // Auto-hide the notification
+            notificationTimeout = setTimeout(() => {
+                notificationVisible.value = false;
+            }, duration);
+        }
 
         // ===============================
         // Utility Functions
@@ -186,7 +220,7 @@ export default {
          */
         function handleError(error, defaultMessage) {
             const errorMessage = error?.response?.data?.error || defaultMessage;
-            notification.value?.show(errorMessage, "error");
+            showNotification(errorMessage, "error");
         }
 
         // ===============================
@@ -268,7 +302,7 @@ export default {
                     error.response.data &&
                     error.response.data.subscription_required
                 ) {
-                    notification.value?.show(
+                    showNotification(
                         error.response.data.error ||
                             "この機能を利用するにはサブスクリプションが必要です。",
                         "error",
@@ -381,10 +415,7 @@ export default {
 
                 // Handle empty task or empty array
                 if (!task || (Array.isArray(task) && task.length === 0)) {
-                    notification.value?.show(
-                        "編集するタスクが見つかりません",
-                        "error",
-                    );
+                    showNotification("編集するタスクが見つかりません", "error");
                     return;
                 }
 
@@ -397,10 +428,7 @@ export default {
 
                     // Ensure task ID is properly set
                     if (task.id === undefined || task.id === null) {
-                        notification.value?.show(
-                            "タスクIDが見つかりません",
-                            "error",
-                        );
+                        showNotification("タスクIDが見つかりません", "error");
                         return;
                     }
 
@@ -652,7 +680,7 @@ export default {
                     selectedTaskId.value,
                     deleteAllRecurring.value,
                 );
-                notification.value?.show("タスクを削除しました");
+                showNotification("タスクを削除しました");
                 showDeleteConfirmModal.value = false;
 
                 // Update task list
@@ -711,7 +739,7 @@ export default {
                         } else if (data) {
                             openEditTaskModal(data);
                         } else {
-                            notification.value?.show(
+                            showNotification(
                                 "タスク編集データが無効です",
                                 "error",
                             );
@@ -726,7 +754,7 @@ export default {
         });
 
         return {
-            // State
+            // Existing variables
             todos,
             categories,
             currentView,
@@ -738,31 +766,28 @@ export default {
             selectedTaskId,
             selectedTaskData,
             showDeleteConfirmModal,
-            notification,
 
-            // View functions
+            // Add notification variables here
+            notificationMessage,
+            notificationType,
+            notificationVisible,
+            showNotification,
+
+            // Rest of your return variables
             setView,
-
-            // Date functions
             selectDate,
             previousDay,
             nextDay,
             goToToday,
-
-            // Task modal functions
             openAddTaskModal,
             openEditTaskModal,
             fetchAndEditTask,
             closeTaskModal,
-
-            // Task functions
             submitTask,
             toggleTaskStatus,
             handleTaskDelete,
             confirmDeleteTask,
             confirmDelete,
-
-            // Other functions
             loadCategories,
             isRecurringTask,
         };

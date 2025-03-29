@@ -20,8 +20,8 @@ class CategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'color' => 'required|string|max:7',
+            "name" => "required|string|max:255",
+            "color" => "required|string|max:7",
         ];
     }
 
@@ -31,10 +31,40 @@ class CategoryRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required' => 'カテゴリー名は必須です',
-            'name.max' => 'カテゴリー名は255文字以内で入力してください',
-            'color.required' => 'カラーは必須です',
-            'color.max' => 'カラーは7文字以内で入力してください',
+            "name.required" => $this->expectsJson()
+                ? "Category name is required"
+                : "カテゴリー名は必須です",
+            "name.max" => $this->expectsJson()
+                ? "Category name must not exceed 255 characters"
+                : "カテゴリー名は255文字以内で入力してください",
+            "color.required" => $this->expectsJson()
+                ? "Color is required"
+                : "カラーは必須です",
+            "color.max" => $this->expectsJson()
+                ? "Color must be a valid hex code (max 7 characters)"
+                : "カラーは7文字以内で入力してください",
         ];
+    }
+
+    /**
+     * Handle a failed validation attempt for JSON requests.
+     */
+    public function failedValidation(
+        \Illuminate\Contracts\Validation\Validator $validator
+    ) {
+        if ($this->expectsJson()) {
+            throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                response()->json(
+                    [
+                        "success" => false,
+                        "message" => "Validation failed",
+                        "errors" => $validator->errors(),
+                    ],
+                    422
+                )
+            );
+        }
+
+        parent::failedValidation($validator);
     }
 }

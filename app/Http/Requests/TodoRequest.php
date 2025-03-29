@@ -13,17 +13,23 @@ class TodoRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        // Base rules for both create and update
+        $rules = [
             "title" => "required|string|max:255",
-            "location" => "sometimes|string|in:INBOX,TODAY,TEMPLATE,SCHEDULED",
+            "category_id" => "nullable|exists:categories,id",
             "due_date" => "nullable|date",
             "due_time" => "nullable|date_format:H:i",
-            "status" => "nullable|string|in:pending,completed,trashed",
-            "category_id" => "nullable|exists:categories,id",
-            "recurrence_type" =>
-                "sometimes|string|in:none,daily,weekly,monthly",
+            "recurrence_type" => "nullable|in:none,daily,weekly,monthly",
             "recurrence_end_date" => "nullable|date|after_or_equal:due_date",
         ];
+
+        if ($this->isMethod("post")) {
+            $rules["location"] =
+                "sometimes|string|in:INBOX,TODAY,TEMPLATE,SCHEDULED";
+            $rules["status"] = "nullable|string|in:pending,completed,trashed";
+        }
+
+        return $rules;
     }
 
     public function messages(): array

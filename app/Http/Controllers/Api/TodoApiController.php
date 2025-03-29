@@ -328,6 +328,51 @@ class TodoApiController extends Controller
         }
     }
 
+    public function updateStatus(Request $request, Todo $todo)
+    {
+        try {
+            // Check if user is authenticated
+            if (!Auth::check()) {
+                return response()->json(
+                    ["error" => "Authentication required"],
+                    401
+                );
+            }
+
+            // Check if the user is authorized to update this task
+            if (Gate::denies("update", $todo)) {
+                return response()->json(
+                    [
+                        "error" =>
+                            "Unauthorized access. You don't have permission to update this task.",
+                    ],
+                    403
+                );
+            }
+
+            // Validate status parameter
+            $validated = $request->validate([
+                "status" => "required|in:pending,in_progress,paused,completed",
+            ]);
+
+            // Update the task status
+            $todo->status = $validated["status"];
+            $todo->save();
+
+            return response()->json([
+                "success" => true,
+                "message" => "Task status updated successfully",
+                "todo" => $todo,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error updating task status: " . $e->getMessage());
+            return response()->json(
+                ["error" => "Error updating task status: " . $e->getMessage()],
+                500
+            );
+        }
+    }
+
     /**
      * Toggle todo status between completed and pending.
      *

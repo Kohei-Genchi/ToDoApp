@@ -7,7 +7,7 @@ use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Http\Requests\CategoryApiRequest;
+use App\Http\Requests\CategoryRequest;
 
 class CategoryApiController extends Controller
 {
@@ -47,7 +47,7 @@ class CategoryApiController extends Controller
     /**
      * Store a newly created category via AJAX.
      */
-    public function store(CategoryApiRequest $request): JsonResponse
+    public function store(CategoryRequest $request): JsonResponse
     {
         // For unauthenticated access, return unauthorized error
         if (!Auth::check()) {
@@ -63,7 +63,7 @@ class CategoryApiController extends Controller
         try {
             $user = Auth::user();
 
-            // Create the category - request is already validated by CategoryApiRequest
+            // Create the category - request is already validated by CategoryRequest
             $category = Category::create([
                 "name" => $request->name,
                 "color" => $request->color,
@@ -99,7 +99,7 @@ class CategoryApiController extends Controller
      * Update an existing category.
      */
     public function update(
-        CategoryApiRequest $request,
+        CategoryRequest $request,
         Category $category
     ): JsonResponse {
         // For unauthenticated access, return unauthorized error
@@ -125,7 +125,7 @@ class CategoryApiController extends Controller
         }
 
         try {
-            // Update the category - request is already validated by CategoryApiRequest
+            // Update the category - request is already validated by CategoryRequest
             $category->update([
                 "name" => $request->name,
                 "color" => $request->color,

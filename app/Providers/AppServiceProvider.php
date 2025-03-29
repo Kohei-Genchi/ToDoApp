@@ -17,14 +17,13 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        // Register custom Slack channel
+        // Register custom Slack channel with SlackNotifyService
         Notification::extend("custom-slack", function ($app) {
-            return new CustomSlackChannel();
+            return new CustomSlackChannel(
+                $app->make(SlackNotifyService::class)
+            );
         });
     }
 }

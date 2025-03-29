@@ -158,6 +158,46 @@ class ShareNotificationWebController extends Controller
         }
     }
 
+    public function processApproval(string $token)
+    {
+        Log::info("Direct share approval called", ["token" => $token]);
+
+        // Find the share request
+        $shareRequest = ShareRequest::where("token", $token)
+            ->where("status", "pending")
+            ->where("expires_at", ">", now())
+            ->first();
+
+        if (!$shareRequest) {
+            return view("share-requests.error", [
+                "message" => "無効または期限切れのリクエストです。",
+                "title" => "エラー",
+            ]);
+        }
+
+        // Find recipient user
+        $recipient = User::where(
+            "email",
+            $shareRequest->recipient_email
+        )->first();
+        if (!$recipient) {
+            return view("share-requests.error", [
+                "message" => "受信者が見つかりません。",
+                "title" => "エラー",
+            ]);
+        }
+
+        // Force login as recipient
+        Auth::logout();
+        session()->invalidate();
+        session()->regenerateToken();
+        Auth::login($recipient, true);
+        session()->regenerate();
+
+        // Process the approval (reuse existing method)
+        return $this->approveRequest($token);
+    }
+
     /**
      * Show a list of pending share requests for the authenticated user - web UI
      */
