@@ -10,7 +10,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Api\CategoryShareController;
 use App\Http\Controllers\ShareNotificationWebController;
 use App\Http\Controllers\SharedTasksController;
-use App\Http\Controllers\StripSubscriptionController;
 use App\Http\Controllers\DirectShareApprovalController;
 /*
 |--------------------------------------------------------------------------
@@ -49,35 +48,6 @@ Route::group([], function () {
         ->middleware("guest")
         ->name("guest.login");
 });
-
-/**
- * Stripe Subscription Routes
- */
-Route::prefix("stripe/subscription")
-    ->middleware("auth")
-    ->group(function () {
-        // Subscription page
-        Route::get("/", [StripSubscriptionController::class, "index"])->name(
-            "stripe.subscription"
-        );
-
-        // Checkout page
-        Route::get("/checkout", [
-            StripSubscriptionController::class,
-            "checkout",
-        ])->name("stripe.subscription.checkout");
-
-        // Payment complete
-        Route::get("/comp", [StripSubscriptionController::class, "comp"])->name(
-            "stripe.subscription.comp"
-        );
-
-        // Customer portal
-        Route::get("/customer_portal", [
-            StripSubscriptionController::class,
-            "customer_portal",
-        ])->name("stripe.subscription.customer_portal");
-    });
 
 /**
  * Authenticated Routes
@@ -157,9 +127,10 @@ Route::middleware(["auth"])->group(function () {
             "tasks.kanban"
         );
 
+        // Team members
         Route::get("/team", [
-            App\Http\Controllers\SharedTeamMembersController::class,
-            "index",
+            SharedTasksController::class,
+            "teamMembers",
         ])->name("tasks.team");
 
         // Analytics
@@ -190,19 +161,19 @@ Route::middleware(["auth"])->group(function () {
     ])->name("share-requests.index");
 
     Route::get("/share-requests-direct/{token}/approve", [
-        App\Http\Controllers\ShareNotificationWebController::class,
+        ShareNotificationWebController::class,
         "approveRequest",
     ])->name("share-requests.direct.approve");
-    // Find these routes
+
     Route::get("/share-requests/{token}/approve", [
-        App\Http\Controllers\ShareNotificationWebController::class,
+        ShareNotificationWebController::class,
         "approveRequest",
     ])
         ->name("share-requests.web.approve")
         ->middleware("signed");
 
     Route::get("/share-requests/{token}/reject", [
-        App\Http\Controllers\ShareNotificationWebController::class,
+        ShareNotificationWebController::class,
         "rejectRequest",
     ])
         ->name("share-requests.web.reject")

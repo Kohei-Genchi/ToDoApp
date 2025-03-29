@@ -14,34 +14,17 @@
                 カテゴリー
             </a>
 
-            <!-- 共有タスクタブ - サブスクリプションが必要な場合は条件分岐 -->
-            @if(Auth::user()->subscription_id)
-                <a href="{{ route('todos.shared') }}"
-                   class="{{ request()->routeIs('todos.shared') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
-                    共有タスク
-                </a>
-            @else
-                <span class="cursor-not-allowed whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-gray-300 text-sm"
-                      title="サブスクリプションが必要です">
-                    共有タスク
-                </span>
-            @endif
+            <!-- 共有タスクタブ -->
+            <a href="{{ route('todos.shared') }}"
+               class="{{ request()->routeIs('todos.shared') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                共有タスク
+            </a>
 
-            <!-- 共有カテゴリータブ - 新機能 -->
-            @if(Auth::user()->subscription_id)
-                <a href="{{ route('categories.shared') }}"
-                   class="{{ request()->routeIs('categories.shared') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
-                    共有カテゴリー
-                </a>
-            @else
-                <span class="cursor-not-allowed whitespace-nowrap py-3 px-1 border-b-2 border-transparent text-gray-300 text-sm"
-                      title="サブスクリプションが必要です">
-                    共有カテゴリー
-                </span>
-            @endif
-
-            <!-- カレンダービュータブ - サブスクリプションが必要な場合 -->
-
+            <!-- 共有カテゴリータブ -->
+            <a href="{{ route('categories.shared') }}"
+               class="{{ request()->routeIs('categories.shared') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                共有カテゴリー
+            </a>
         </nav>
     </div>
 </div>

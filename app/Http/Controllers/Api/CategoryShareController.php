@@ -26,34 +26,11 @@ class CategoryShareController extends Controller
         $this->shareRequestsController = $shareRequestsController;
     }
 
-    private function checkSubscription(): ?JsonResponse
-    {
-        // Subscription check is disabled for development
-        // Uncomment when ready to enforce subscription requirements
-        /*
-        if (!Auth::user()->subscription_id) {
-            return response()->json(
-                [
-                    "error" => "共有機能を利用するにはサブスクリプションが必要です。",
-                    "subscription_required" => true,
-                ],
-                403
-            );
-        }
-        */
-        return null;
-    }
-
     /**
      * Get users with whom a category is shared.
      */
     public function index(Category $category): JsonResponse
     {
-        // Check subscription
-        if ($subscriptionCheck = $this->checkSubscription()) {
-            return $subscriptionCheck;
-        }
-
         // Check if the authenticated user owns this category
         if ($category->user_id !== Auth::id()) {
             return response()->json(["error" => "Unauthorized"], 403);
@@ -72,11 +49,6 @@ class CategoryShareController extends Controller
     public function store(Request $request, Category $category): JsonResponse
     {
         try {
-            // Check subscription
-            if ($subscriptionCheck = $this->checkSubscription()) {
-                return $subscriptionCheck;
-            }
-
             // Delegate to ShareRequestsController
             return $this->shareRequestsController->storeCategoryShare(
                 $request,
@@ -105,11 +77,6 @@ class CategoryShareController extends Controller
         Category $category,
         User $user
     ): JsonResponse {
-        // Check subscription
-        if ($subscriptionCheck = $this->checkSubscription()) {
-            return $subscriptionCheck;
-        }
-
         // Check if the authenticated user owns this category
         if ($category->user_id !== Auth::id()) {
             return response()->json(["error" => "Unauthorized"], 403);
@@ -158,11 +125,6 @@ class CategoryShareController extends Controller
      */
     public function destroy(Category $category, User $user): JsonResponse
     {
-        // Check subscription
-        if ($subscriptionCheck = $this->checkSubscription()) {
-            return $subscriptionCheck;
-        }
-
         // Check if the authenticated user owns this category
         if ($category->user_id !== Auth::id()) {
             return response()->json(["error" => "Unauthorized"], 403);
@@ -193,11 +155,6 @@ class CategoryShareController extends Controller
      */
     public function sharedWithMe(): JsonResponse
     {
-        // Check subscription
-        if ($subscriptionCheck = $this->checkSubscription()) {
-            return $subscriptionCheck;
-        }
-
         $sharedCategories = Auth::user()
             ->sharedCategories()
             ->with("user")
@@ -211,11 +168,6 @@ class CategoryShareController extends Controller
      */
     public function tasksFromSharedCategories(): JsonResponse
     {
-        // Check subscription
-        if ($subscriptionCheck = $this->checkSubscription()) {
-            return $subscriptionCheck;
-        }
-
         // Get IDs of categories shared with the current user
         $sharedCategoryIds = Auth::user()
             ->sharedCategories()

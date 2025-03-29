@@ -1,10 +1,7 @@
 <template>
     <div>
         <!-- Quick Input Component -->
-        <quick-input-component
-            @task-added="handleTaskAdded"
-            @multiple-tasks-added="handleMultipleTasksAdded"
-        />
+        <quick-input-component @task-added="handleTaskAdded" />
 
         <!-- Memo List Component -->
         <memo-list-component :refreshTrigger="refreshCounter" />
@@ -36,43 +33,6 @@ export default {
         handleTaskAdded() {
             // Increment the counter to trigger a refresh in MemoListComponent
             this.refreshCounter++;
-        },
-
-        // Handle multiple tasks added from voice input
-        async handleMultipleTasksAdded(tasks) {
-            if (!tasks || tasks.length === 0) return;
-
-            try {
-                // Create each task sequentially
-                for (const taskTitle of tasks) {
-                    await axios.post(
-                        "/api/memos",
-                        { title: taskTitle },
-                        {
-                            headers: {
-                                "X-CSRF-TOKEN": this.csrfToken,
-                                "Content-Type": "application/json",
-                                Accept: "application/json",
-                                "X-Requested-With": "XMLHttpRequest",
-                            },
-                        },
-                    );
-                }
-
-                // Refresh the memo list after all tasks are created
-                this.refreshCounter++;
-
-                // Show notification if available
-                this.showNotification(
-                    `${tasks.length}個のタスクを作成しました`,
-                );
-            } catch (error) {
-                console.error("Error creating multiple tasks:", error);
-                this.showNotification(
-                    "タスクの作成中にエラーが発生しました",
-                    "error",
-                );
-            }
         },
 
         // Simple notification helper

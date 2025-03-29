@@ -32,13 +32,6 @@
                             </svg>
                             Profile
                         </a>
-                        <a href="{{ route('stripe.subscription') }}" class="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-gray-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 9a2 2 0 10-4 0v5a2 2 0 104 0V9z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9h6m-6 6h6" />
-                            </svg>
-                            Subscription
-                        </a>
                         <button onclick="confirmLogout()" class="flex items-center w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -66,7 +59,7 @@
         @endauth
 
         @auth
-            @if(!Request::is('profile*') && !Request::is('stripe/subscription*'))
+            @if(!Request::is('profile*'))
                 <!-- Mount Vue.js component for quick input and memo list -->
                 <div id="sidebar-memos" class="mt-4">
                     <!-- Vue.js SidebarMemosComponent will be mounted here -->

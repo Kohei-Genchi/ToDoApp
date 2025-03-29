@@ -6,8 +6,6 @@ use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\MemoApiController;
 use App\Http\Controllers\Api\CategoryShareController;
 use App\Http\Controllers\Api\ShareRequestsController;
-use App\Http\Controllers\Api\SpeechToTextController;
-use App\Http\Controllers\StripSubscriptionController;
 use App\Http\Controllers\Api\SlackInteractionController;
 
 /*
@@ -23,12 +21,6 @@ use App\Http\Controllers\Api\SlackInteractionController;
  * Public Routes (No Authentication Required)
  */
 Route::group([], function () {
-    // Stripe webhook - doesn't need CSRF
-    Route::post("stripe/subscription/webhook", [
-        StripSubscriptionController::class,
-        "webhook",
-    ]);
-
     // Share request approval/rejection via signed URLs (security via URL signing)
     Route::get("share-requests/{token}/approve", [
         ShareRequestsController::class,
@@ -205,12 +197,4 @@ Route::middleware(["auth:sanctum"])->group(function () {
             // Create a new memo
             Route::post("/", [MemoApiController::class, "store"]);
         });
-
-    /**
-     * Speech to Text
-     */
-    Route::post("speech-to-tasks", [
-        SpeechToTextController::class,
-        "processSpeech",
-    ])->name("api.speech-to-tasks");
 });
