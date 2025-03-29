@@ -1,8 +1,6 @@
-/**
- * Todo API Client
- *
- * Handles all task management API operations
- */
+// resources/js/api/todo.js
+// APIクライアントの修正 - ステータス更新処理を明示的に定義
+
 import axios from "axios";
 
 /**
@@ -89,27 +87,6 @@ export default {
         });
     },
 
-    getSharedTasks() {
-        return axios.get("/api/shared/categories/tasks", {
-            headers: getCommonHeaders(),
-        });
-    },
-
-    updateTaskStatus(id, status) {
-        validateId(id, "updateTaskStatus");
-
-        return axios.post(
-            `/api/todos/${id}`,
-            {
-                _method: "PUT",
-                status: status,
-            },
-            {
-                headers: getCsrfHeaders(),
-            },
-        );
-    },
-
     /**
      * Get a specific task by ID
      * @param {number} id Task ID
@@ -187,6 +164,29 @@ export default {
     },
 
     /**
+     * Update only task status
+     * @param {number} id Task ID
+     * @param {string} status New status
+     * @returns {Promise} API response
+     */
+    updateTaskStatus(id, status) {
+        validateId(id, "updateTaskStatus");
+
+        console.log(`Updating task ${id} status to ${status}`);
+
+        return axios.post(
+            `/api/todos/${id}`,
+            {
+                _method: "PUT",
+                status: status,
+            },
+            {
+                headers: getCsrfHeaders(),
+            },
+        );
+    },
+
+    /**
      * Toggle task status between completed and pending
      * @param {number} id Task ID
      * @returns {Promise} API response
@@ -219,6 +219,33 @@ export default {
         return axios.delete(`/api/todos/${id}`, {
             headers: getCsrfHeaders(),
             params: { delete_recurring: deleteRecurring ? 1 : 0 },
+        });
+    },
+    getTasksWithPermissions(view, date, additionalParams = {}) {
+        let params = {
+            view: view || "today",
+            date: date || new Date().toISOString().split("T")[0],
+            include_permissions: true, // 権限情報を含める
+        };
+
+        // Merge additional parameters if provided
+        if (additionalParams && typeof additionalParams === "object") {
+            params = { ...params, ...additionalParams };
+        }
+
+        return axios.get("/api/todos", {
+            params: params,
+            headers: getCommonHeaders(),
+        });
+    },
+
+    /**
+     * Get all shared tasks
+     * @returns {Promise} API response
+     */
+    getSharedTasks() {
+        return axios.get("/api/shared/categories/tasks", {
+            headers: getCommonHeaders(),
         });
     },
 };

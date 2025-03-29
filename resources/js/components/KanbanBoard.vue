@@ -1,3 +1,4 @@
+<!-- KanbanBoard.vue のタグ構造を修正 -->
 <template>
     <div class="kanban-container">
         <!-- ヘッダー（フィルター、コントロール） -->
@@ -127,10 +128,7 @@
         </div>
 
         <!-- カンバンボード -->
-        <div
-            v-else-if="!isLoading"
-            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
-        >
+        <div v-else-if="!isLoading" class="grid grid-cols-4 gap-4">
             <!-- To Do Column -->
             <div
                 class="bg-gray-100 rounded-lg p-4"
@@ -164,26 +162,58 @@
                         </button>
                     </div>
                 </div>
-                <div class="space-y-2">
+                <div class="space-y-2 task-container">
                     <div
                         v-for="task in getTasksByStatus('pending')"
                         :key="task.id"
-                        class="bg-white rounded shadow p-3 cursor-pointer"
-                        draggable="true"
-                        @dragstart="onDragStart($event, task.id)"
-                        @click="$emit('edit-task', task)"
+                        class="bg-white rounded shadow p-3 cursor-pointer task-card"
+                        :class="{
+                            'cursor-not-allowed opacity-75':
+                                task.can_edit === false,
+                            'my-task': task.user_id === currentUserId,
+                        }"
+                        :draggable="task.can_edit !== false"
+                        @dragstart="onDragStart($event, task.id, task.can_edit)"
+                        @click="handleTaskClick(task)"
+                        :data-task-id="task.id"
+                        :data-status="'pending'"
                     >
                         <div class="flex items-center justify-between">
                             <h4 class="font-medium text-sm">
                                 {{ task.title }}
                             </h4>
-                            <span
-                                v-if="task.category"
-                                class="w-2 h-2 rounded-full"
-                                :style="{
-                                    backgroundColor: task.category.color,
-                                }"
-                            ></span>
+                            <div class="flex items-center space-x-1">
+                                <!-- 所有者バッジ -->
+                                <span
+                                    v-if="task.user_id === currentUserId"
+                                    class="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full"
+                                >
+                                    自分
+                                </span>
+                                <!-- カテゴリー色 -->
+                                <span
+                                    v-if="task.category"
+                                    class="w-2 h-2 rounded-full"
+                                    :style="{
+                                        backgroundColor: task.category.color,
+                                    }"
+                                ></span>
+                                <!-- 読み取り専用アイコン -->
+                                <svg
+                                    v-if="task.can_edit === false"
+                                    class="h-3 w-3 text-gray-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                    />
+                                </svg>
+                            </div>
                         </div>
                         <div
                             v-if="task.due_date"
@@ -194,6 +224,13 @@
                                 formatTime(task.due_time)
                             }}</span>
                         </div>
+                        <!-- タスク所有者情報 -->
+                        <div
+                            v-if="task.user && task.user_id !== currentUserId"
+                            class="mt-1 text-xs text-gray-400"
+                        >
+                            {{ task.user.name }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -203,8 +240,8 @@
                 class="bg-blue-100 rounded-lg p-4"
                 @dragover.prevent
                 @drop="onDrop($event, 'in_progress')"
+                data-status="in_progress"
             >
-                <!-- 同様の内容で 'in_progress' ステータス用 -->
                 <div class="flex justify-between items-center mb-3">
                     <h3 class="font-medium">In Progress</h3>
                     <div class="flex items-center">
@@ -232,16 +269,71 @@
                         </button>
                     </div>
                 </div>
-                <div class="space-y-2">
+                <div class="space-y-2 task-container">
                     <div
                         v-for="task in getTasksByStatus('in_progress')"
                         :key="task.id"
-                        class="bg-white rounded shadow p-3 cursor-pointer"
-                        draggable="true"
-                        @dragstart="onDragStart($event, task.id)"
-                        @click="$emit('edit-task', task)"
+                        class="bg-white rounded shadow p-3 cursor-pointer task-card"
+                        :class="{
+                            'cursor-not-allowed opacity-75':
+                                task.can_edit === false,
+                            'my-task': task.user_id === currentUserId,
+                        }"
+                        :draggable="task.can_edit !== false"
+                        @dragstart="onDragStart($event, task.id, task.can_edit)"
+                        @click="handleTaskClick(task)"
+                        :data-task-id="task.id"
+                        :data-status="'in_progress'"
                     >
-                        <!-- タスクカード内容（To Doカラムと同様） -->
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-sm">
+                                {{ task.title }}
+                            </h4>
+                            <div class="flex items-center space-x-1">
+                                <span
+                                    v-if="task.user_id === currentUserId"
+                                    class="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full"
+                                >
+                                    自分
+                                </span>
+                                <span
+                                    v-if="task.category"
+                                    class="w-2 h-2 rounded-full"
+                                    :style="{
+                                        backgroundColor: task.category.color,
+                                    }"
+                                ></span>
+                                <svg
+                                    v-if="task.can_edit === false"
+                                    class="h-3 w-3 text-gray-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                    />
+                                </svg>
+                            </div>
+                        </div>
+                        <div
+                            v-if="task.due_date"
+                            class="mt-2 text-xs text-gray-500"
+                        >
+                            {{ formatDate(task.due_date) }}
+                            <span v-if="task.due_time">{{
+                                formatTime(task.due_time)
+                            }}</span>
+                        </div>
+                        <div
+                            v-if="task.user && task.user_id !== currentUserId"
+                            class="mt-1 text-xs text-gray-400"
+                        >
+                            {{ task.user.name }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -251,8 +343,102 @@
                 class="bg-yellow-100 rounded-lg p-4"
                 @dragover.prevent
                 @drop="onDrop($event, 'review')"
+                data-status="review"
             >
-                <!-- 同様の内容で 'review' ステータス用 -->
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-medium">Review</h3>
+                    <div class="flex items-center">
+                        <span
+                            class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2"
+                        >
+                            {{ getTasksByStatus("review").length }}
+                        </span>
+                        <button
+                            @click="openAddTaskModal('review')"
+                            class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-gray-600"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-2 task-container">
+                    <div
+                        v-for="task in getTasksByStatus('review')"
+                        :key="task.id"
+                        class="bg-white rounded shadow p-3 cursor-pointer task-card"
+                        :class="{
+                            'cursor-not-allowed opacity-75':
+                                task.can_edit === false,
+                            'my-task': task.user_id === currentUserId,
+                        }"
+                        :draggable="task.can_edit !== false"
+                        @dragstart="onDragStart($event, task.id, task.can_edit)"
+                        @click="handleTaskClick(task)"
+                        :data-task-id="task.id"
+                        :data-status="'review'"
+                    >
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-sm">
+                                {{ task.title }}
+                            </h4>
+                            <div class="flex items-center space-x-1">
+                                <span
+                                    v-if="task.user_id === currentUserId"
+                                    class="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full"
+                                >
+                                    自分
+                                </span>
+                                <span
+                                    v-if="task.category"
+                                    class="w-2 h-2 rounded-full"
+                                    :style="{
+                                        backgroundColor: task.category.color,
+                                    }"
+                                ></span>
+                                <svg
+                                    v-if="task.can_edit === false"
+                                    class="h-3 w-3 text-gray-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                    />
+                                </svg>
+                            </div>
+                        </div>
+                        <div
+                            v-if="task.due_date"
+                            class="mt-2 text-xs text-gray-500"
+                        >
+                            {{ formatDate(task.due_date) }}
+                            <span v-if="task.due_time">{{
+                                formatTime(task.due_time)
+                            }}</span>
+                        </div>
+                        <div
+                            v-if="task.user && task.user_id !== currentUserId"
+                            class="mt-1 text-xs text-gray-400"
+                        >
+                            {{ task.user.name }}
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Completed Column -->
@@ -260,27 +446,163 @@
                 class="bg-green-100 rounded-lg p-4"
                 @dragover.prevent
                 @drop="onDrop($event, 'completed')"
+                data-status="completed"
             >
-                <!-- 同様の内容で 'completed' ステータス用 -->
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-medium">Completed</h3>
+                    <div class="flex items-center">
+                        <span
+                            class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full mr-2"
+                        >
+                            {{ getTasksByStatus("completed").length }}
+                        </span>
+                        <button
+                            @click="openAddTaskModal('completed')"
+                            class="bg-white p-1 rounded-full shadow hover:bg-gray-100"
+                        >
+                            <svg
+                                class="w-4 h-4 text-gray-600"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="space-y-2 task-container">
+                    <div
+                        v-for="task in getTasksByStatus('completed')"
+                        :key="task.id"
+                        class="bg-white rounded shadow p-3 cursor-pointer task-card"
+                        :class="{
+                            'cursor-not-allowed opacity-75':
+                                task.can_edit === false,
+                            'my-task': task.user_id === currentUserId,
+                        }"
+                        :draggable="task.can_edit !== false"
+                        @dragstart="onDragStart($event, task.id, task.can_edit)"
+                        @click="handleTaskClick(task)"
+                        :data-task-id="task.id"
+                        :data-status="'completed'"
+                    >
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-sm">
+                                {{ task.title }}
+                            </h4>
+                            <div class="flex items-center space-x-1">
+                                <span
+                                    v-if="task.user_id === currentUserId"
+                                    class="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full"
+                                >
+                                    自分
+                                </span>
+                                <span
+                                    v-if="task.category"
+                                    class="w-2 h-2 rounded-full"
+                                    :style="{
+                                        backgroundColor: task.category.color,
+                                    }"
+                                ></span>
+                                <svg
+                                    v-if="task.can_edit === false"
+                                    class="h-3 w-3 text-gray-400"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                    />
+                                </svg>
+                            </div>
+                        </div>
+                        <div
+                            v-if="task.due_date"
+                            class="mt-2 text-xs text-gray-500"
+                        >
+                            {{ formatDate(task.due_date) }}
+                            <span v-if="task.due_time">{{
+                                formatTime(task.due_time)
+                            }}</span>
+                        </div>
+                        <div
+                            v-if="task.user && task.user_id !== currentUserId"
+                            class="mt-1 text-xs text-gray-400"
+                        >
+                            {{ task.user.name }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 権限エラーメッセージモーダル -->
+        <div
+            v-if="showPermissionError"
+            class="fixed inset-0 flex items-center justify-center z-50"
+        >
+            <div
+                class="absolute inset-0 bg-black bg-opacity-40"
+                @click="showPermissionError = false"
+            ></div>
+            <div class="bg-white rounded-lg p-5 max-w-md relative z-10">
+                <div class="flex items-start">
+                    <svg
+                        class="h-6 w-6 text-yellow-500 mr-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                    </svg>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">
+                            権限がありません
+                        </h3>
+                        <p class="text-sm text-gray-500">
+                            このタスクは閲覧のみ許可されています。編集するには、タスクの所有者に編集権限をリクエストしてください。
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <button
+                        @click="showPermissionError = false"
+                        class="px-4 py-2 bg-blue-500 text-white rounded-md text-sm"
+                    >
+                        閉じる
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script>
-import { ref, reactive, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import TodoApi from "../api/todo";
 
 export default {
     name: "KanbanBoard",
 
     props: {
-        // 親コンポーネントから渡されるカテゴリーリスト
         categories: {
             type: Array,
             default: () => [],
         },
-        // 現在のユーザーID
         currentUserId: {
             type: Number,
             default: null,
@@ -305,14 +627,23 @@ export default {
         // ドラッグ＆ドロップ
         const draggedTaskId = ref(null);
 
+        // 権限エラーメッセージ用の状態
+        const showPermissionError = ref(false);
+
         // 初期タスク読み込み
         const loadTasks = async () => {
             try {
                 isLoading.value = true;
                 errorMessage.value = "";
 
-                // 共有タスクを取得
-                const response = await TodoApi.getTasks("shared");
+                // 権限情報を含めて共有タスクを取得
+                const response =
+                    await TodoApi.getTasksWithPermissions("shared");
+
+                console.log(
+                    "Loaded shared tasks with permissions:",
+                    response.data,
+                );
 
                 allTasks.value = response.data;
 
@@ -341,6 +672,12 @@ export default {
 
         // フィルター適用
         const applyFilters = () => {
+            console.log("Applying filters with:", {
+                categoryId: selectedCategoryId.value,
+                userId: selectedUserId.value,
+                searchQuery: searchQuery.value,
+            });
+
             filteredTasks.value = allTasks.value.filter((task) => {
                 // カテゴリーフィルター
                 if (
@@ -366,6 +703,16 @@ export default {
 
                 return true;
             });
+
+            console.log("Filtered tasks:", filteredTasks.value);
+
+            // ステータスごとのタスク数をログ出力（デバッグ用）
+            console.log("Tasks by status:", {
+                pending: getTasksByStatus("pending").length,
+                in_progress: getTasksByStatus("in_progress").length,
+                review: getTasksByStatus("review").length,
+                completed: getTasksByStatus("completed").length,
+            });
         };
 
         // 特定ステータスのタスクを取得
@@ -373,11 +720,32 @@ export default {
             return filteredTasks.value.filter((task) => task.status === status);
         };
 
-        // ドラッグ開始ハンドラー
-        const onDragStart = (event, taskId) => {
+        // ドラッグ開始ハンドラー - 権限チェックを追加
+        const onDragStart = (event, taskId, canEdit) => {
+            // 編集権限がない場合はドラッグを中止
+            if (canEdit === false) {
+                event.preventDefault();
+                showPermissionError.value = true;
+                return;
+            }
+
             draggedTaskId.value = taskId;
             event.dataTransfer.setData("text/plain", taskId);
+
+            // ドラッグ中のスタイルを適用
             event.target.classList.add("opacity-50");
+        };
+
+        // タスククリック処理 - 権限チェックを追加
+        const handleTaskClick = (task) => {
+            // 編集できないタスクをクリックしたときは権限エラーを表示
+            if (task.can_edit === false) {
+                showPermissionError.value = true;
+                return;
+            }
+
+            // 通常通り編集モーダルを開く
+            emit("edit-task", task);
         };
 
         // ドロップハンドラー
@@ -391,6 +759,8 @@ export default {
             if (!taskId) return;
 
             try {
+                console.log(`Dropping task ${taskId} to ${newStatus}`);
+
                 // 親コンポーネントにステータス変更を通知
                 emit("task-status-changed", Number(taskId), newStatus);
 
@@ -399,12 +769,18 @@ export default {
                     (t) => t.id === Number(taskId),
                 );
                 if (taskIndex !== -1) {
+                    console.log(
+                        `Updating task ${taskId} status from ${allTasks.value[taskIndex].status} to ${newStatus}`,
+                    );
                     allTasks.value[taskIndex].status = newStatus;
                     applyFilters(); // 再フィルタリング
                 }
             } catch (error) {
                 console.error("Error updating task status:", error);
                 errorMessage.value = "タスクステータスの更新に失敗しました。";
+
+                // エラー発生時はタスクを再読み込み
+                await loadTasks();
             }
         };
 
@@ -436,7 +812,6 @@ export default {
         // 新規タスク追加モーダルを開く
         const openAddTaskModal = (status = "pending") => {
             // 新規タスク追加画面を開く処理
-            // TodoApp.vueのopenAddTaskModalを呼び出す
             const taskData = {
                 title: "",
                 description: "",
@@ -472,6 +847,7 @@ export default {
             selectedUserId,
             searchQuery,
             teamUsers,
+            showPermissionError,
 
             // メソッド
             getTasksByStatus,
@@ -481,6 +857,7 @@ export default {
             formatTime,
             applyFilters,
             openAddTaskModal,
+            handleTaskClick,
         };
     },
 };
@@ -491,6 +868,11 @@ export default {
     min-height: calc(100vh - 180px);
 }
 
+/* CSS Grid を強制的に4カラム表示に */
+.grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 /* ドラッグ＆ドロップスタイル */
 [draggable="true"] {
     cursor: grab;
@@ -498,5 +880,52 @@ export default {
 
 .opacity-50 {
     opacity: 0.5;
+}
+
+/* モバイル表示のためのレスポンシブ対応（必要に応じて） */
+@media (max-width: 1024px) {
+    .grid-cols-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .grid-cols-4 {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+}
+
+/* スクロールバーのスタイリング */
+.task-container {
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+}
+
+.task-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+.task-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.task-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+/* 自分のタスクのスタイル */
+.my-task {
+    border-left: 3px solid #3b82f6; /* 青色のボーダーで自分のタスクを強調 */
+}
+
+/* 共有タスクのスタイル */
+.task-card:not(.my-task) {
+    border-left: 3px solid #10b981; /* 緑色のボーダーで共有タスクを示す */
+}
+
+/* 読み取り専用タスクのスタイル */
+.cursor-not-allowed {
+    cursor: not-allowed !important;
 }
 </style>

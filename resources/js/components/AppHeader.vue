@@ -1,3 +1,4 @@
+<!-- resources/js/components/AppHeader.vue -->
 <template>
     <header class="bg-white shadow">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
@@ -5,6 +6,7 @@
                 <h1 class="text-xl font-semibold text-gray-900">Todo App</h1>
 
                 <div class="flex space-x-2">
+                    <!-- タスク一覧ボタン -->
                     <button
                         @click="$emit('set-view', 'today')"
                         :class="[
@@ -17,7 +19,31 @@
                         今日
                     </button>
 
-                    <!-- 共有タスクボタン - リンクからビュー切り替えボタンに変更 -->
+                    <!-- カテゴリー管理ボタン - 追加 -->
+                    <a
+                        href="/categories"
+                        class="px-3 py-1 rounded-md text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    >
+                        <span class="flex items-center">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-4 w-4 mr-1"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                                />
+                            </svg>
+                            カテゴリー
+                        </span>
+                    </a>
+
+                    <!-- 共有タスクボタン -->
                     <button
                         @click="$emit('set-view', 'shared')"
                         :class="[
@@ -46,6 +72,37 @@
                         </span>
                     </button>
 
+                    <!-- 共有カテゴリーボタン - 追加 -->
+                    <a
+                        href="/categories/shared"
+                        class="px-3 py-1 rounded-md text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    >
+                        <span class="flex items-center">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-4 w-4 mr-1"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                                />
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                            </svg>
+                            共有カテゴリー
+                        </span>
+                    </a>
+
+                    <!-- 新規タスクボタン -->
                     <button
                         @click="$emit('add-task')"
                         class="px-3 py-1 rounded-md text-sm font-medium text-white bg-blue-500 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -68,29 +125,5 @@ export default {
         },
     },
     emits: ["set-view", "add-task"],
-
-    computed: {
-        /**
-         * Check if user has subscription
-         */
-        hasSubscription() {
-            return (
-                window.Laravel &&
-                window.Laravel.user &&
-                window.Laravel.user.has_subscription
-            );
-        },
-    },
-
-    methods: {
-        /**
-         * Show subscription required message
-         */
-        showSubscriptionMessage(feature) {
-            alert(
-                `${feature}機能を使用するにはサブスクリプションが必要です。「設定 > サブスクリプション」からご登録ください。`,
-            );
-        },
-    },
 };
 </script>

@@ -353,14 +353,41 @@ export default {
             }
         }
 
+        // TodoApp.vue の handleTaskStatusChange 関数修正
+
+        // タスクステータス変更ハンドラ（KanbanBoardからの通知用）
         async function handleTaskStatusChange(taskId, newStatus) {
             try {
-                await TodoApi.updateTask(taskId, { status: newStatus });
-                // 成功したら再読み込み（または状態の最適化更新）
-                await loadTasks();
+                console.log(
+                    `Handling task status change: Task ${taskId} -> ${newStatus}`,
+                );
+
+                // 専用の更新ステータスメソッドを使用
+                await TodoApi.updateTaskStatus(taskId, newStatus);
+
+                // 成功メッセージ表示
                 showNotification("タスクステータスを更新しました", "success");
+
+                // 状態の最適化更新 - 既存のtodos配列内のタスクを直接更新
+                const taskIndex = todos.value.findIndex((t) => t.id === taskId);
+                if (taskIndex !== -1) {
+                    console.log(
+                        `Optimistically updating task ${taskId} status to ${newStatus}`,
+                    );
+                    todos.value[taskIndex].status = newStatus;
+
+                    // 配列を新しいものとして設定して反応性をトリガー
+                    todos.value = [...todos.value];
+                } else {
+                    // タスクが見つからない場合は全タスクを再読み込み
+                    await loadTasks();
+                }
             } catch (error) {
+                console.error("Error updating task status:", error);
                 handleError(error, "タスクステータスの更新に失敗しました");
+
+                // エラー時にはタスクリストを完全に再読み込み
+                await loadTasks();
             }
         }
 

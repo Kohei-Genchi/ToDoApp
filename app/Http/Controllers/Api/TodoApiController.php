@@ -26,6 +26,41 @@ class TodoApiController extends Controller
         $this->taskService = $taskService;
     }
 
+    private function addPermissionsToTasks($tasks)
+    {
+        return $tasks->map(function ($task) {
+            // タスクの所有者なら完全な権限を持つ
+            if ($task->user_id === Auth::id()) {
+                $task->can_edit = true;
+                $task->can_delete = true;
+                return $task;
+            }
+
+            // 所有者でない場合（共有タスク）
+            // カテゴリーを通じた共有権限をチェック
+            if ($task->category_id) {
+                $sharedCategory = Auth::user()
+                    ->sharedCategories()
+                    ->where("categories.id", $task->category_id)
+                    ->first();
+
+                if ($sharedCategory) {
+                    // 編集権限は共有設定によって決まる
+                    $task->can_edit =
+                        $sharedCategory->pivot->permission === "edit";
+                    // 削除権限は所有者のみ
+                    $task->can_delete = false;
+                    return $task;
+                }
+            }
+
+            // デフォルトでは権限なし
+            $task->can_edit = false;
+            $task->can_delete = false;
+            return $task;
+        });
+    }
+
     /**
      * Get all todos based on view and date.
      *
@@ -46,51 +81,18 @@ class TodoApiController extends Controller
             $categoryId = $request->category_id;
             $status = $request->status;
 
-            // If a specific category is requested, we check if it's shared with the current user
-            if ($categoryId) {
-                $category = Category::find($categoryId);
-
-                if ($category) {
-                    // If the category is owned by someone else
-                    if ($category->user_id !== Auth::id()) {
-                        // Check if it's shared with current user
-                        $isShared = Auth::user()
-                            ->sharedCategories()
-                            ->where("category_id", $categoryId)
-                            ->exists();
-
-                        if (!$isShared) {
-                            return response()->json(
-                                [
-                                    "error" =>
-                                        "You do not have access to this category",
-                                ],
-                                403
-                            );
-                        }
-
-                        // If shared, we'll get all tasks from this category
-                        $todos = Todo::where("category_id", $categoryId)
-                            ->with(["category", "user"])
-                            ->get();
-
-                        return response()->json($todos);
-                    }
-                }
-            }
-
             // Handle "shared" view specifically for shared tasks
             if ($view === "shared") {
                 try {
-                    // Get tasks from shared categories
+                    // 1. 共有カテゴリーからのタスク
                     $sharedCategoryIds = Auth::user()
                         ->sharedCategories()
                         ->pluck("categories.id");
 
-                    $todos = [];
+                    $sharedTasks = collect([]);
 
                     if ($sharedCategoryIds->isNotEmpty()) {
-                        $todos = Todo::whereIn(
+                        $sharedTasks = Todo::whereIn(
                             "category_id",
                             $sharedCategoryIds
                         )
@@ -98,7 +100,25 @@ class TodoApiController extends Controller
                             ->get();
                     }
 
-                    return response()->json($todos);
+                    // 2. 自分のタスクも追加
+                    $ownTasks = Auth::user()
+                        ->todos()
+                        ->with(["category", "user"])
+                        ->get();
+
+                    // 3. タスクをマージして返す
+                    $combinedTasks = $sharedTasks
+                        ->concat($ownTasks)
+                        ->unique("id");
+
+                    // 権限情報を含める
+                    if ($request->boolean("include_permissions", false)) {
+                        $combinedTasks = $this->addPermissionsToTasks(
+                            $combinedTasks
+                        );
+                    }
+
+                    return response()->json($combinedTasks);
                 } catch (\Exception $e) {
                     Log::error(
                         "Error retrieving shared tasks: " . $e->getMessage()

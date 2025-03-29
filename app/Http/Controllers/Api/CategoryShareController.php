@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Services\ShareNotificationService;
 use Illuminate\View\View;
+use App\Http\Controllers\Api\ShareRequestsController;
 
 class CategoryShareController extends Controller
 {
@@ -20,7 +21,7 @@ class CategoryShareController extends Controller
 
     public function __construct(
         ShareNotificationService $shareNotificationService,
-        ShareRequestsController $shareRequestsController
+        ShareRequestsController $shareRequestsController = null
     ) {
         $this->shareNotificationService = $shareNotificationService;
         $this->shareRequestsController = $shareRequestsController;
@@ -50,6 +51,12 @@ class CategoryShareController extends Controller
     {
         try {
             // Delegate to ShareRequestsController
+            if (!$this->shareRequestsController) {
+                $this->shareRequestsController = app()->make(
+                    ShareRequestsController::class
+                );
+            }
+
             return $this->shareRequestsController->storeCategoryShare(
                 $request,
                 $category
@@ -186,6 +193,35 @@ class CategoryShareController extends Controller
      */
     public function sharedWithMePage(): View
     {
-        return view("categories.shared");
+        // 共有カテゴリー情報の取得
+        $sharedWithMe = Auth::user()->sharedCategories()->with("user")->get();
+
+        // 自分が共有しているカテゴリーの取得
+        $mySharedCategories = Category::where("user_id", Auth::id())
+            ->with("sharedWith")
+            ->whereHas("sharedWith")
+            ->get();
+
+        // 共有リクエスト情報の取得
+        if (!$this->shareRequestsController) {
+            $this->shareRequestsController = app()->make(
+                ShareRequestsController::class
+            );
+        }
+
+        $shareRequests = $this->shareRequestsController->index()->getData(true);
+
+        $outgoingRequests = collect($shareRequests["outgoing_requests"] ?? []);
+        $incomingRequests = collect($shareRequests["incoming_requests"] ?? []);
+
+        return view(
+            "categories.shared",
+            compact(
+                "sharedWithMe",
+                "mySharedCategories",
+                "outgoingRequests",
+                "incomingRequests"
+            )
+        );
     }
 }
