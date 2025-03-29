@@ -89,6 +89,27 @@ export default {
         });
     },
 
+    getSharedTasks() {
+        return axios.get("/api/shared/categories/tasks", {
+            headers: getCommonHeaders(),
+        });
+    },
+
+    updateTaskStatus(id, status) {
+        validateId(id, "updateTaskStatus");
+
+        return axios.post(
+            `/api/todos/${id}`,
+            {
+                _method: "PUT",
+                status: status,
+            },
+            {
+                headers: getCsrfHeaders(),
+            },
+        );
+    },
+
     /**
      * Get a specific task by ID
      * @param {number} id Task ID

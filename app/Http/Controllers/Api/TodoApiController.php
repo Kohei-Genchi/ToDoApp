@@ -334,7 +334,9 @@ class TodoApiController extends Controller
             // Check if user is authenticated
             if (!Auth::check()) {
                 return response()->json(
-                    ["error" => "Authentication required"],
+                    [
+                        "error" => "Authentication required",
+                    ],
                     401
                 );
             }
@@ -352,7 +354,8 @@ class TodoApiController extends Controller
 
             // Validate status parameter
             $validated = $request->validate([
-                "status" => "required|in:pending,in_progress,completed",
+                "status" =>
+                    "required|in:pending,in_progress,review,completed,trashed",
             ]);
 
             // Update the task status
@@ -367,7 +370,10 @@ class TodoApiController extends Controller
         } catch (\Exception $e) {
             Log::error("Error updating task status: " . $e->getMessage());
             return response()->json(
-                ["error" => "Error updating task status: " . $e->getMessage()],
+                [
+                    "error" =>
+                        "Error updating task status: " . $e->getMessage(),
+                ],
                 500
             );
         }

@@ -8,21 +8,33 @@
         />
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <!-- Weekly Date Navigation - new component -->
+            <!-- Weekly Date Navigation - 共有ビュー以外で表示 -->
             <weekly-date-navigation
-                v-if="currentView !== 'shared'"
+                v-if="!isSharedView"
                 :current-date="currentDate"
                 @date-selected="selectDate"
+                @previous-day="previousDay"
+                @next-day="nextDay"
             />
 
-            <!-- Task List (normal view) -->
+            <!-- Task List (通常ビュー) -->
             <todo-list
-                v-if="currentView !== 'shared'"
+                v-if="!isSharedView"
                 :todos="filteredTodos"
                 :categories="categories"
+                :current-user-id="currentUserId"
                 @toggle-task="toggleTaskStatus"
                 @edit-task="openEditTaskModal"
                 @delete-task="confirmDeleteTask"
+            />
+
+            <!-- Kanban Board (共有ビュー) -->
+            <kanban-board
+                v-if="isSharedView"
+                :categories="categories"
+                :current-user-id="currentUserId"
+                @edit-task="openEditTaskModal"
+                @task-status-changed="handleTaskStatusChange"
             />
         </main>
 
@@ -71,18 +83,20 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, defineAsyncComponent } from "vue";
+import { ref, computed, onMounted, defineAsyncComponent, watch } from "vue";
 import TodoApi from "../api/todo";
 import CategoryApi from "../api/category";
 
-// Component imports
+// コンポーネントインポート
 const TodoList = defineAsyncComponent(() => import("./TodoList.vue"));
 const TaskModal = defineAsyncComponent(() => import("./TaskModal.vue"));
 const DeleteConfirmModal = defineAsyncComponent(
     () => import("./DeleteConfirmModal.vue"),
 );
+// 新しく追加するKanbanBoardコンポーネント
+const KanbanBoard = defineAsyncComponent(() => import("./KanbanBoard.vue"));
 
-// Component imports
+// 他のコンポーネント
 import AppHeader from "./AppHeader.vue";
 import WeeklyDateNavigation from "./WeeklyDateNavigation.vue";
 
@@ -95,23 +109,23 @@ export default {
         DeleteConfirmModal,
         AppHeader,
         WeeklyDateNavigation,
+        KanbanBoard, // 追加
     },
 
     setup() {
-        // ===============================
-        // State
-        // ===============================
+        // 状態変数
         const todos = ref([]);
         const categories = ref([]);
         const currentView = ref("today");
+        const currentUserId = ref(null);
 
-        // FIXED: Use local date format to prevent timezone issues
+        // 現在日付
         const today = new Date();
         const currentDate = ref(
             `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`,
         );
 
-        // Modal state
+        // モーダル状態
         const showTaskModal = ref(false);
         const taskModalMode = ref("add");
         const selectedTaskId = ref(null);
@@ -119,14 +133,18 @@ export default {
         const showDeleteConfirmModal = ref(false);
         const deleteAllRecurring = ref(false);
 
-        // Notification reference
-        const notification = ref(null);
-
-        // In the setup function
+        // 通知状態
         const notificationMessage = ref("");
         const notificationType = ref("success");
         const notificationVisible = ref(false);
         let notificationTimeout = null;
+
+        // 計算プロパティ
+
+        // 共有ビューかどうかを判定
+        const isSharedView = computed(() => {
+            return ["shared", "kanban"].includes(currentView.value);
+        });
 
         function showNotification(message, type = "success", duration = 3000) {
             // Clear any existing timeout
@@ -264,6 +282,10 @@ export default {
          * Filter todos based on current date
          */
         const filteredTodos = computed(() => {
+            if (isSharedView.value) {
+                return todos.value;
+            }
+
             const formattedCurrentDate = formatDateForComparison(
                 currentDate.value,
             );
@@ -288,36 +310,22 @@ export default {
          */
         async function loadTasks() {
             try {
-                const response = await TodoApi.getTasks(
-                    currentView.value,
-                    currentDate.value,
-                );
-                // Normal task loading logic...
-                todos.value = response.data;
-            } catch (error) {
-                // Check for subscription required error
-                if (
-                    error.response &&
-                    error.response.status === 403 &&
-                    error.response.data &&
-                    error.response.data.subscription_required
-                ) {
-                    showNotification(
-                        error.response.data.error ||
-                            "この機能を利用するにはサブスクリプションが必要です。",
-                        "error",
-                        5000,
+                let response;
+
+                if (isSharedView.value) {
+                    // 共有ビューの場合は共有タスクをロード
+                    response = await TodoApi.getTasks("shared");
+                } else {
+                    // 通常ビューの場合は日付などでフィルタリング
+                    response = await TodoApi.getTasks(
+                        currentView.value,
+                        currentDate.value,
                     );
-
-                    // Redirect to today view if trying to access premium feature
-                    if (currentView.value === "shared") {
-                        currentView.value = "today";
-                    }
-
-                    return;
                 }
 
-                // Handle other errors
+                todos.value = response.data;
+            } catch (error) {
+                // エラーハンドリング
                 handleError(error, "タスクの読み込みに失敗しました");
             }
         }
@@ -345,6 +353,17 @@ export default {
             }
         }
 
+        async function handleTaskStatusChange(taskId, newStatus) {
+            try {
+                await TodoApi.updateTask(taskId, { status: newStatus });
+                // 成功したら再読み込み（または状態の最適化更新）
+                await loadTasks();
+                showNotification("タスクステータスを更新しました", "success");
+            } catch (error) {
+                handleError(error, "タスクステータスの更新に失敗しました");
+            }
+        }
+
         // ===============================
         // View Functions
         // ===============================
@@ -358,7 +377,15 @@ export default {
             if (view === "today") {
                 goToToday();
             }
+            updateUrl(view);
+
             loadTasks();
+        }
+
+        function updateUrl(view) {
+            const url = new URL(window.location);
+            url.searchParams.set("view", view);
+            window.history.replaceState({}, "", url);
         }
 
         // ===============================
@@ -719,11 +746,48 @@ export default {
             currentDate.value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
         }
 
-        // Initialization
         onMounted(() => {
-            // Set today's date using local format
-            goToToday();
+            // Bladeからビュータイプを取得 (data-view属性)
+            const todoAppElement = document.getElementById("todo-app");
+            const viewFromBlade = todoAppElement?.dataset?.view;
 
+            // URLからビュータイプを取得
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = urlParams.get("view");
+
+            // Blade -> URL -> デフォルトの優先順位でビュータイプを設定
+            if (
+                viewFromBlade &&
+                [
+                    "today",
+                    "date",
+                    "scheduled",
+                    "inbox",
+                    "shared",
+                    "kanban",
+                ].includes(viewFromBlade)
+            ) {
+                currentView.value = viewFromBlade;
+            } else if (
+                viewParam &&
+                [
+                    "today",
+                    "date",
+                    "scheduled",
+                    "inbox",
+                    "shared",
+                    "kanban",
+                ].includes(viewParam)
+            ) {
+                currentView.value = viewParam;
+            }
+
+            // 現在のユーザーIDを取得
+            if (window.Laravel && window.Laravel.user) {
+                currentUserId.value = window.Laravel.user.id;
+            }
+
+            // データ読み込み
             loadTasks();
             loadCategories();
 
@@ -754,26 +818,29 @@ export default {
         });
 
         return {
-            // Existing variables
+            // 状態変数
             todos,
             categories,
             currentView,
             currentDate,
             formattedDate,
             filteredTodos,
+            isSharedView,
+            currentUserId,
+
+            // モーダル関連
             showTaskModal,
             taskModalMode,
             selectedTaskId,
             selectedTaskData,
             showDeleteConfirmModal,
 
-            // Add notification variables here
+            // 通知関連
             notificationMessage,
             notificationType,
             notificationVisible,
-            showNotification,
 
-            // Rest of your return variables
+            // 関数
             setView,
             selectDate,
             previousDay,
@@ -781,7 +848,6 @@ export default {
             goToToday,
             openAddTaskModal,
             openEditTaskModal,
-            fetchAndEditTask,
             closeTaskModal,
             submitTask,
             toggleTaskStatus,
@@ -789,7 +855,7 @@ export default {
             confirmDeleteTask,
             confirmDelete,
             loadCategories,
-            isRecurringTask,
+            handleTaskStatusChange,
         };
     },
 };

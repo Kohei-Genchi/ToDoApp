@@ -25,11 +25,13 @@ class TodoController extends Controller
      *
      * @return View
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        // Simply return the todos index view
-        // The Vue.js component will handle data loading via API
-        return view("todos.index");
+        // ビュータイプをクエリパラメータから取得
+        $view = $request->query("view", "today");
+
+        // JavaScriptにビュータイプを渡す
+        return view("todos.index", ["view" => $view]);
     }
 
     /**

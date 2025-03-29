@@ -1,11 +1,9 @@
 <template>
     <header class="bg-white shadow">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-            <!-- Single row layout with app title and all buttons -->
             <div class="flex justify-between items-center">
                 <h1 class="text-xl font-semibold text-gray-900">Todo App</h1>
 
-                <!-- All buttons in a single row -->
                 <div class="flex space-x-2">
                     <button
                         @click="$emit('set-view', 'today')"
@@ -19,12 +17,12 @@
                         今日
                     </button>
 
-                    <!-- Shared tasks button - directs to Kanban board -->
-                    <a
-                        href="/tasks/kanban"
+                    <!-- 共有タスクボタン - リンクからビュー切り替えボタンに変更 -->
+                    <button
+                        @click="$emit('set-view', 'shared')"
                         :class="[
                             'px-3 py-1 rounded-md text-sm font-medium',
-                            currentView === 'shared'
+                            currentView === 'shared' || currentView === 'kanban'
                                 ? 'bg-green-600 text-white'
                                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
                         ]"
@@ -46,7 +44,7 @@
                             </svg>
                             共有タスク
                         </span>
-                    </a>
+                    </button>
 
                     <button
                         @click="$emit('add-task')"
@@ -63,17 +61,12 @@
 <script>
 export default {
     name: "AppHeader",
-
     props: {
-        /**
-         * Current view
-         */
         currentView: {
             type: String,
             required: true,
         },
     },
-
     emits: ["set-view", "add-task"],
 
     computed: {

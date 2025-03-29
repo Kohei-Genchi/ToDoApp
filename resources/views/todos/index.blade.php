@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div id="todo-app" class="w-full max-w-full">
+    <div id="todo-app" class="w-full max-w-full" data-view="{{ $view ?? 'today' }}">
         <!-- Todo コンポーネントはここでマウントされます -->
     </div>
 

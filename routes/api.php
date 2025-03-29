@@ -173,6 +173,11 @@ Route::middleware(["auth:sanctum"])->group(function () {
                 "update",
             ])->name("api.todos.update");
 
+            Route::patch("/{todo}/status", [
+                TodoApiController::class,
+                "updateStatus",
+            ])->name("api.todos.status.update");
+
             // Toggle task status
             Route::patch("/{todo}/toggle", [
                 TodoApiController::class,
