@@ -352,7 +352,7 @@ class TodoApiController extends Controller
 
             // Validate status parameter
             $validated = $request->validate([
-                "status" => "required|in:pending,in_progress,paused,completed",
+                "status" => "required|in:pending,in_progress,completed",
             ]);
 
             // Update the task status

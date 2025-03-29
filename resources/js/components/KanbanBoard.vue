@@ -513,17 +513,6 @@ export default {
 
                 const data = await response.json();
 
-                // Process tasks and convert legacy statuses
-                allTasks.value = data.map((task) => {
-                    // Convert legacy statuses
-                    if (task.status === "ongoing") {
-                        task.status = "in_progress";
-                    } else if (task.status === "paused") {
-                        task.status = "review";
-                    }
-                    return task;
-                });
-
                 console.log(`Loaded ${allTasks.value.length} tasks`);
 
                 // Apply initial filters

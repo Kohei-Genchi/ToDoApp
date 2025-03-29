@@ -17,22 +17,23 @@ return new class extends Migration {
                 ->default("INBOX");
             $table->date("due_date")->nullable();
             $table->time("due_time")->nullable();
+            // ここを変更: 古いステータス値を削除し、新しいステータス値を直接使用
             $table
                 ->enum("status", [
                     "pending",
-                    "ongoing",
-                    "paused",
+                    "in_progress", // "ongoing"ではなく
+                    "review", // "paused"ではなく
                     "completed",
                     "trashed",
                 ])
                 ->default("pending");
-            $table->string("recurrence_type")->nullable(); // Added here
-            $table->date("recurrence_end_date")->nullable(); // Added here
+            $table->string("recurrence_type")->nullable();
+            $table->date("recurrence_end_date")->nullable();
             $table
                 ->foreignId("category_id")
                 ->nullable()
                 ->constrained()
-                ->nullOnDelete(); // Added here
+                ->nullOnDelete();
             $table->timestamps();
         });
     }

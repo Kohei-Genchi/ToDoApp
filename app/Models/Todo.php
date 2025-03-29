@@ -17,10 +17,6 @@ class Todo extends Model
     const STATUS_COMPLETED = "completed";
     const STATUS_TRASHED = "trashed";
 
-    // Legacy status constants (for backward compatibility)
-    const STATUS_ONGOING = "ongoing"; // Maps to in_progress
-    const STATUS_PAUSED = "paused"; // Maps to review
-
     // Location constants
     const LOCATION_INBOX = "INBOX";
     const LOCATION_TODAY = "TODAY";
@@ -86,10 +82,6 @@ class Todo extends Model
     public static function mapLegacyStatus(string $status): string
     {
         switch ($status) {
-            case self::STATUS_ONGOING:
-                return self::STATUS_IN_PROGRESS;
-            case self::STATUS_PAUSED:
-                return self::STATUS_REVIEW;
             default:
                 return $status;
         }

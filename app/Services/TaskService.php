@@ -236,9 +236,6 @@ class TaskService
                 Todo::STATUS_REVIEW,
                 Todo::STATUS_COMPLETED,
                 Todo::STATUS_TRASHED,
-                // Legacy statuses
-                Todo::STATUS_ONGOING,
-                Todo::STATUS_PAUSED,
             ];
 
             if (!in_array($taskData["status"], $allowedStatuses)) {

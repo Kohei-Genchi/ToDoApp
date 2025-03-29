@@ -48,12 +48,11 @@ class SharedTasksController extends Controller
             });
 
             $inProgressTasks = $allTasks->filter(function ($task) {
-                return $task->status === "in_progress" ||
-                    $task->status === "ongoing";
+                return $task->status === "in_progress";
             });
 
             $reviewTasks = $allTasks->filter(function ($task) {
-                return $task->status === "review" || $task->status === "paused";
+                return $task->status === "review";
             });
 
             $completedTasks = $allTasks->filter(function ($task) {

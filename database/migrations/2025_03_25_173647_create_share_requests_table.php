@@ -25,7 +25,10 @@ return new class extends Migration {
             $table->foreignId("category_id")->nullable();
             $table->string("recipient_email");
             $table->string("token")->unique();
-            $table->enum("share_type", ["task", "global"])->default("task");
+            // ここを変更: 'category'を追加
+            $table
+                ->enum("share_type", ["task", "global", "category"])
+                ->default("task");
             $table->enum("permission", ["view", "edit"])->default("view");
             $table
                 ->enum("status", ["pending", "approved", "rejected"])

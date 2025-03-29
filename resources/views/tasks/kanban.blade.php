@@ -110,11 +110,11 @@
                         </div>
 
                         <!-- Paused Column (Previously Review) -->
-                        <div class="bg-yellow-100 rounded-lg p-4" id="column-paused" ondragover="allowDrop(event)" ondrop="dropTask(event, 'paused')">
+                        <div class="bg-yellow-100 rounded-lg p-4" id="column-review" ondragover="allowDrop(event)" ondrop="dropTask(event, 'review')">
                             <div class="flex justify-between items-center mb-3">
                                 <h3 class="font-medium">Paused</h3>
                                 <div class="flex items-center">
-                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full" id="paused-count">
+                                    <span class="bg-white text-gray-600 text-xs px-2 py-1 rounded-full" id="review-count">
                                         {{ $reviewTasks->count() }}
                                     </span>
                                 </div>
@@ -125,7 +125,7 @@
                                      draggable="true"
                                      ondragstart="dragTask(event, {{ $task->id }})"
                                      data-task-id="{{ $task->id }}"
-                                     data-status="paused"
+                                     data-status="review"
                                      onclick="editTask(event, {{ $task->id }})">
                                     <div class="flex items-center justify-between">
                                         <h4 class="font-medium text-sm">{{ $task->title }}</h4>
@@ -240,7 +240,7 @@
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1.5 px-3 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                                 <option value="pending">To Do</option>
                                 <option value="in_progress">In Progress</option>
-                                <option value="paused">Paused</option>
+                                <option value="review">Paused</option>
                                 <option value="completed">Completed</option>
                             </select>
                         </div>
@@ -319,7 +319,7 @@
                     const statusMapping = {
                         'pending': 'pending',
                         'in_progress': 'in_progress',
-                        'paused': 'review',       // Map "paused" column to "review" status
+                        'review': 'review',       // Map "review" column to "review" status
                         'completed': 'completed'
                     };
 
@@ -349,7 +349,7 @@
 
         function updateColumnCounts() {
             // Update the count for each column
-            const columns = ['pending', 'in_progress', 'paused', 'completed'];
+            const columns = ['pending', 'in_progress', 'completed'];
 
             columns.forEach(status => {
                 const taskCount = document.querySelectorAll(`#column-${status} .task-card`).length;
