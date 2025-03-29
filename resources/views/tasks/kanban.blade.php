@@ -289,51 +289,63 @@
         let currentTaskId = null;
         let isNewTask = false;
 
-        // Drag and drop functionality
         function dragTask(event, taskId) {
-            draggedTaskId = taskId;
-            event.dataTransfer.setData("text/plain", taskId);
-            setTimeout(() => {
-                event.target.classList.add("opacity-50");
-            }, 0);
-        }
+                draggedTaskId = taskId;
+                event.dataTransfer.setData("text/plain", taskId);
+                setTimeout(() => {
+                    event.target.classList.add("opacity-50");
+                }, 0);
+            }
 
-        function allowDrop(event) {
-            event.preventDefault();
-        }
+            function allowDrop(event) {
+                    event.preventDefault();
+                }
 
-        function dropTask(event, newStatus) {
-            event.preventDefault();
+                function dropTask(event, newStatus) {
+                    event.preventDefault();
 
-            // Remove opacity from all dragged items
-            document.querySelectorAll('.opacity-50').forEach(el => {
-                el.classList.remove('opacity-50');
-            });
+                    // Remove opacity from all dragged items
+                    document.querySelectorAll('.opacity-50').forEach(el => {
+                        el.classList.remove('opacity-50');
+                    });
 
-            const taskId = draggedTaskId;
-            if (!taskId) return;
+                    // Get the task ID from the event data transfer
+                    const taskId = event.dataTransfer.getData("text/plain");
 
-            // Get the task element
-            const taskElement = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-            if (!taskElement) return;
+                    if (!taskId) return;
 
-            // Move task element to new column
-            const targetColumn = document.getElementById(`column-${newStatus}`);
-            if (!targetColumn) return;
+                    // Map frontend column names to backend status values
+                    // THIS IS THE CRUCIAL FIX:
+                    const statusMapping = {
+                        'pending': 'pending',
+                        'in_progress': 'in_progress',
+                        'paused': 'review',       // Map "paused" column to "review" status
+                        'completed': 'completed'
+                    };
 
-            const taskContainer = targetColumn.querySelector('.task-container');
-            if (!taskContainer) return;
+                    // Get the correct backend status value
+                    const backendStatus = statusMapping[newStatus] || newStatus;
 
-            // Remove from current column and add to new column
-            taskElement.parentNode.removeChild(taskElement);
-            taskContainer.appendChild(taskElement);
+                    console.log(`Dropping task ID: ${taskId} from status to: ${newStatus} (backend: ${backendStatus})`);
 
-            // Update count displays
-            updateColumnCounts();
+                    // Rest of your existing function...
+                    const taskElement = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+                    if (!taskElement) return;
 
-            // Send API request to update status
-            updateTaskStatus(taskId, newStatus);
-        }
+                    const targetColumn = document.getElementById(`column-${newStatus}`);
+                    if (!targetColumn) return;
+
+                    const taskContainer = targetColumn.querySelector('.task-container');
+                    if (!taskContainer) return;
+
+                    taskElement.parentNode.removeChild(taskElement);
+                    taskContainer.appendChild(taskElement);
+
+                    updateColumnCounts();
+
+                    // Send the mapped status to the API
+                    updateTaskStatus(taskId, backendStatus);
+                }
 
         function updateColumnCounts() {
             // Update the count for each column
@@ -355,15 +367,17 @@
                 // Log the request for debugging
                 console.log(`Updating task ${taskId} to status ${newStatus}`);
 
-                // Use a custom endpoint specifically for status updates
-                const response = await fetch(`/tasks/status/${taskId}`, {
+                // FIXED: Use the standard API endpoint for updating todos
+                const response = await fetch(`/api/todos/${taskId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken,
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
                     },
                     body: JSON.stringify({
+                        _method: 'PUT',  // Method spoofing for Laravel
                         status: newStatus
                     })
                 });
