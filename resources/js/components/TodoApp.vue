@@ -237,7 +237,13 @@ export default {
          * @returns {boolean} Whether task is recurring
          */
         function isRecurringTask(task) {
-            return task?.recurrence_type && task.recurrence_type !== "none";
+            if (!task) return false;
+
+            return (
+                task.recurrence_type &&
+                task.recurrence_type !== "none" &&
+                task.recurrence_type !== null
+            );
         }
 
         /**
@@ -713,7 +719,10 @@ export default {
                 selectedTaskData.value = task;
             }
 
-            // Show confirmation modal - don't delete until user confirms
+            // Check if task is recurring
+            const recurring = isRecurringTask(selectedTaskData.value);
+
+            // Show confirmation modal with recurring status
             showDeleteConfirmModal.value = true;
         }
 
@@ -724,6 +733,11 @@ export default {
         function confirmDeleteTask(task) {
             selectedTaskId.value = task.id;
             selectedTaskData.value = task;
+
+            // Check if task is recurring before showing modal
+            const recurring = isRecurringTask(task);
+
+            // Pass the recurring status to the modal
             showDeleteConfirmModal.value = true;
         }
 
@@ -731,7 +745,10 @@ export default {
          * Confirm delete
          * @param {boolean} confirmed Confirmed flag
          */
-        async function confirmDelete(confirmed = true) {
+        async function confirmDelete(
+            confirmed = true,
+            deleteAllRecurringFlag = false,
+        ) {
             // Only continue if user confirmed
             if (!confirmed) {
                 showDeleteConfirmModal.value = false;
@@ -741,7 +758,7 @@ export default {
             try {
                 await TodoApi.deleteTask(
                     selectedTaskId.value,
-                    deleteAllRecurring.value,
+                    deleteAllRecurringFlag,
                 );
                 showNotification("タスクを削除しました");
                 showDeleteConfirmModal.value = false;
@@ -884,6 +901,7 @@ export default {
             goToToday,
             openAddTaskModal,
             openEditTaskModal,
+            isRecurringTask,
             closeTaskModal,
             submitTask,
             toggleTaskStatus,
