@@ -72,10 +72,14 @@
                         </span>
                     </button>
 
-                    <!-- 共有カテゴリーボタン - 追加 -->
-                    <a
-                        href="/categories/shared"
-                        class="px-3 py-1 rounded-md text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    <button
+                        @click="$emit('set-view', 'categories-shared')"
+                        :class="[
+                            'px-3 py-1 rounded-md text-sm font-medium',
+                            currentView === 'categories-shared'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300',
+                        ]"
                     >
                         <span class="flex items-center">
                             <svg
@@ -100,7 +104,7 @@
                             </svg>
                             共有カテゴリー
                         </span>
-                    </a>
+                    </button>
 
                     <!-- 新規タスクボタン -->
                     <button

@@ -97,6 +97,11 @@ Route::middleware(["auth"])->group(function () {
             );
         });
 
+    Route::get("/categories/shared", function () {
+        return view("todos.index", ["view" => "categories-shared"]);
+    })
+        ->middleware(["auth"])
+        ->name("categories.shared");
     /**
      * Category Management Web UI
      */
@@ -121,12 +126,6 @@ Route::middleware(["auth"])->group(function () {
             CategoryController::class,
             "destroy",
         ])->name("categories.destroy");
-
-        // Shared categories page
-        Route::get("/shared", [
-            CategoryShareController::class,
-            "sharedWithMePage",
-        ])->name("categories.shared");
     });
 
     /**
@@ -154,6 +153,32 @@ Route::middleware(["auth"])->group(function () {
         "processApproval",
     ])->name("share.direct.approve");
 
+    Route::prefix("shared-data")->group(function () {
+        // Get categories shared with current user
+        Route::get("/categories", function () {
+            $sharedCategories = Auth::user()
+                ->sharedCategories()
+                ->with("user")
+                ->get();
+            return response()->json($sharedCategories);
+        })->name("shared-data.categories");
+
+        // Get categories the current user has shared with others
+        Route::get("/my-shared-categories", function () {
+            $mySharedCategories = Auth::user()
+                ->categories()
+                ->with("sharedWith")
+                ->whereHas("sharedWith")
+                ->get();
+            return response()->json($mySharedCategories);
+        })->name("shared-data.my-shared-categories");
+
+        // Get share requests data
+        Route::get("/share-requests", function () {
+            // Code to retrieve share requests
+            // ...
+        })->name("shared-data.share-requests");
+    });
     /**
      * Share Requests Web UI
      */

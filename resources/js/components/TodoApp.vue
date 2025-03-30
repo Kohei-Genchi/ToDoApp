@@ -28,13 +28,18 @@
                 @delete-task="confirmDeleteTask"
             />
 
-            <!-- Kanban Board (共有ビュー) -->
             <kanban-board
-                v-if="isSharedView"
+                v-if="isSharedView && currentView !== 'categories-shared'"
                 :categories="categories"
                 :current-user-id="currentUserId"
                 @edit-task="openEditTaskModal"
                 @task-status-changed="handleTaskStatusChange"
+            />
+
+            <!-- Shared Categories View (共有カテゴリービュー) -->
+            <shared-categories-view
+                v-if="currentView === 'categories-shared'"
+                :current-user-id="currentUserId"
             />
         </main>
 
@@ -99,6 +104,7 @@ const KanbanBoard = defineAsyncComponent(() => import("./KanbanBoard.vue"));
 // 他のコンポーネント
 import AppHeader from "./AppHeader.vue";
 import WeeklyDateNavigation from "./WeeklyDateNavigation.vue";
+import SharedCategoriesView from "./SharedCategoriesView.vue";
 
 export default {
     name: "TodoApp",
@@ -109,7 +115,8 @@ export default {
         DeleteConfirmModal,
         AppHeader,
         WeeklyDateNavigation,
-        KanbanBoard, // 追加
+        KanbanBoard,
+        SharedCategoriesView,
     },
 
     setup() {
@@ -143,7 +150,9 @@ export default {
 
         // 共有ビューかどうかを判定
         const isSharedView = computed(() => {
-            return ["shared", "kanban"].includes(currentView.value);
+            return ["shared", "kanban", "categories-shared"].includes(
+                currentView.value,
+            );
         });
 
         function showNotification(message, type = "success", duration = 3000) {
