@@ -1,4 +1,4 @@
-<!-- resources/js/components/AppHeader.vue -->
+<!-- AppHeader.vue update -->
 <template>
     <header class="bg-white shadow">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
@@ -46,7 +46,29 @@
                         共有タスク
                     </button>
 
-                    <!-- 共有カテゴリーボタン - 改善済み -->
+                    <!-- 場所でタスク共有ボタン - 新規追加 -->
+                    <button
+                        @click="$emit('open-share-modal')"
+                        class="px-3 py-1 rounded-md text-sm font-medium flex items-center bg-green-600 text-white hover:bg-green-700"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4 mr-1"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 6h16M4 12h16m-7 6h7"
+                            />
+                        </svg>
+                        場所で共有
+                    </button>
+
+                    <!-- 共有カテゴリーボタン -->
                     <button
                         @click="$emit('set-view', 'categories-shared')"
                         :class="[
@@ -101,6 +123,6 @@ export default {
             required: true,
         },
     },
-    emits: ["set-view", "add-task"],
+    emits: ["set-view", "add-task", "open-share-modal"], // Add the new event
 };
 </script>

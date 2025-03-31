@@ -2,23 +2,36 @@
 
 <template>
     <li
-        class="cosmic-task-item hover:bg-gray-800/50 transition-all duration-300"
+        class="cosmic-task-item hover:bg-gray-800/50 transition-all duration-300 group"
+        :class="{ 'bg-blue-900/20': isSelected }"
     >
         <div class="p-3 sm:px-4 flex items-center">
-            <!-- Checkbox -->
+            <!-- Selection checkbox (new) -->
+            <div class="mr-2 flex-shrink-0" v-if="selectionMode">
+                <input
+                    type="checkbox"
+                    :checked="isSelected"
+                    @change="$emit('toggle-selection', todo)"
+                    class="h-4 w-4 text-blue-500 rounded focus:ring-blue-500"
+                    @click.stop
+                />
+            </div>
+
+            <!-- Completion checkbox -->
             <div class="mr-3 flex-shrink-0">
                 <input
                     type="checkbox"
                     :checked="todo.status === 'completed'"
                     @change="$emit('toggle', todo)"
                     class="h-5 w-5 text-orange-500 rounded focus:ring-orange-500 cosmic-checkbox"
+                    @click.stop
                 />
             </div>
 
             <!-- Task content -->
             <div
                 class="flex-1 min-w-0"
-                @click="handleEdit"
+                @click="handleItemClick"
                 style="cursor: pointer"
             >
                 <div class="flex items-center">
@@ -151,6 +164,28 @@
 
             <!-- Action buttons -->
             <div class="flex-shrink-0 ml-3 flex space-x-1">
+                <!-- Select button (new) -->
+                <button
+                    v-if="!selectionMode"
+                    @click.stop="$emit('enable-selection', todo)"
+                    class="text-gray-400 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                    title="選択"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        />
+                    </svg>
+                </button>
+
                 <!-- Delete button -->
                 <button
                     @click.stop="$emit('delete')"
@@ -194,9 +229,17 @@ export default {
             type: Number,
             default: null,
         },
+        selectionMode: {
+            type: Boolean,
+            default: false,
+        },
+        selectedTaskIds: {
+            type: Array,
+            default: () => [],
+        },
     },
 
-    emits: ["toggle", "edit", "delete"],
+    emits: ["toggle", "edit", "delete", "toggle-selection", "enable-selection"],
 
     setup(props, { emit }) {
         /**
@@ -207,6 +250,21 @@ export default {
                 props.todo.recurrence_type &&
                 props.todo.recurrence_type !== "none",
         );
+
+        const isSelected = computed(() => {
+            return props.selectedTaskIds.includes(props.todo.id);
+        });
+
+        // Handle clicking on the task item
+        const handleItemClick = () => {
+            if (props.selectionMode) {
+                // In selection mode, toggle selection
+                emit("toggle-selection", props.todo);
+            } else {
+                // Normal mode - edit the task
+                emit("edit", props.todo);
+            }
+        };
 
         /**
          * Get label for recurrence type
@@ -285,6 +343,8 @@ export default {
             isSharedViaCategory,
             sharedViaCategory,
             sharedTooltip,
+            isSelected,
+            handleItemClick,
         };
     },
 };

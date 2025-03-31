@@ -80,7 +80,27 @@ class TodoApiController extends Controller
             $userId = $request->user_id;
             $categoryId = $request->category_id;
             $status = $request->status;
+            $location = $request->location;
 
+            if ($location) {
+                Log::info("Filtering tasks by location: {$location}");
+                // Directly filter by location when specified
+                $todos = Auth::user()
+                    ->todos()
+                    ->where("location", $location)
+                    ->when($status, function ($query, $status) {
+                        return $query->where("status", $status);
+                    })
+                    ->with(["category", "user"])
+                    ->get();
+
+                Log::info(
+                    "Found " .
+                        count($todos) .
+                        " tasks for location: {$location}"
+                );
+                return response()->json($todos);
+            }
             // Handle "shared" view specifically for shared tasks
             if ($view === "shared") {
                 try {

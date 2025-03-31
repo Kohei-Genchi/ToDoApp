@@ -5,6 +5,7 @@
             :current-view="currentView"
             @set-view="setView"
             @add-task="openAddTaskModal"
+            @open-share-modal="openShareByLocationModal"
         />
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
@@ -84,6 +85,12 @@
                 {{ notificationMessage }}
             </div>
         </div>
+        <!-- Location Sharing Modal -->
+        <share-by-location-modal
+            v-if="showShareByLocationModal"
+            @close="showShareByLocationModal = false"
+            @shared="handleLocationShared"
+        />
     </div>
 </template>
 
@@ -105,6 +112,7 @@ const KanbanBoard = defineAsyncComponent(() => import("./KanbanBoard.vue"));
 import AppHeader from "./AppHeader.vue";
 import WeeklyDateNavigation from "./WeeklyDateNavigation.vue";
 import SharedCategoriesView from "./SharedCategoriesView.vue";
+import ShareByLocationModal from "./ShareByLocationModal.vue";
 
 export default {
     name: "TodoApp",
@@ -117,6 +125,7 @@ export default {
         WeeklyDateNavigation,
         KanbanBoard,
         SharedCategoriesView,
+        ShareByLocationModal,
     },
 
     setup() {
@@ -154,6 +163,44 @@ export default {
                 currentView.value,
             );
         });
+
+        const showShareByLocationModal = ref(false);
+
+        // Add this to the setup function methods:
+        const openShareByLocationModal = () => {
+            showShareByLocationModal.value = true;
+        };
+
+        const handleLocationShared = (shareInfo) => {
+            showNotification(
+                `${shareInfo.taskCount}件の${getLocationName(shareInfo.location)}タスクを${shareInfo.email}に共有しました`,
+                "success",
+            );
+            loadTasks();
+        };
+
+        const getLocationName = (location) => {
+            switch (location) {
+                case "INBOX":
+                    return "未分類";
+                case "TODAY":
+                    return "今日";
+                case "SCHEDULED":
+                    return "予定";
+                default:
+                    return location;
+            }
+        };
+
+        const handleTasksShared = (shareInfo) => {
+            showNotification(
+                `${shareInfo.taskCount}件のタスクを${shareInfo.email}に共有しました`,
+                "success",
+            );
+
+            // Reload tasks to reflect any changes
+            loadTasks();
+        };
 
         function showNotification(message, type = "success", duration = 3000) {
             // Clear any existing timeout
@@ -910,6 +957,10 @@ export default {
             confirmDelete,
             loadCategories,
             handleTaskStatusChange,
+            showShareByLocationModal,
+            openShareByLocationModal,
+            handleLocationShared,
+            handleTasksShared,
         };
     },
 };
