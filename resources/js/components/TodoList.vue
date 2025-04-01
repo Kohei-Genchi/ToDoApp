@@ -1,5 +1,3 @@
-<!-- TodoList.vue の修正 -->
-
 <template>
     <div>
         <div
@@ -28,61 +26,12 @@
             </p>
         </div>
 
-        <!-- Task selection toolbar - only visible when tasks are selected -->
-        <div
-            v-if="selectedTasks.length > 0"
-            class="bg-blue-600 text-white px-4 py-2 rounded-md mb-2 flex justify-between items-center"
-        >
-            <div class="flex items-center">
-                <span class="font-medium"
-                    >{{ selectedTasks.length }}件のタスクを選択中</span
-                >
-                <button
-                    @click="clearSelection"
-                    class="ml-3 text-sm bg-blue-700 hover:bg-blue-800 px-2 py-1 rounded"
-                >
-                    選択解除
-                </button>
-            </div>
-
-            <div class="flex items-center space-x-2">
-                <!-- 共有ボタンを削除 -->
-                <button
-                    @click="addSelectedToCategory"
-                    class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded text-sm font-medium"
-                >
-                    カテゴリー追加
-                </button>
-            </div>
-        </div>
-
         <!-- Task list -->
         <div v-else-if="todos.length > 0" class="bg-white rounded-lg shadow-sm">
             <div
                 class="px-4 py-2 border-b border-gray-100 flex justify-between items-center"
             >
                 <h3 class="font-medium text-gray-700">タスク一覧</h3>
-                <button
-                    v-if="!selectionMode && todos.length > 1"
-                    @click="enableSelectionMode"
-                    class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded flex items-center"
-                >
-                    <svg
-                        class="h-3 w-3 mr-1"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                    >
-                        <path
-                            d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"
-                        />
-                        <path
-                            fill-rule="evenodd"
-                            d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
-                            clip-rule="evenodd"
-                        />
-                    </svg>
-                    複数選択
-                </button>
             </div>
             <ul class="divide-y divide-gray-100">
                 <task-item
@@ -91,13 +40,9 @@
                     :todo="todo"
                     :category="getCategoryById(todo.category_id)"
                     :current-user-id="currentUserId"
-                    :selection-mode="selectionMode"
-                    :selected-task-ids="selectedTaskIds"
                     @toggle="$emit('toggle-task', todo)"
                     @edit="$emit('edit-task', todo)"
                     @delete="$emit('delete-task', todo)"
-                    @toggle-selection="toggleTaskSelection"
-                    @enable-selection="enableSelectionModeWithTask"
                 />
             </ul>
         </div>
@@ -129,23 +74,11 @@ export default {
         },
     },
 
-    // shared-tasks イベントを削除
     emits: ["toggle-task", "edit-task", "delete-task"],
 
     setup(props, { emit }) {
         // Get current user ID from Laravel global variable
         const currentUserId = ref(null);
-
-        // Selection mode state
-        const selectionMode = ref(false);
-        const selectedTaskIds = ref([]);
-
-        // Computed properties
-        const selectedTasks = computed(() => {
-            return props.todos.filter((todo) =>
-                selectedTaskIds.value.includes(todo.id),
-            );
-        });
 
         /**
          * Get category by ID
@@ -156,47 +89,6 @@ export default {
             if (!categoryId) return null;
             return (
                 props.categories.find((cat) => cat.id === categoryId) || null
-            );
-        };
-
-        // Task selection methods
-        const enableSelectionMode = () => {
-            selectionMode.value = true;
-            selectedTaskIds.value = [];
-        };
-
-        const enableSelectionModeWithTask = (task) => {
-            selectionMode.value = true;
-            selectedTaskIds.value = [task.id];
-        };
-
-        const toggleTaskSelection = (task) => {
-            const index = selectedTaskIds.value.indexOf(task.id);
-            if (index === -1) {
-                selectedTaskIds.value.push(task.id);
-            } else {
-                selectedTaskIds.value.splice(index, 1);
-            }
-
-            // Exit selection mode if no tasks selected
-            if (selectedTaskIds.value.length === 0) {
-                selectionMode.value = false;
-            }
-        };
-
-        const clearSelection = () => {
-            selectedTaskIds.value = [];
-            selectionMode.value = false;
-        };
-
-        // Add selected tasks to category
-        const addSelectedToCategory = () => {
-            if (selectedTasks.value.length === 0) return;
-            // This would typically open a category selection modal
-            // For now, we'll just console.log
-            console.log(
-                "Would add these tasks to category:",
-                selectedTasks.value,
             );
         };
 
@@ -211,15 +103,6 @@ export default {
         return {
             currentUserId,
             getCategoryById,
-            // Selection mode
-            selectionMode,
-            selectedTaskIds,
-            selectedTasks,
-            enableSelectionMode,
-            enableSelectionModeWithTask,
-            toggleTaskSelection,
-            clearSelection,
-            addSelectedToCategory,
         };
     },
 };

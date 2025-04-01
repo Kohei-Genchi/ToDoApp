@@ -49,11 +49,11 @@ Route::group([], function () {
         ->name("guest.login");
 });
 
-Route::get("/todos/shared", function () {
-    return view("todos.index", ["view" => "shared"]);
-})
-    ->middleware(["auth"])
-    ->name("todos.shared");
+// Route::get("/todos/shared", function () {
+//     return view("todos.index", ["view" => "shared"]);
+// })
+//     ->middleware(["auth"])
+//     ->name("todos.shared");
 
 // 統合された共有タスクを表示するためのルートパラメータ追加
 Route::get("/todos", [TodoController::class, "index"])

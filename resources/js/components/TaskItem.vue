@@ -1,20 +1,8 @@
 <template>
     <li
         class="cosmic-task-item hover:bg-gray-800/50 transition-all duration-300 group"
-        :class="{ 'bg-blue-900/20': isSelected }"
     >
         <div class="p-3 sm:px-4 flex items-center">
-            <!-- Selection checkbox (複数選択用に残す) -->
-            <div class="mr-2 flex-shrink-0" v-if="selectionMode">
-                <input
-                    type="checkbox"
-                    :checked="isSelected"
-                    @change="$emit('toggle-selection', todo)"
-                    class="h-4 w-4 text-blue-500 rounded focus:ring-blue-500"
-                    @click.stop
-                />
-            </div>
-
             <!-- Completion checkbox -->
             <div class="mr-3 flex-shrink-0">
                 <input
@@ -43,35 +31,6 @@
                     >
                         {{ todo.title }}
                     </p>
-
-                    <!-- Category based shared status indicator (カテゴリーベースの共有表示は残す) -->
-                    <span
-                        v-if="isSharedViaCategory"
-                        class="ml-2 p-0.5 rounded text-xs border flex items-center"
-                        :class="{
-                            'text-orange-400 border-orange-500/30 bg-orange-900/20':
-                                todo.user_id === currentUserId,
-                            'text-blue-400 border-blue-500/30 bg-blue-900/20':
-                                todo.user_id !== currentUserId,
-                        }"
-                        :title="sharedTooltip"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 mr-0.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                            />
-                        </svg>
-                        <span>{{ sharedViaCategory ? "共有中" : "" }}</span>
-                    </span>
 
                     <!-- Category label -->
                     <span
@@ -111,10 +70,10 @@
 
                 <!-- Time display -->
                 <div
-                    v-if="formattedTime || isSharedViaCategory"
+                    v-if="formattedTime"
                     class="text-sm text-gray-400 mt-0.5 flex space-x-2"
                 >
-                    <span v-if="formattedTime" class="inline-flex items-center">
+                    <span class="inline-flex items-center">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             class="h-3.5 w-3.5 mr-0.5"
@@ -131,59 +90,11 @@
                         </svg>
                         {{ formattedTime }}
                     </span>
-
-                    <!-- Owner info when viewing a task from a shared category -->
-                    <span
-                        v-if="
-                            isSharedViaCategory &&
-                            todo.user_id !== currentUserId &&
-                            todo.user
-                        "
-                        class="inline-flex items-center"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-3.5 w-3.5 mr-0.5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                            />
-                        </svg>
-                        {{ todo.user.name }}
-                    </span>
                 </div>
             </div>
 
             <!-- Action buttons -->
             <div class="flex-shrink-0 ml-3 flex space-x-1">
-                <!-- Select button (複数選択用に残す) -->
-                <button
-                    v-if="!selectionMode"
-                    @click.stop="$emit('enable-selection', todo)"
-                    class="text-gray-400 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
-                    title="選択"
-                >
-                    <svg
-                        class="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                        />
-                    </svg>
-                </button>
-
                 <!-- Delete button -->
                 <button
                     @click.stop="$emit('delete')"
@@ -227,18 +138,9 @@ export default {
             type: Number,
             default: null,
         },
-        selectionMode: {
-            type: Boolean,
-            default: false,
-        },
-        selectedTaskIds: {
-            type: Array,
-            default: () => [],
-        },
     },
 
-    // 'share-task' を削除し、他の操作用emitは残す
-    emits: ["toggle", "edit", "delete", "toggle-selection", "enable-selection"],
+    emits: ["toggle", "edit", "delete"],
 
     setup(props, { emit }) {
         /**
@@ -250,19 +152,10 @@ export default {
                 props.todo.recurrence_type !== "none",
         );
 
-        const isSelected = computed(() => {
-            return props.selectedTaskIds.includes(props.todo.id);
-        });
-
         // Handle clicking on the task item
         const handleItemClick = () => {
-            if (props.selectionMode) {
-                // In selection mode, toggle selection
-                emit("toggle-selection", props.todo);
-            } else {
-                // Normal mode - edit the task
-                emit("edit", props.todo);
-            }
+            // Edit the task
+            emit("edit", props.todo);
         };
 
         /**
@@ -303,80 +196,13 @@ export default {
             emit("edit", props.todo);
         };
 
-        /**
-         * Check if task is from a shared category
-         */
-        const isSharedViaCategory = computed(() => {
-            // A task is considered shared via category if:
-            // 1. It has a user_id different from the current user (shared with current user)
-            // 2. Or it belongs to the current user and has a category that might be shared
-            return (
-                props.todo.user_id !== props.currentUserId ||
-                props.category != null
-            );
-        });
-
-        /**
-         * Check if the category of this task is shared
-         */
-        const sharedViaCategory = computed(() => {
-            return props.category != null;
-        });
-
-        /**
-         * Get tooltip text for shared indicator
-         */
-        const sharedTooltip = computed(() => {
-            if (props.todo.user_id === props.currentUserId) {
-                return `このタスクはカテゴリー「${props.category?.name || ""}」を通して共有されています`;
-            } else {
-                return "このタスクは共有カテゴリーから共有されています";
-            }
-        });
-
         return {
             isRecurring,
             recurrenceLabel,
             formattedTime,
             handleEdit,
-            isSharedViaCategory,
-            sharedViaCategory,
-            sharedTooltip,
-            isSelected,
             handleItemClick,
         };
     },
 };
 </script>
-
-<style scoped>
-.cosmic-task-item {
-    position: relative;
-    overflow: hidden;
-    backdrop-filter: blur(8px);
-    border-left: 3px solid #ff9933;
-    margin-bottom: 4px;
-    border-radius: 0.375rem;
-}
-
-.cosmic-task-item::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, rgba(255, 153, 51, 0.05), transparent);
-    pointer-events: none;
-}
-
-.cosmic-checkbox {
-    border: 2px solid #ff9933;
-    transition: all 0.2s ease;
-}
-
-.cosmic-checkbox:checked {
-    background-color: #ff9933;
-    border-color: #ff9933;
-}
-</style>

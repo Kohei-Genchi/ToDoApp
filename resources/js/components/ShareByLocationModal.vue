@@ -132,7 +132,6 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
-import TaskSharingService from "./TaskSharingService";
 
 export default {
     name: "ShareByLocationModal",
@@ -185,19 +184,50 @@ export default {
             successMessage.value = "";
 
             try {
-                // Use the simplified task sharing service
-                const result = await TaskSharingService.shareTasks(
-                    shareEmail.value,
-                    permission.value,
-                    slackAuthRequired.value,
+                // 1. Get all pending tasks
+                const tasksResponse = await axios.get("/api/todos", {
+                    params: { status: "pending" },
+                });
+                const tasks = tasksResponse.data || [];
+
+                // 2. Create a category for the tasks
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getDate().toString().padStart(2, "0")}`;
+                const categoryName = `共有タスク (${dateStr})`;
+
+                const categoryResponse = await axios.post("/api/categories", {
+                    name: categoryName,
+                    color: "#3182CE", // Blue
+                });
+
+                const categoryId = categoryResponse.data.id;
+
+                // 3. Add all pending tasks to this category
+                const updatePromises = tasks.map((task) =>
+                    axios.put(`/api/todos/${task.id}`, {
+                        category_id: categoryId,
+                    }),
                 );
 
-                successMessage.value = `${result.taskCount}件のタスクを共有しました！`;
+                // Wait for all tasks to be updated
+                await Promise.all(updatePromises);
+
+                // 4. Share the category
+                const shareResponse = await axios.post(
+                    `/api/categories/${categoryId}/shares`,
+                    {
+                        email: shareEmail.value,
+                        permission: permission.value,
+                        slack_auth_required: slackAuthRequired.value,
+                    },
+                );
+
+                successMessage.value = `${tasks.length}件のタスクを共有しました！`;
 
                 // Wait a moment to show success message before closing
                 setTimeout(() => {
                     emit("shared", {
-                        taskCount: result.taskCount,
+                        taskCount: tasks.length,
                         email: shareEmail.value,
                     });
                     emit("close");
