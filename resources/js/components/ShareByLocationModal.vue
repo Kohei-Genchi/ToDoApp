@@ -1,4 +1,4 @@
-<!-- ShareByLocationModal.vue -->
+<!-- resources/js/components/ShareByLocationModal.vue -->
 <template>
     <div class="fixed inset-0 flex items-center justify-center z-50">
         <!-- Background overlay -->
@@ -11,49 +11,7 @@
         <div
             class="bg-white rounded-lg shadow-md w-full max-w-md relative z-10 p-6"
         >
-            <h3 class="text-lg font-medium mb-4">場所でタスクを共有</h3>
-
-            <!-- Location selection -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2"
-                    >共有するタスクの場所</label
-                >
-                <div class="grid grid-cols-3 gap-2">
-                    <button
-                        @click="selectedLocation = 'INBOX'"
-                        :class="[
-                            'px-3 py-2 rounded-md text-center text-sm font-medium',
-                            selectedLocation === 'INBOX'
-                                ? 'bg-blue-100 text-blue-800 border-2 border-blue-400'
-                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200',
-                        ]"
-                    >
-                        未分類
-                    </button>
-                    <button
-                        @click="selectedLocation = 'TODAY'"
-                        :class="[
-                            'px-3 py-2 rounded-md text-center text-sm font-medium',
-                            selectedLocation === 'TODAY'
-                                ? 'bg-blue-100 text-blue-800 border-2 border-blue-400'
-                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200',
-                        ]"
-                    >
-                        今日
-                    </button>
-                    <button
-                        @click="selectedLocation = 'SCHEDULED'"
-                        :class="[
-                            'px-3 py-2 rounded-md text-center text-sm font-medium',
-                            selectedLocation === 'SCHEDULED'
-                                ? 'bg-blue-100 text-blue-800 border-2 border-blue-400'
-                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200',
-                        ]"
-                    >
-                        予定
-                    </button>
-                </div>
-            </div>
+            <h3 class="text-lg font-medium mb-4">タスクを共有</h3>
 
             <!-- Email input -->
             <div class="mb-4">
@@ -102,39 +60,32 @@
                 </div>
             </div>
 
-            <!-- Task preview -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                    共有するタスク数: {{ taskCount }}
-                </label>
-                <div class="max-h-40 overflow-y-auto bg-gray-50 p-2 rounded-md">
-                    <div v-if="isLoading" class="text-center py-4">
-                        <span
-                            class="inline-block animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full mr-2"
-                        ></span>
-                        タスクを読み込み中...
-                    </div>
-                    <div
-                        v-else-if="tasks.length === 0"
-                        class="text-center py-4 text-gray-500"
+            <!-- Task info -->
+            <div class="mb-4 p-3 bg-gray-50 rounded-md">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium text-gray-700"
+                        >共有するタスク</span
                     >
-                        該当するタスクはありません
-                    </div>
-                    <div v-else class="divide-y divide-gray-200">
-                        <div
-                            v-for="task in tasks.slice(0, 5)"
-                            :key="task.id"
-                            class="py-2 text-sm"
-                        >
-                            {{ task.title }}
-                        </div>
-                        <div
-                            v-if="tasks.length > 5"
-                            class="py-2 text-sm text-gray-500 text-center"
-                        >
-                            他 {{ tasks.length - 5 }} 件のタスク
-                        </div>
-                    </div>
+                    <span
+                        class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full"
+                    >
+                        {{ taskCount }} 件
+                    </span>
+                </div>
+                <div v-if="isLoading" class="text-center py-2">
+                    <span
+                        class="inline-block animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full mr-2"
+                    ></span>
+                    読み込み中...
+                </div>
+                <div
+                    v-else-if="taskCount === 0"
+                    class="text-center text-sm text-gray-500 py-2"
+                >
+                    共有可能なタスクがありません
+                </div>
+                <div v-else class="text-sm text-gray-600">
+                    選択されたタスクが共有されます
                 </div>
             </div>
 
@@ -159,7 +110,7 @@
                     キャンセル
                 </button>
                 <button
-                    @click="shareTasksByLocation"
+                    @click="shareSelectedTasks"
                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                     :disabled="!canShare || isSharing"
                 >
@@ -179,9 +130,8 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted } from "vue";
 import axios from "axios";
-import TaskSharingService from "./TaskSharingService";
 
 export default {
     name: "ShareByLocationModal",
@@ -190,74 +140,43 @@ export default {
 
     setup(props, { emit }) {
         // State
-        const selectedLocation = ref("TODAY");
         const shareEmail = ref("");
         const permission = ref("view");
-        const tasks = ref([]);
-        const isLoading = ref(false);
+        const taskCount = ref(0);
+        const isLoading = ref(true);
         const isSharing = ref(false);
         const errorMessage = ref("");
         const successMessage = ref("");
         const slackAuthRequired = ref(true);
 
         // Computed properties
-        const taskCount = computed(() => tasks.value.length);
-
         const canShare = computed(() => {
             return (
-                selectedLocation.value &&
                 shareEmail.value &&
                 shareEmail.value.includes("@") &&
-                tasks.value.length > 0
+                taskCount.value > 0
             );
         });
 
-        const loadTasksByLocation = async () => {
-            if (!selectedLocation.value) return;
-
+        // Load task count
+        const loadTaskCount = async () => {
             isLoading.value = true;
-            errorMessage.value = "";
-
             try {
-                // Make sure we're explicitly sending the selected location as a query parameter
                 const response = await axios.get("/api/todos", {
-                    params: {
-                        location: selectedLocation.value, // This is the key fix - ensure we're using the selected location
-                        status: "pending",
-                    },
+                    params: { count_only: true, status: "pending" },
                 });
-
-                console.log(
-                    "Loaded tasks for location:",
-                    selectedLocation.value,
-                    response.data,
-                );
-
-                tasks.value = response.data || [];
+                taskCount.value = response.data.count || 0;
             } catch (error) {
-                console.error("Failed to load tasks:", error);
-                errorMessage.value = "タスクの読み込みに失敗しました";
-                tasks.value = [];
+                console.error("Failed to load task count:", error);
+                errorMessage.value = "タスク情報の取得に失敗しました";
+                taskCount.value = 0;
             } finally {
                 isLoading.value = false;
             }
         };
 
-        // Method to get a location display name
-        const getLocationDisplayName = (location) => {
-            switch (location) {
-                case "INBOX":
-                    return "未分類";
-                case "TODAY":
-                    return "今日";
-                case "SCHEDULED":
-                    return "予定";
-                default:
-                    return location;
-            }
-        };
-
-        const shareTasksByLocation = async () => {
+        // Share selected tasks
+        const shareSelectedTasks = async () => {
             if (!canShare.value) return;
 
             isSharing.value = true;
@@ -265,24 +184,48 @@ export default {
             successMessage.value = "";
 
             try {
-                // Use the TaskSharingService to handle the sharing process
-                const result = await TaskSharingService.shareTasksByLocation(
-                    selectedLocation.value,
-                    shareEmail.value,
-                    permission.value,
-                    slackAuthRequired.value,
+                // Create a new category for the tasks
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getDate().toString().padStart(2, "0")}`;
+                const categoryName = `共有タスク (${dateStr})`;
+
+                // Create a category
+                const categoryResponse = await axios.post("/api/categories", {
+                    name: categoryName,
+                    color: "#3182CE", // Blue
+                });
+
+                const categoryId = categoryResponse.data.id;
+
+                // Get all pending tasks
+                const tasksResponse = await axios.get("/api/todos", {
+                    params: { status: "pending" },
+                });
+
+                // Update tasks to use the new category
+                const updatePromises = tasksResponse.data.map((task) =>
+                    axios.put(`/api/todos/${task.id}`, {
+                        category_id: categoryId,
+                    }),
                 );
 
-                successMessage.value = `${result.taskCount}件のタスクを共有しました！`;
+                await Promise.all(updatePromises);
+
+                // Share the category
+                await axios.post(`/api/categories/${categoryId}/shares`, {
+                    email: shareEmail.value,
+                    permission: permission.value,
+                    slack_auth_required: slackAuthRequired.value,
+                });
+
+                successMessage.value = `${taskCount.value}件のタスクを共有しました！`;
 
                 // Wait a moment to show success message before closing
                 setTimeout(() => {
                     emit("shared", {
-                        location: selectedLocation.value,
+                        taskCount: taskCount.value,
                         email: shareEmail.value,
-                        taskCount: result.taskCount,
                     });
-
                     emit("close");
                 }, 1500);
             } catch (error) {
@@ -295,42 +238,22 @@ export default {
             }
         };
 
-        const getColorForLocation = (location) => {
-            switch (location) {
-                case "INBOX":
-                    return "#4A5568"; // Gray
-                case "TODAY":
-                    return "#3182CE"; // Blue
-                case "SCHEDULED":
-                    return "#805AD5"; // Purple
-                default:
-                    return "#3182CE"; // Default blue
-            }
-        };
-
-        watch(selectedLocation, (newLocation) => {
-            console.log("Location changed to:", newLocation);
-            loadTasksByLocation();
-        });
-
         // Lifecycle hooks
         onMounted(() => {
-            loadTasksByLocation();
+            loadTaskCount();
         });
 
         return {
-            selectedLocation,
             shareEmail,
             permission,
-            tasks,
+            taskCount,
             isLoading,
             isSharing,
             errorMessage,
             successMessage,
-            taskCount,
-            canShare,
-            shareTasksByLocation,
             slackAuthRequired,
+            canShare,
+            shareSelectedTasks,
         };
     },
 };
