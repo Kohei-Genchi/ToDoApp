@@ -2,11 +2,8 @@
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 py-6">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 bg-white border-b border-gray-200">
-                <div class="mb-4 flex justify-between items-center">
+                <div class="mb-4">
                     <h2 class="text-xl font-semibold text-gray-800">共有カテゴリー</h2>
-                    <a href="{{ route('categories.index') }}" class="inline-flex items-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 active:bg-gray-400 focus:outline-none focus:border-gray-500 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150">
-                        カテゴリー管理へ戻る
-                    </a>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
