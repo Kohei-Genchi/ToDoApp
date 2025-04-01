@@ -192,16 +192,6 @@ export default {
             }
         };
 
-        const handleTasksShared = (shareInfo) => {
-            showNotification(
-                `${shareInfo.taskCount}件のタスクを${shareInfo.email}に共有しました`,
-                "success",
-            );
-
-            // Reload tasks to reflect any changes
-            loadTasks();
-        };
-
         function showNotification(message, type = "success", duration = 3000) {
             // Clear any existing timeout
             if (notificationTimeout) {
@@ -960,7 +950,6 @@ export default {
             showShareByLocationModal,
             openShareByLocationModal,
             handleLocationShared,
-            handleTasksShared,
         };
     },
 };

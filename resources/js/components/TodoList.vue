@@ -1,4 +1,5 @@
-<!-- TodoList.vue update - partial code for modifications -->
+<!-- TodoList.vue の修正 -->
+
 <template>
     <div>
         <div
@@ -45,27 +46,7 @@
             </div>
 
             <div class="flex items-center space-x-2">
-                <button
-                    @click="openShareSelectedTasksModal"
-                    class="flex items-center bg-green-500 hover:bg-green-600 px-3 py-1 rounded text-sm font-medium"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4 mr-1"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                        />
-                    </svg>
-                    共有
-                </button>
-
+                <!-- 共有ボタンを削除 -->
                 <button
                     @click="addSelectedToCategory"
                     class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded text-sm font-medium"
@@ -120,27 +101,17 @@
                 />
             </ul>
         </div>
-
-        <!-- Share Selected Tasks Modal -->
-        <share-selected-tasks-modal
-            v-if="showShareSelectedTasksModal"
-            :tasks="selectedTasks"
-            @close="showShareSelectedTasksModal = false"
-            @shared="handleTasksShared"
-        />
     </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from "vue";
 import TaskItem from "./TaskItem.vue";
-import ShareSelectedTasksModal from "./ShareSelectedTasksModal.vue";
 
 export default {
     name: "TodoList",
     components: {
         TaskItem,
-        ShareSelectedTasksModal,
     },
 
     props: {
@@ -158,7 +129,8 @@ export default {
         },
     },
 
-    emits: ["toggle-task", "edit-task", "delete-task", "shared-tasks"],
+    // shared-tasks イベントを削除
+    emits: ["toggle-task", "edit-task", "delete-task"],
 
     setup(props, { emit }) {
         // Get current user ID from Laravel global variable
@@ -167,7 +139,6 @@ export default {
         // Selection mode state
         const selectionMode = ref(false);
         const selectedTaskIds = ref([]);
-        const showShareSelectedTasksModal = ref(false);
 
         // Computed properties
         const selectedTasks = computed(() => {
@@ -218,20 +189,6 @@ export default {
             selectionMode.value = false;
         };
 
-        // Share selected tasks methods
-        const openShareSelectedTasksModal = () => {
-            if (selectedTasks.value.length === 0) return;
-            showShareSelectedTasksModal.value = true;
-        };
-
-        const handleTasksShared = (result) => {
-            // Emit event to parent
-            emit("shared-tasks", result);
-
-            // Clear selection
-            clearSelection();
-        };
-
         // Add selected tasks to category
         const addSelectedToCategory = () => {
             if (selectedTasks.value.length === 0) return;
@@ -262,11 +219,6 @@ export default {
             enableSelectionModeWithTask,
             toggleTaskSelection,
             clearSelection,
-            // Share selected tasks
-            showShareSelectedTasksModal,
-            openShareSelectedTasksModal,
-            handleTasksShared,
-            // Other methods
             addSelectedToCategory,
         };
     },

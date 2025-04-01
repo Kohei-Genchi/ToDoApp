@@ -70,6 +70,6 @@ export default {
         },
     },
 
-    emits: ["clear-selection", "share-tasks", "add-to-category", "batch-edit"],
+    emits: ["clear-selection", "add-to-category", "batch-edit"],
 };
 </script>

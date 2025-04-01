@@ -1,12 +1,10 @@
-// Updated TaskItem.vue without individual task sharing UI
-
 <template>
     <li
         class="cosmic-task-item hover:bg-gray-800/50 transition-all duration-300 group"
         :class="{ 'bg-blue-900/20': isSelected }"
     >
         <div class="p-3 sm:px-4 flex items-center">
-            <!-- Selection checkbox (new) -->
+            <!-- Selection checkbox (複数選択用に残す) -->
             <div class="mr-2 flex-shrink-0" v-if="selectionMode">
                 <input
                     type="checkbox"
@@ -46,7 +44,7 @@
                         {{ todo.title }}
                     </p>
 
-                    <!-- Category based shared status indicator -->
+                    <!-- Category based shared status indicator (カテゴリーベースの共有表示は残す) -->
                     <span
                         v-if="isSharedViaCategory"
                         class="ml-2 p-0.5 rounded text-xs border flex items-center"
@@ -164,7 +162,7 @@
 
             <!-- Action buttons -->
             <div class="flex-shrink-0 ml-3 flex space-x-1">
-                <!-- Select button (new) -->
+                <!-- Select button (複数選択用に残す) -->
                 <button
                     v-if="!selectionMode"
                     @click.stop="$emit('enable-selection', todo)"
@@ -239,6 +237,7 @@ export default {
         },
     },
 
+    // 'share-task' を削除し、他の操作用emitは残す
     emits: ["toggle", "edit", "delete", "toggle-selection", "enable-selection"],
 
     setup(props, { emit }) {
