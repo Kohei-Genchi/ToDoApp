@@ -173,7 +173,7 @@ export default {
 
         const handleLocationShared = (shareInfo) => {
             showNotification(
-                `${shareInfo.taskCount}件の${getLocationName(shareInfo.location)}タスクを${shareInfo.email}に共有しました`,
+                `${shareInfo.taskCount}件のタスクを${shareInfo.email}に共有しました`,
                 "success",
             );
             loadTasks();

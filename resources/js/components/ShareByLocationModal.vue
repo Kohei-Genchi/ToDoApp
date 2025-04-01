@@ -85,7 +85,7 @@
                     共有可能なタスクがありません
                 </div>
                 <div v-else class="text-sm text-gray-600">
-                    選択されたタスクが共有されます
+                    保留中のタスクをすべて共有します
                 </div>
             </div>
 
@@ -110,7 +110,7 @@
                     キャンセル
                 </button>
                 <button
-                    @click="shareSelectedTasks"
+                    @click="shareTasks"
                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                     :disabled="!canShare || isSharing"
                 >
@@ -132,6 +132,7 @@
 <script>
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
+import TaskSharingService from "./TaskSharingService";
 
 export default {
     name: "ShareByLocationModal",
@@ -163,9 +164,9 @@ export default {
             isLoading.value = true;
             try {
                 const response = await axios.get("/api/todos", {
-                    params: { count_only: true, status: "pending" },
+                    params: { status: "pending" },
                 });
-                taskCount.value = response.data.count || 0;
+                taskCount.value = response.data.length || 0;
             } catch (error) {
                 console.error("Failed to load task count:", error);
                 errorMessage.value = "タスク情報の取得に失敗しました";
@@ -175,8 +176,8 @@ export default {
             }
         };
 
-        // Share selected tasks
-        const shareSelectedTasks = async () => {
+        // Share tasks
+        const shareTasks = async () => {
             if (!canShare.value) return;
 
             isSharing.value = true;
@@ -184,46 +185,19 @@ export default {
             successMessage.value = "";
 
             try {
-                // Create a new category for the tasks
-                const now = new Date();
-                const dateStr = `${now.getFullYear()}/${(now.getMonth() + 1).toString().padStart(2, "0")}/${now.getDate().toString().padStart(2, "0")}`;
-                const categoryName = `共有タスク (${dateStr})`;
-
-                // Create a category
-                const categoryResponse = await axios.post("/api/categories", {
-                    name: categoryName,
-                    color: "#3182CE", // Blue
-                });
-
-                const categoryId = categoryResponse.data.id;
-
-                // Get all pending tasks
-                const tasksResponse = await axios.get("/api/todos", {
-                    params: { status: "pending" },
-                });
-
-                // Update tasks to use the new category
-                const updatePromises = tasksResponse.data.map((task) =>
-                    axios.put(`/api/todos/${task.id}`, {
-                        category_id: categoryId,
-                    }),
+                // Use the simplified task sharing service
+                const result = await TaskSharingService.shareTasks(
+                    shareEmail.value,
+                    permission.value,
+                    slackAuthRequired.value,
                 );
 
-                await Promise.all(updatePromises);
-
-                // Share the category
-                await axios.post(`/api/categories/${categoryId}/shares`, {
-                    email: shareEmail.value,
-                    permission: permission.value,
-                    slack_auth_required: slackAuthRequired.value,
-                });
-
-                successMessage.value = `${taskCount.value}件のタスクを共有しました！`;
+                successMessage.value = `${result.taskCount}件のタスクを共有しました！`;
 
                 // Wait a moment to show success message before closing
                 setTimeout(() => {
                     emit("shared", {
-                        taskCount: taskCount.value,
+                        taskCount: result.taskCount,
                         email: shareEmail.value,
                     });
                     emit("close");
@@ -253,7 +227,7 @@ export default {
             successMessage,
             slackAuthRequired,
             canShare,
-            shareSelectedTasks,
+            shareTasks,
         };
     },
 };

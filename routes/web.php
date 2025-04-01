@@ -97,35 +97,24 @@ Route::middleware(["auth"])->group(function () {
             );
         });
 
-    Route::get("/categories/shared", function () {
-        return view("todos.index", ["view" => "categories-shared"]);
-    })
-        ->middleware(["auth"])
-        ->name("categories.shared");
-    /**
-     * Category Management Web UI
-     */
     Route::prefix("categories")->group(function () {
-        // Categories list page
-        Route::get("/", [CategoryController::class, "index"])->name(
-            "categories.index"
-        );
-
-        // Create category (web form)
+        // Keep these routes for API usage
         Route::post("/", [CategoryController::class, "store"])->name(
             "categories.store"
         );
-
-        // Update category (web form)
         Route::put("/{category}", [CategoryController::class, "update"])->name(
             "categories.update"
         );
-
-        // Delete category
         Route::delete("/{category}", [
             CategoryController::class,
             "destroy",
         ])->name("categories.destroy");
+
+        // Keep shared categories view
+        Route::get("/shared", [
+            CategoryShareController::class,
+            "sharedWithMePage",
+        ])->name("categories.shared");
     });
 
     /**
